@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.7/lib/p5.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tonal/browser/tonal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.1.5/Tone.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <main></main>
+
+    <div id="ensemble-buttons-container">
+      <button
+        onclick="startEnsemble()"
+        class="ensemble-btn"
+        id="start-ensemble-btn"
+        disabled
+      >
+        play all
+      </button>
+      <button
+        onclick="stopEnsemble()"
+        class="ensemble-btn"
+        id="stop-ensemble-btn"
+        disabled
+      >
+        stop all
+      </button>
+    </div>
+
+    <div id="spectrum-container">
+      <canvas id="spectrum-canvas"></canvas>
+    </div>
+
+    <script src="modules/spectrum.js"></script>
+    <script src="modules/colors.js"></script>
+    <script src="modules/scales.js"></script>
+    <script src="modules/numbers.js"></script>
+    <script src="modules/sequences.js"></script>
+    <script src="modules/synths.js"></script>
+    <script src="modules/tape-loops.js"></script>
+    <script src="modules/controls.js"></script>
+    <script src="modules/examples.js"></script>
+
+    <script src="sketch.js"></script>
+  </body>
+</html>
