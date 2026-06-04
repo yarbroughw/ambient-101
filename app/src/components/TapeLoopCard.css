@@ -1,0 +1,161 @@
+.tape-loop-card {
+  width: var(--loop-panel-width);
+}
+
+.tape-loop-card__panel {
+  width: var(--loop-panel-width);
+  height: var(--loop-panel-height);
+  padding: 11px 0 10px;
+  background: var(--color-loop-bg);
+  border: 1px solid var(--color-outline);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tape-loop-card__label {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1;
+  text-align: center;
+  text-transform: lowercase;
+  color: var(--color-labels);
+  flex-shrink: 0;
+}
+
+.tape-loop-card__reel {
+  position: relative;
+  width: var(--loop-circle-size);
+  height: var(--loop-circle-size);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.tape-loop-card__ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--color-outline);
+  border-radius: 50%;
+  opacity: 0.55;
+  box-sizing: border-box;
+}
+
+.tape-loop-card__tick {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 2px;
+  height: 11px;
+  margin-left: -1px;
+  background: var(--color-outline);
+  z-index: 1;
+}
+
+.tape-loop-card__dot {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tape-loop-card__dot-head {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--color-active);
+  transform: translateY(calc(var(--loop-circle-size) / -2 + 1px));
+}
+
+@keyframes tape-loop-dot-lap-flash {
+  0%,
+  10% {
+    background: #fff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.95);
+  }
+  58% {
+    background: rgb(236, 233, 255);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.45);
+  }
+  100% {
+    background: var(--color-active);
+    box-shadow: none;
+  }
+}
+
+.tape-loop-card__dot-head--lap {
+  animation: tape-loop-dot-lap-flash 1.35s linear forwards;
+}
+
+.tape-loop-card__duration,
+.tape-loop-card__duration-input {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: auto;
+  width: 100%;
+  height: 1.2em;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--color-outline);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: center;
+  z-index: 1;
+}
+
+.tape-loop-card__duration-input {
+  width: 42px;
+  height: 18px;
+  border: 1px solid var(--color-outline);
+  border-radius: 2px;
+  background: var(--color-loop-bg);
+  cursor: text;
+}
+
+.tape-loop-card__controls {
+  display: flex;
+  gap: 0;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tape-loop-btn {
+  width: 23px;
+  height: 23px;
+  padding: 0;
+  margin: 0 2px;
+  border: none;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tape-loop-btn--play {
+  background-color: var(--color-play);
+  padding-bottom: 2px;
+}
+
+.tape-loop-btn--stop {
+  background-color: var(--color-stop);
+  font-size: 14px;
+  padding-bottom: 2px;
+}
+
+.tape-loop-btn--test {
+  background-color: var(--color-test);
+  font-size: 18px;
+  padding-bottom: 3px;
+}
