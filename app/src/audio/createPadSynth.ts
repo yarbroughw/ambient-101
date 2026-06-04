@@ -1,0 +1,115 @@
+import * as Tone from 'tone'
+import type { NoteSink } from './types'
+
+const OUTPUT_GAIN = 0.15
+
+let sharedReverb: Tone.Reverb | null = null
+
+function getSharedReverb(): Tone.Reverb {
+  if (!sharedReverb) {
+    sharedReverb = new Tone.Reverb({
+      decay: 6,
+      preDelay: 0.03,
+      wet: 0.75,
+    }).toDestination()
+  }
+  return sharedReverb
+}
+
+type SynthChain = {
+  synth: Tone.PolySynth
+  filter: Tone.Filter
+  gain: Tone.Gain
+  meter: Tone.Meter
+}
+
+function buildSynthChain(): SynthChain {
+  const synth = new Tone.PolySynth(Tone.Synth)
+  synth.set({
+    oscillator: { type: 'sawtooth' },
+    envelope: { attack: 1, decay: 1, sustain: 0.7, release: 4 },
+    volume: -12,
+  })
+
+  const filter = new Tone.Filter({
+    frequency: 2000,
+    type: 'lowpass',
+    rolloff: -12,
+  })
+  const gain = new Tone.Gain(OUTPUT_GAIN)
+  const meter = new Tone.Meter({ normalRange: true, smoothing: 0.65 })
+
+  synth.connect(filter)
+  filter.connect(gain)
+  gain.connect(meter)
+  meter.connect(getSharedReverb())
+
+  return { synth, filter, gain, meter }
+}
+
+export type LoopVoice = {
+  sink: NoteSink
+  silence: () => void
+  prepare: () => void
+  getLevel: () => number
+}
+
+function readMeterLevel(meter: Tone.Meter): number {
+  const value = meter.getValue()
+  return typeof value === 'number' ? value : 0
+}
+
+export function createLoopVoice(): LoopVoice {
+  let chain: SynthChain | null = buildSynthChain()
+  let sink = createSynthNoteSink(chain.synth)
+
+  function disposeChain() {
+    if (!chain) {
+      return
+    }
+    const t = Tone.now()
+    chain.synth.releaseAll(t)
+    chain.synth.disconnect()
+    chain.filter.disconnect()
+    chain.gain.disconnect()
+    chain.meter.disconnect()
+    chain.synth.dispose()
+    chain.filter.dispose()
+    chain.meter.dispose()
+    chain.gain.gain.cancelScheduledValues(t)
+    chain.gain.gain.setValueAtTime(0, t)
+    chain.gain.dispose()
+    chain = null
+  }
+
+  return {
+    get sink() {
+      if (!chain) {
+        throw new Error('Loop voice is not prepared')
+      }
+      return sink
+    },
+    silence() {
+      disposeChain()
+    },
+    prepare() {
+      disposeChain()
+      chain = buildSynthChain()
+      sink = createSynthNoteSink(chain.synth)
+    },
+    getLevel() {
+      if (!chain) {
+        return 0
+      }
+      return readMeterLevel(chain.meter)
+    },
+  }
+}
+
+export function createSynthNoteSink(synth: Tone.PolySynth): NoteSink {
+  return {
+    triggerAttackRelease(note, duration, time, velocity = 1) {
+      synth.triggerAttackRelease(note, duration, time, velocity)
+    },
+  }
+}
