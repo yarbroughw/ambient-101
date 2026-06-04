@@ -1,4 +1,4 @@
-# Ambient 101 (web)
+# Ambient 101
 
 Vite + React + TypeScript + Tone.js + Tonal.
 

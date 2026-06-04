@@ -53,7 +53,7 @@ Workshop slides (`Generative Music Workshop.pdf` at repo root) motivate concepts
 
 ## Technology direction
 
-- **Stack**: Vite + TypeScript + React for the application in `web/` (`package.json` name `ambient-101-web`, semver from `0.1.0` until a camp-ready release).
+- **Stack**: Vite + TypeScript + React for the application in `app/` (`package.json` name `ambient-101-app`, semver from `0.1.0` until a camp-ready release).
 - **Audio / theory**: **Tone.js** for scheduling, synthesis, and transport; **Tonal** (or `@tonaljs/*` as appropriate) for scales, degrees, and naming—aligned with v1 capabilities but without exposing code to participants.
 
 ## Repository layout (initial)
@@ -61,7 +61,7 @@ Workshop slides (`Generative Music Workshop.pdf` at repo root) motivate concepts
 ```
 /docs/design.md          — this document
 /legacy/sketch-v1/       — frozen reference implementation (p5 + scripts)
-/web/                    — Vite React app (scaffold)
+/app/                    — Vite React app (scaffold)
 ```
 
 ## Open decisions (to resolve during implementation)
