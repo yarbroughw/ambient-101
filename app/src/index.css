@@ -1,9 +1,11 @@
+@import './styles/legacy-theme.css';
+
 :root {
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
+  font-family: var(--font-mono);
+  line-height: 1.4;
   font-weight: 400;
-  color: #e8e6f0;
-  background-color: #121218;
+  color: var(--color-btn-text);
+  background-color: var(--color-canvas-bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -22,7 +24,18 @@ body {
 }
 
 #root {
-  max-width: 56rem;
+  max-width: 520px;
   margin: 0 auto;
-  padding: 1.5rem 1.25rem 3rem;
+  padding: 60px 10px 40px;
+}
+
+button {
+  font-family: var(--font-mono);
+  color: var(--color-btn-text);
+  border-radius: 3px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

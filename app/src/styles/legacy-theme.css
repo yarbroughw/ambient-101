@@ -1,0 +1,18 @@
+/* Palette from legacy/sketch-v1/modules/colors.js */
+:root {
+  --color-play: #8bb95a;
+  --color-stop: #e17a6b;
+  --color-test: #f0c749;
+  --color-active: #705cfc;
+  --color-loop-bg: #e8dcc0;
+  --color-canvas-bg: #c8cdd2;
+  --color-outline: #969696;
+  --color-labels: #808080;
+  --color-btn-text: #383838;
+  --color-spectrum-border: rgba(87, 86, 86, 0.3);
+
+  --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
+  --loop-panel-width: 100px;
+  --loop-panel-height: 140px;
+  --loop-circle-size: 50px;
+}
