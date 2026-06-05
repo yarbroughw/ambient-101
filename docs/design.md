@@ -17,75 +17,93 @@ Workshop slides (`Generative Music Workshop.pdf` at repo root) motivate concepts
 4. **Instructor demo**: **multiple tape loops in one interface** on a single laptop.
 5. **Participant workflow**: attendees develop several loops and pick a favorite; at the **finale**, roughly **one loop audible per laptop** so the room reads as N voices, not N×layers.
 
-## Shipped today (Phase 1)
+## Current state
 
-The app in `app/` is past scaffold: audio and a first-pass loop UI are working.
+The app in `app/` has a working audio engine and the **horizontal row layout** from the target UI. Two fixed demo loops run independently with dual playheads, global FX, and a master spectrum. **Composition editing is not yet available**—patterns are hardcoded and the expanded row is a placeholder.
 
 ### Audio
 
 - **Browser audio gate** (`StartAudioButton` → `ensureAudioStarted`).
-- **`TapeLoop`**: `Tone.Loop`-driven period, independent per loop; `start` / `stop` / `test`; wall-clock `getProgress()` for visuals; editable loop duration.
-- **Per-loop voice**: pad synth → filter → gain → meter → shared reverb; `silence` / `prepare` on transport changes.
-- **Schedulable note sink**: notes scheduled on the Transport so `stop` cancels future hits; fresh loop instance on each `start` avoids overlap.
-- **Demo content**: two hardcoded patterns in C minor—`bass` (7s), `melody1` (11s)—compiled from imperative `TapeLoopCallback`s in `demoPatterns.ts`.
+- **`TapeLoop`**: `Tone.Loop`-driven period per loop; `start` / `stop` / `test(playbackDurationSec)`; wall-clock `getProgress()` for visuals; editable loop duration.
+- **Declarative patterns**: `LoopPattern` / `PatternNote` types; `compilePatternToSink()` schedules notes; `melodyBounds()` derives content span for the mini melody view.
+- **Schedulable note sink**: notes on the Transport so `stop` cancels future hits; fresh voice chain on each `start` avoids overlap.
+- **Per-loop voice**: pad synth → filter → gain → meter → **global effects bus**; `silence` / `prepare` on transport changes.
+- **Global effects bus** (`globalEffects.ts`): dry/wet reverb and ping-pong delay sends, master volume, FFT analyser tap on the master output.
+- **Demo content**: two hardcoded patterns in C4 minor—`bass` (7s), `melody1` (11s)—in `demoPatterns.ts`.
 
-### UI (interim layout)
+### UI
 
-- **Workshop palette** from sketch-v1 (`theme.css`; colors sourced from `legacy/sketch-v1/`).
-- **Toolbar**: play all / stop all after audio starts.
-- **Loop grid**: square `TapeLoopCard` panels (100×140px) in a responsive grid—**placeholder layout** until horizontal rows land (see below).
-- **Per card**: label, transport (play / stop / test), circular reel with 12 o’clock tick, rotating playhead dot, lap flash at cycle start (white pulse), inline loop duration edit.
+- **Workshop palette** from sketch-v1 (`theme.css`; colors sourced from `legacy/sketch-v1/`). Layout tokens in `layout.css`. App shell max-width 720px, UI scale 1.1×.
+- **Toolbar** (three-column grid): play all / stop all | **master FFT spectrum** | **global FX** (reverb, delay, volume dials).
+- **Loop stack**: full-width **horizontal `TapeLoopRow` bars**, stacked vertically. One row expanded at a time (accordion).
 
-### Not yet built
+**Collapsed row** (summary, mostly read-only):
 
-- User-authored patterns, sequencer grid, instrument/scale controls, mute/solo/favorite, add/remove loops, horizontal bar layout, mini melody view, reel level visualization (meter hook exists on `TapeLoop` but is not wired to the UI).
+| Region | Behavior |
+|--------|----------|
+| Transport | play / stop / test |
+| Level meter | RMS bar with peak hold during playback or test |
+| Reel | 12 o’clock tick, rotating playhead dot, lap flash at cycle start |
+| Duration | Read-only seconds in reel center |
+| Label | Pattern name |
+| Mini melody view | Content-width note timeline + playhead (see below) |
+| Metadata | BPM, instrument, scale — display only |
+| Expand | Opens editor panel below |
 
-## Target UI: horizontal tape loop rows
+**Expanded row**: same summary strip, except loop duration is click-to-edit (floor = `melodySpan`, max = 60s). Editor panel is a **placeholder** (“Sequencer editor coming soon…”).
 
-Loops are **full-width horizontal bars**, **stacked vertically**—not a grid of square tiles. Expanding a loop grows the row **downward**, which is easier to picture than expanding inside a fixed tile.
-
-### Collapsed row (summary, read-only)
-
-Left-to-right (exact order TBD during implementation):
-
-- Transport: play, stop, test
-- **Reel** + rotating playhead (loop period), with lap flash at 12 o’clock
-- **Loop duration** (seconds)
-- Label
-- **Metadata strip**: instrument, scale (if shown), tempo or derived melody span
-- **Mini melody view** (see below)
-
-One loop expanded at a time (accordion) is the default expectation.
-
-### Expanded row (editable)
-
-Same summary strip at top (or sticky), plus:
-
-- Note grid for melody definition
-- Instrument selector
-- Duration controls for **loop** and **melody** (see Time model)
-- Other per-loop settings as they are added
-
-### Dual clocks (why two playheads)
+### Dual clocks (shipped)
 
 Tape loops teach two different durations:
 
 | Clock | Domain | UI |
 |-------|--------|-----|
-| **Tape loop** | Full loop period (e.g. 30s) | Reel rotation + lap flash |
-| **Melody** | Musical content only (e.g. 2s of notes inside that 30s) | Mini melody view + horizontal playhead |
+| **Tape loop** | Full loop period (e.g. 11s) | Reel rotation + lap flash |
+| **Melody** | Musical content only (e.g. ~8s of notes inside 11s) | Mini melody view + horizontal playhead |
 
 The reel answers: *when does this loop come back around relative to the others?*  
 The mini melody answers: *when do notes fire inside one pass of the tape?*
 
-Those are intentionally separate so sparse long loops (short gesture, long silence) stay legible.
+### Mini melody view (shipped)
 
-### Mini melody view
+- **X-axis = melody content only**, not full loop duration. Width is `melodyBounds` span (first note start → last note end).
+- Notes render as a compact timeline (position/size from `startTime` and `duration`).
+- **Playhead** scans left → right while `loopTime` is inside the melody window; **hidden** before the first note and after the last note ends (including the silent tail of the loop).
+- **Test** transport previews melody content only (`test` duration = melody end).
 
-- **X-axis = melody content only**, not full loop duration. If the loop is 30s and sounding content spans 2s, the mini view is 2s wide—no empty 28s tail.
-- Notes render as a compact timeline (position/size from note times and lengths).
-- **Playhead** scans left → right over the mini view while `loopTime` is inside the melody window; sits at the end (or idles) during the silent tail; resets each loop lap.
-- **Expanded editor** may show the full loop timeline (0…loop duration) for placement; the collapsed mini view stays content-only.
+## Next steps
+
+Ordered toward a camp-ready release. Items within a phase can be parallelized.
+
+### 1. Expanded sequencer editor
+
+The main gap between demo and workshop use.
+
+- Note grid for melody definition (bounded step grid, not piano-roll parity).
+- Instrument selector (pad is the only voice today).
+- Loop and melody duration controls with bidirectional clamps (see Time model).
+- Presentation toggle: **highlight** vs **fold** for scale tones.
+- Dual duration display in the summary strip (e.g. `8.0s / 11.0s`).
+
+### 2. Pattern editing and validation
+
+- User-authored patterns (replace hardcoded demos as the default path).
+- Enforce `melodySpan ≤ loopDuration` and per-note bounds in the UI—invalid states unreachable, no dialogs.
+- Ableton-style **dials** with greyed inactive arcs for forbidden ranges (reusable `Dial` component exists for FX today).
+- BPM as an **editing lens** for the grid (`step width ∝ 60/bpm`); seconds remain canonical on the tape.
+
+### 3. Multiple loops and orchestra controls
+
+- Create, remove, and reorder loops in the stack.
+- **Mute / solo** for comparing layers on one laptop.
+- **Favorite** designation for the finale (one audible loop per laptop).
+- Optional later: global key/scale control for the room; per-loop scale when it differs from global.
+
+### 4. Polish and pedagogy hooks
+
+- Reel ring level visualization (meter data exists; `reelVisualStyle.ts` helpers are unused—level is shown in the side meter today).
+- Random seed exposure for any randomized behavior.
+- Preset model, import/export, undo—see Open decisions.
 
 ## Time model
 
@@ -93,9 +111,9 @@ Those are intentionally separate so sparse long loops (short gesture, long silen
 
 - **`loopDuration`**: seconds—drives `Tone.Loop`, reel, and coprime-length pedagogy.
 - **Note events**: `startTime`, sounding duration, pitch, velocity—in seconds relative to loop start.
-- **`melodySpan`**: derived from content (start of first note → end of last sounding note), or an explicit pattern-length cap—used for validation and the mini view width.
+- **`melodySpan`**: derived from content (`melodyBounds`), used for validation and mini view width.
 
-**Tempo (BPM)** and **bars/beats** are an **editing lens** for the grid (`step width ∝ 60/bpm`), not a replacement for loop duration. Always show derived **melody span** alongside loop duration (e.g. `2.4s / 30s`).
+**Tempo (BPM)** and **bars/beats** are an **editing lens** for the grid, not a replacement for loop duration. Show derived **melody span** alongside loop duration (e.g. `8.0s / 11.0s`).
 
 ### Validation (no dialogs)
 
@@ -115,7 +133,7 @@ Invalid states must be **unreachable**, not corrected after the fact. No modal d
 
 If melody is 7s, the loop-duration control **cannot go below 7s**. If loop is 30s, melody **cannot extend past 30s**.
 
-**Preferred control**: Ableton-style **dials** with a **greyed inactive arc** for the forbidden range (e.g. loop dial shows 0–7s greyed when melody is 7s). Steppers, sliders with dead zones, and non-draggable grid boundaries are acceptable alternatives. Drag, scroll, and keyboard nudging all respect the same clamps.
+**Preferred control**: Ableton-style **dials** with a **greyed inactive arc** for the forbidden range. Steppers, sliders with dead zones, and non-draggable grid boundaries are acceptable alternatives. Drag, scroll, and keyboard nudging all respect the same clamps.
 
 When the user shortens the pattern (delete notes), `melodySpan` drops and the loop-duration floor moves down live.
 
@@ -160,7 +178,7 @@ No centralized server clock. **Drift between laptops** is intentional. Shared mu
 ```
 /docs/design.md          — this document
 /legacy/sketch-v1/       — frozen p5 reference
-/app/                    — Vite React app (Phase 1 shipped)
+/app/                    — Vite React app (horizontal rows + audio shipped)
 ```
 
 ## Open decisions
@@ -168,5 +186,5 @@ No centralized server clock. **Drift between laptops** is intentional. Shared mu
 - Exact **grid defaults** (steps, octave span), **editing gestures** (toggle vs drag), **undo**.
 - **Preset model**: factory presets vs blank slate; import/export (optional).
 - **Per-loop scale** in v1 or post-camp.
-- **Accordion**: strict one-expanded-row vs allow multiple.
+- **Accordion**: strict one-expanded-row (current) vs allow multiple.
 - **Favorite / mute / solo** control naming and finale UX.
