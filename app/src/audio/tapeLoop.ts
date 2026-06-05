@@ -8,7 +8,10 @@ export class TapeLoop {
   private recording: TapeLoopCallback | null = null
   private toneLoop: Tone.Loop | null = null
   private running = false
+  private testing = false
   private startedAtMs = 0
+  private testStartedAtMs = 0
+  private testDurationSec = 0
   private silenceAudio: (() => void) | null = null
   private prepareAudio: (() => void) | null = null
   private getLevelAudio: (() => number) | null = null
@@ -25,6 +28,24 @@ export class TapeLoop {
 
   get isRunning(): boolean {
     return this.running
+  }
+
+  isTesting(): boolean {
+    return this.testing
+  }
+
+  getTestTimeSec(): number {
+    if (!this.testing) {
+      return 0
+    }
+
+    const elapsed = (performance.now() - this.testStartedAtMs) / 1000
+    if (elapsed >= this.testDurationSec) {
+      this.testing = false
+      return this.testDurationSec
+    }
+
+    return elapsed
   }
 
   addScheduledNote(transportId: number): void {
@@ -83,11 +104,12 @@ export class TapeLoop {
     }
 
     this.running = false
+    this.testing = false
     this.silenceAudio?.()
     this.disposeToneLoop()
   }
 
-  test(): void {
+  test(playbackDurationSec: number): void {
     if (!this.recording) {
       return
     }
@@ -97,6 +119,9 @@ export class TapeLoop {
       this.prepareAudio?.()
     }
 
+    this.testing = true
+    this.testStartedAtMs = performance.now()
+    this.testDurationSec = playbackDurationSec
     this.recording(Tone.now())
   }
 

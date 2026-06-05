@@ -7,10 +7,9 @@ import './App.css'
 
 export default function App() {
   const [audioReady, setAudioReady] = useState(false)
-  const [runningA, setRunningA] = useState(false)
-  const [runningB, setRunningB] = useState(false)
+  const [runningById, setRunningById] = useState<Record<string, boolean>>({})
 
-  const loops = useMemo(() => {
+  const demoLoops = useMemo(() => {
     if (!audioReady) {
       return null
     }
@@ -19,29 +18,32 @@ export default function App() {
 
   useEffect(() => {
     return () => {
-      loops?.loopA.dispose()
-      loops?.loopB.dispose()
+      demoLoops?.forEach(({ loop }) => loop.dispose())
     }
-  }, [loops])
+  }, [demoLoops])
+
+  function setRunning(id: string, running: boolean) {
+    setRunningById((prev) => ({ ...prev, [id]: running }))
+  }
 
   function startAll() {
-    if (!loops) {
+    if (!demoLoops) {
       return
     }
-    loops.loopA.start()
-    loops.loopB.start()
-    setRunningA(true)
-    setRunningB(true)
+    for (const { pattern, loop } of demoLoops) {
+      loop.start()
+      setRunning(pattern.id, true)
+    }
   }
 
   function stopAll() {
-    if (!loops) {
+    if (!demoLoops) {
       return
     }
-    loops.loopA.stop()
-    loops.loopB.stop()
-    setRunningA(false)
-    setRunningB(false)
+    for (const { pattern, loop } of demoLoops) {
+      loop.stop()
+      setRunning(pattern.id, false)
+    }
   }
 
   return (
@@ -54,7 +56,7 @@ export default function App() {
             <button
               type="button"
               className="ensemble-btn ensemble-btn--play"
-              disabled={!loops}
+              disabled={!demoLoops}
               onClick={startAll}
             >
               play all
@@ -62,7 +64,7 @@ export default function App() {
             <button
               type="button"
               className="ensemble-btn ensemble-btn--stop"
-              disabled={!loops}
+              disabled={!demoLoops}
               onClick={stopAll}
             >
               stop all
@@ -72,20 +74,14 @@ export default function App() {
       </div>
 
       <section className="loop-grid" aria-label="Tape loops">
-        {loops ? (
-          <>
-            <TapeLoopCard
-              loop={loops.loopA}
-              running={runningA}
-              onRunningChange={setRunningA}
-            />
-            <TapeLoopCard
-              loop={loops.loopB}
-              running={runningB}
-              onRunningChange={setRunningB}
-            />
-          </>
-        ) : null}
+        {demoLoops?.map(({ pattern, loop }) => (
+          <TapeLoopCard
+            key={pattern.id}
+            loop={loop}
+            running={runningById[pattern.id] ?? false}
+            onRunningChange={(running) => setRunning(pattern.id, running)}
+          />
+        ))}
       </section>
     </div>
   )
