@@ -80,7 +80,7 @@ export function MiniMelodyView({
             />
           )
         })}
-        {showPlayhead ? (
+        {showPlayhead && playheadRatio !== null ? (
           <span
             className="mini-melody__playhead"
             style={{ left: `${playheadRatio * 100}%` }}

@@ -3,9 +3,9 @@ import type { MelodyBounds } from '../audio/patternTypes'
 export function melodyPlayheadRatio(
   loopTimeSec: number,
   bounds: MelodyBounds,
-): number {
+): number | null {
   if (bounds.span <= 0) {
-    return 0
+    return null
   }
 
   if (loopTimeSec < bounds.start) {
@@ -13,7 +13,7 @@ export function melodyPlayheadRatio(
   }
 
   if (loopTimeSec >= bounds.end) {
-    return 1
+    return null
   }
 
   return (loopTimeSec - bounds.start) / bounds.span
