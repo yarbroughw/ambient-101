@@ -92,6 +92,17 @@ The main gap between demo and workshop use.
 - Ableton-style **dials** with greyed inactive arcs for forbidden ranges (reusable `Dial` component exists for FX today).
 - BPM as an **editing lens** for the grid (`step width ∝ 60/bpm`); seconds remain canonical on the tape.
 
+### 2b. Local persistence (later)
+
+Rudimentary **`localStorage`** persistence so a refresh or return visit restores the user's work. Not camp-blocking until live editing ships; implement once patterns are user-authored.
+
+**Persist (minimum):**
+
+- Loop stack: order, count, and per-loop `LoopPattern` data (notes, `loopDuration`, BPM, scale, instrument, label).
+- Per-loop UI config as needed (e.g. favorite, mute—when those exist).
+
+**Out of scope for v1:** server sync, accounts, import/export file format (may follow from preset work in Open decisions). Serialize a versioned JSON blob; migrate or reset on schema change.
+
 ### 3. Multiple loops and orchestra controls
 
 - Create, remove, and reorder loops in the stack.
@@ -111,33 +122,47 @@ The main gap between demo and workshop use.
 
 - **`loopDuration`**: seconds—drives `Tone.Loop`, reel, and coprime-length pedagogy.
 - **Note events**: `startTime`, sounding duration, pitch, velocity—in seconds relative to loop start.
-- **`melodySpan`**: derived from content (`melodyBounds`), used for validation and mini view width.
+- **`bpm`**: per-loop **melody tempo**—sets grid step length and playhead speed across the fixed grid.
+- **`melodySpan`**: derived from note content (`melodyBounds`)—mini melody view width and test length only; not the loop-duration floor.
 
-**Tempo (BPM)** and **bars/beats** are an **editing lens** for the grid, not a replacement for loop duration. Show derived **melody span** alongside loop duration (e.g. `8.0s / 11.0s`).
+### Melody window vs tape length (shipped model)
+
+Composition uses a **short fixed grid**; playback uses a **longer tape** when needed.
+
+| Concept | Role |
+|---------|------|
+| **Grid** | **32 columns** (two bars of 16th-note steps), fixed pixel width—composable window, not the whole tape |
+| **`bpm`** | Independent melody tempo; `stepSec = 60 / bpm / 4`; sets **playhead speed** across the grid |
+| **Melody window** | `32 × stepSec` seconds—derived from BPM only (`480 / bpm`) |
+| **`loopDuration`** | Independent tape period (reel, `Tone.Loop`); may exceed melody window; trailing time is silence |
+
+**Why:** Many long loops (ensemble spacing) must not produce a huge scrollable grid of rests. Users compose in two bars; lengthening the tape is separate.
+
+**Playhead (expanded grid):** scans left → right over the melody window, then hides. Reel playhead reflects full `loopDuration`.
+
+**Phasing** is a **multi-loop** property (different `loopDuration` values across rows), not within a single loop.
 
 ### Validation (no dialogs)
 
-Invalid states must be **unreachable**, not corrected after the fact. No modal dialogs for duration conflicts.
+Invalid states must be **unreachable**, not corrected after the fact.
 
-**Rules:**
-
-1. `melodySpan ≤ loopDuration`
-2. Every note: `startTime + soundingDuration ≤ loopDuration`
-
-**Bidirectional UI clamps:**
+**Coupling (bidirectional clamps):**
 
 | Control | Floor | Ceiling |
 |---------|-------|---------|
-| Loop duration | `melodySpan` | app maximum (e.g. 60s) |
-| Melody extent | — | `loopDuration` |
+| **Loop duration** | melody window (`480 / bpm`) | app maximum (e.g. 60s) |
+| **Melody BPM** | `480 / loopDuration` (grid must fit on tape) | app maximum (e.g. 240) |
 
-If melody is 7s, the loop-duration control **cannot go below 7s**. If loop is 30s, melody **cannot extend past 30s**.
+Equivalently: **melody window ≤ loop duration** at all times. Raising BPM shortens the melody window (faster playhead); lowering BPM lengthens it and may require a longer tape.
 
-**Preferred control**: Ableton-style **dials** with a **greyed inactive arc** for the forbidden range. Steppers, sliders with dead zones, and non-draggable grid boundaries are acceptable alternatives. Drag, scroll, and keyboard nudging all respect the same clamps.
+**Additional rules (when editing is live):**
 
-When the user shortens the pattern (delete notes), `melodySpan` drops and the loop-duration floor moves down live.
+1. Every note: `startTime + duration ≤ loopDuration`
+2. Every note: `startTime + duration ≤ melody window` (grid extent)
 
-When tempo or bar count changes, recompute `melodySpan` and apply the same ceilings—still no dialogs.
+**Preferred control**: Ableton-style **dials** with greyed inactive arcs for forbidden ranges.
+
+**Display:** show **melody window / loop** (e.g. `5.0s / 11.0s`) in the editor—not note-derived span.
 
 ## Scale and tonality
 
@@ -155,6 +180,7 @@ Currently: two fixed demo loops only.
 ## Sequencer / composition (scoped)
 
 - Bounded step grid—not piano-roll parity.
+- **Fixed 32-column grid** (two bars of 16ths at fixed cell size); BPM sets step seconds and playhead speed; not stretched to `loopDuration`.
 - **Presentation toggle**:
   - **Highlight**: full pitch set in scope; scale tones emphasized.
   - **Fold**: non-scale rows hidden; underlying chromatic data preserved.
@@ -183,8 +209,8 @@ No centralized server clock. **Drift between laptops** is intentional. Shared mu
 
 ## Open decisions
 
-- Exact **grid defaults** (steps, octave span), **editing gestures** (toggle vs drag), **undo**.
-- **Preset model**: factory presets vs blank slate; import/export (optional).
+- **Editing gestures** (toggle vs drag), **undo**. Grid is fixed at 32 columns (two bars) for v1.
+- **Preset model**: factory presets vs blank slate; import/export (optional). **localStorage** restore is the first persistence step—see §2b.
 - **Per-loop scale** in v1 or post-camp.
 - **Accordion**: strict one-expanded-row (current) vs allow multiple.
 - **Favorite / mute / solo** control naming and finale UX.
