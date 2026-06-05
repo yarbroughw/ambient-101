@@ -9,8 +9,7 @@ export class TapeLoop {
   private toneLoop: Tone.Loop | null = null
   private running = false
   private testing = false
-  private startedAtMs = 0
-  private testStartedAtMs = 0
+  private testStartAudioTime = 0
   private testDurationSec = 0
   private silenceAudio: (() => void) | null = null
   private prepareAudio: (() => void) | null = null
@@ -39,7 +38,7 @@ export class TapeLoop {
       return 0
     }
 
-    const elapsed = (performance.now() - this.testStartedAtMs) / 1000
+    const elapsed = Tone.now() - this.testStartAudioTime
     if (elapsed >= this.testDurationSec) {
       this.testing = false
       return this.testDurationSec
@@ -92,7 +91,6 @@ export class TapeLoop {
     this.toneLoop = new Tone.Loop(this.recording, this.durationSeconds)
     this.toneLoop.start(Tone.now())
     this.running = true
-    this.startedAtMs = performance.now()
   }
 
   stop(): void {
@@ -120,17 +118,26 @@ export class TapeLoop {
     }
 
     this.testing = true
-    this.testStartedAtMs = performance.now()
+    this.testStartAudioTime = Tone.now()
     this.testDurationSec = playbackDurationSec
     this.recording(Tone.now())
   }
 
   getProgress(): number {
-    if (!this.running) {
+    if (!this.running || !this.toneLoop) {
       return 0
     }
-    const elapsed = (performance.now() - this.startedAtMs) / 1000
-    return (elapsed % this.durationSeconds) / this.durationSeconds
+    return this.toneLoop.progress
+  }
+
+  getLoopTimeSec(): number {
+    if (this.running) {
+      return this.getProgress() * this.durationSeconds
+    }
+    if (this.testing) {
+      return this.getTestTimeSec()
+    }
+    return 0
   }
 
   dispose(): void {

@@ -43,10 +43,10 @@ export function useLoopProgress(
         }
 
         setProgress(p)
-        setLoopTimeSec(p * loop.duration)
+        setLoopTimeSec(loop.getLoopTimeSec())
         setAngleDeg(p * 360)
       } else {
-        setLoopTimeSec(loop.getTestTimeSec())
+        setLoopTimeSec(loop.getLoopTimeSec())
       }
 
       frameId = requestAnimationFrame(tick)
