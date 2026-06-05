@@ -1,6 +1,8 @@
-@import './styles/legacy-theme.css';
+@import './styles/theme.css';
+@import './styles/layout.css';
 
 :root {
+  --ui-scale: 1.1;
   font-family: var(--font-mono);
   line-height: 1.4;
   font-weight: 400;
@@ -10,6 +12,10 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  zoom: var(--ui-scale);
 }
 
 *,
@@ -24,7 +30,7 @@ body {
 }
 
 #root {
-  max-width: 520px;
+  max-width: 720px;
   margin: 0 auto;
   padding: 60px 10px 40px;
 }

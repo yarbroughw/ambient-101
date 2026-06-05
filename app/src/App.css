@@ -3,11 +3,49 @@
 }
 
 .toolbar {
+  display: grid;
+  grid-template-columns: 1fr minmax(140px, 280px) 1fr;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  min-height: 30px;
+}
+
+.toolbar__spectrum {
+  justify-self: center;
+  width: 100%;
+}
+
+.toolbar__left {
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-bottom: 12px;
-  min-height: 30px;
+  justify-self: start;
+}
+
+.toolbar > .toolbar__effects {
+  justify-self: end;
+}
+
+.toolbar__effects {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.toolbar__effects-fx {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.toolbar__effects-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--color-outline);
+  opacity: 0.55;
+  flex-shrink: 0;
 }
 
 .ensemble-btn {
@@ -39,9 +77,8 @@
   text-transform: lowercase;
 }
 
-.loop-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, var(--loop-panel-width));
-  gap: 10px;
-  justify-content: start;
+.loop-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }

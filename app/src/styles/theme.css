@@ -1,4 +1,4 @@
-/* Palette from legacy/sketch-v1/modules/colors.js */
+/* Colors match sketch-v1 (see /legacy/sketch-v1/modules/colors.js in the repo). */
 :root {
   --color-play: #8bb95a;
   --color-stop: #e17a6b;
@@ -12,7 +12,4 @@
   --color-spectrum-border: rgba(87, 86, 86, 0.3);
 
   --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
-  --loop-panel-width: 100px;
-  --loop-panel-height: 140px;
-  --loop-circle-size: 50px;
 }

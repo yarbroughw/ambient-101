@@ -35,8 +35,3 @@ export function dotHeadStyle(dotFlash: number): CSSProperties {
   }
 }
 
-/** Tone Meter normalRange returns raw waveform RMS, not always 0–1. */
-export function normalizeMeterLevel(raw: number): number {
-  const boosted = raw * 5
-  return Math.min(1, Math.max(0, boosted))
-}

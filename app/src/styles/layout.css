@@ -1,0 +1,9 @@
+:root {
+  --loop-panel-width: 100px;
+  --loop-panel-height: 140px;
+  --loop-circle-size: 44px;
+  --loop-row-padding-y: 13px;
+  --loop-row-height: calc(var(--loop-circle-size) + var(--loop-row-padding-y) * 2);
+  --mini-melody-max-width: 275px;
+  --content-meta-min-width: 92px;
+}

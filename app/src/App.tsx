@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
+import { GlobalEffectsToolbar } from './components/GlobalEffectsToolbar'
+import { MasterSpectrum } from './components/MasterSpectrum'
 import { StartAudioButton } from './components/StartAudioButton'
-import { TapeLoopCard } from './components/TapeLoopCard'
+import { TapeLoopRow } from './components/TapeLoopRow'
 import { createDemoTapeLoops } from './audio/demoPatterns'
-import './components/TapeLoopCard.css'
+import './components/MasterSpectrum.css'
+import './components/TapeLoopRow.css'
 import './App.css'
 
 export default function App() {
   const [audioReady, setAudioReady] = useState(false)
   const [runningById, setRunningById] = useState<Record<string, boolean>>({})
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const demoLoops = useMemo(() => {
     if (!audioReady) {
@@ -46,40 +50,55 @@ export default function App() {
     }
   }
 
+  function handleExpandedChange(id: string, expanded: boolean) {
+    setExpandedId(expanded ? id : null)
+  }
+
   return (
     <div className="app">
       <div className="toolbar">
-        {!audioReady ? (
-          <StartAudioButton onReady={() => setAudioReady(true)} />
-        ) : (
-          <>
-            <button
-              type="button"
-              className="ensemble-btn ensemble-btn--play"
-              disabled={!demoLoops}
-              onClick={startAll}
-            >
-              play all
-            </button>
-            <button
-              type="button"
-              className="ensemble-btn ensemble-btn--stop"
-              disabled={!demoLoops}
-              onClick={stopAll}
-            >
-              stop all
-            </button>
-          </>
-        )}
+        <div className="toolbar__left">
+          {!audioReady ? (
+            <StartAudioButton onReady={() => setAudioReady(true)} />
+          ) : (
+            <>
+              <button
+                type="button"
+                className="ensemble-btn ensemble-btn--play"
+                disabled={!demoLoops}
+                onClick={startAll}
+              >
+                play all
+              </button>
+              <button
+                type="button"
+                className="ensemble-btn ensemble-btn--stop"
+                disabled={!demoLoops}
+                onClick={stopAll}
+              >
+                stop all
+              </button>
+            </>
+          )}
+        </div>
+        <div className="toolbar__spectrum">
+          <MasterSpectrum active={audioReady} />
+        </div>
+        <GlobalEffectsToolbar disabled={!audioReady} />
       </div>
 
-      <section className="loop-grid" aria-label="Tape loops">
+      <section className="loop-stack" aria-label="Tape loops">
         {demoLoops?.map(({ pattern, loop }) => (
-          <TapeLoopCard
+          <TapeLoopRow
             key={pattern.id}
+            pattern={pattern}
             loop={loop}
             running={runningById[pattern.id] ?? false}
+            expanded={expandedId === pattern.id}
             onRunningChange={(running) => setRunning(pattern.id, running)}
+            onExpandedChange={(expanded) =>
+              handleExpandedChange(pattern.id, expanded)
+            }
           />
         ))}
       </section>
