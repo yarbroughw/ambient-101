@@ -31,7 +31,7 @@ The app in `app/` is past scaffold: audio and a first-pass loop UI are working.
 
 ### UI (interim layout)
 
-- **Legacy palette** from v1 (`legacy-theme.css`).
+- **Workshop palette** from sketch-v1 (`theme.css`; colors sourced from `legacy/sketch-v1/`).
 - **Toolbar**: play all / stop all after audio starts.
 - **Loop grid**: square `TapeLoopCard` panels (100×140px) in a responsive grid—**placeholder layout** until horizontal rows land (see below).
 - **Per card**: label, transport (play / stop / test), circular reel with 12 o’clock tick, rotating playhead dot, lap flash at cycle start (white pulse), inline loop duration edit.
