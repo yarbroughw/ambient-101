@@ -1,71 +1,172 @@
-# Ambient 101 — workshop web app (design snapshot)
+# Ambient 101 — workshop web app
 
-This document captures the agreed direction as of the initial scaffold. It is the source of truth for product scope until superseded.
+Source of truth for product scope and implementation direction.
 
 ## Background
 
 - **v1** was a p5.js + Tone.js + Tonal.js sketch (ITP Camp 2025), optimized for learning by editing code in the p5 web editor. It lives in the repo as `legacy/sketch-v1/`.
-- **This app** is a hosted, full web application for a **re-run of the workshop** with a **narrower scope**: participants compose and control sound **through the UI**, not by modifying source code. Instructor explanations can focus on **listening and theory** (phase, loop length, tonality/modality) rather than programming.
+- **This app** is a hosted web application for a **re-run of the workshop** with a **narrower scope**: participants compose and control sound **through the UI**, not by modifying source code. Instructor explanations can focus on **listening and theory** (phase, loop length, tonality/modality) rather than programming.
 
-Workshop slides (`Generative Music Workshop.pdf` at repo root) motivate concepts such as incommensurable tape loops, coprime lengths, time/space analogies (BPM vs Hz), scales/modes, and relative keys. **Markov chains** and **Euclidean rhythms** appear in the slides and in v1 code but are **explicitly out of scope for the first shipped version** of this app (they may return later as optional/advanced features).
+Workshop slides (`Generative Music Workshop.pdf` at repo root) motivate concepts such as incommensurable tape loops, coprime lengths, time/space analogies (BPM vs Hz), scales/modes, and relative keys. **Markov chains** and **Euclidean rhythms** appear in the slides and in v1 code but are **out of scope** until after a camp-ready release (they may return as optional/advanced features).
 
 ## Goals
 
-1. **Reliable workshop delivery**: one URL, predictable audio startup (browser autoplay policies), enough guardrails that attendees rarely “break” the tab.
+1. **Reliable workshop delivery**: one URL, predictable audio startup (browser autoplay policies), guardrails so attendees rarely break the tab.
 2. **Compose loops in the UI**: a bounded sequencer-style surface—not an open-ended DAW.
 3. **Laptop orchestra**: many machines contribute **independent tape loops**; the facilitator uses **tonality/modality** and **loop length relationships** as teaching hooks.
-4. **Instructor demo**: **multiple tape loops in one interface** so a single laptop can demonstrate without juggling separate projects.
-5. **Participant workflow**: attendees may **develop several loops** and **pick a favorite** for sharing; only at the **very end** does the group aim for **roughly one sounding loop per laptop** so the room reads as N voices, not N×layers.
+4. **Instructor demo**: **multiple tape loops in one interface** on a single laptop.
+5. **Participant workflow**: attendees develop several loops and pick a favorite; at the **finale**, roughly **one loop audible per laptop** so the room reads as N voices, not N×layers.
 
-## Naming and versioning
+## Shipped today (Phase 1)
 
-- **Product name** (working): align with **Ambient 101** / “tape loop orchestra” framing used in the workshop.
-- **Technical versioning**: follow **semver** in `package.json` (e.g. `0.x` until a camp-ready freeze, then `1.0.0` for a pinned build). Marketing “2.0” is optional language for “successor to the p5 sketch” and does not need to match semver.
+The app in `app/` is past scaffold: audio and a first-pass loop UI are working.
 
-## Core concepts (audio + UX)
+### Audio
 
-### Tape loops
+- **Browser audio gate** (`StartAudioButton` → `ensureAudioStarted`).
+- **`TapeLoop`**: `Tone.Loop`-driven period, independent per loop; `start` / `stop` / `test`; wall-clock `getProgress()` for visuals; editable loop duration.
+- **Per-loop voice**: pad synth → filter → gain → meter → shared reverb; `silence` / `prepare` on transport changes.
+- **Schedulable note sink**: notes scheduled on the Transport so `stop` cancels future hits; fresh loop instance on each `start` avoids overlap.
+- **Demo content**: two hardcoded patterns in C minor—`bass` (7s), `melody1` (11s)—compiled from imperative `TapeLoopCallback`s in `demoPatterns.ts`.
 
-- Each loop has a **length** (time) and **content** (pitched pattern). Loops run **asynchronously** relative to one another so they **drift in phase**, producing long-period repetition (the pedagogical link to Eno / Airports and coprime lengths).
+### UI (interim layout)
 
-### Multiple loops per browser
+- **Legacy palette** from v1 (`legacy-theme.css`).
+- **Toolbar**: play all / stop all after audio starts.
+- **Loop grid**: square `TapeLoopCard` panels (100×140px) in a responsive grid—**placeholder layout** until horizontal rows land (see below).
+- **Per card**: label, transport (play / stop / test), circular reel with 12 o’clock tick, rotating playhead dot, lap flash at cycle start (white pulse), inline loop duration edit.
 
-- **Multiple loops per tab** are a **first-class** requirement: create/manage several loops, **mute/solo**, compare, and designate a **favorite** (or “the one I’ll use for the finale”)—exact control naming TBD during implementation.
-- **Finale behavior** is a **facilitation rule**: ask everyone to have **only one loop audible** when listening as a full ensemble. Optional future guardrail: a dedicated “ensemble listen” mode that mutes non-selected loops (not required for first milestone).
+### Not yet built
 
-### Sequencer / composition UI (scoped)
+- User-authored patterns, sequencer grid, instrument/scale controls, mute/solo/favorite, add/remove loops, horizontal bar layout, mini melody view, reel level visualization (meter hook exists on `TapeLoop` but is not wired to the UI).
 
-- **Pitch dimension**: user can work in **chromatic** mode or in **named scales/modes** (scale-aware editing).
-- **Presentation toggle** (two modes):
-  - **Highlight**: show the full chromatic grid (or full pitch set in scope); **scale tones are visually emphasized**; non-scale cells remain visible.
-  - **Fold**: **non-scale tones are hidden** (or collapsed) so every visible step is in-scale. Useful for beginners; switching scales mid-edit should not silently destroy data—implementation should prefer a stable underlying representation (e.g. chromatic + mask) so notes outside the current scale are preserved when switching back to highlight/chromatic.
+## Target UI: horizontal tape loop rows
 
-**Explicit non-goals for first ship**: piano-roll parity, arbitrary polyphony editing, Euclidean/Markov generators, open-ended plugin architecture.
+Loops are **full-width horizontal bars**, **stacked vertically**—not a grid of square tiles. Expanding a loop grows the row **downward**, which is easier to picture than expanding inside a fixed tile.
 
-### Randomness
+### Collapsed row (summary, read-only)
 
-- Any **randomized** behavior (e.g. humanize, pattern fill, stochastic picks) should support a user-visible **random seed** so outcomes are **reproducible** (demo, debugging, “same seed, different loop length” comparisons).
+Left-to-right (exact order TBD during implementation):
 
-### Orchestra “sync” (clarification)
+- Transport: play, stop, test
+- **Reel** + rotating playhead (loop period), with lap flash at 12 o’clock
+- **Loop duration** (seconds)
+- Label
+- **Metadata strip**: instrument, scale (if shown), tempo or derived melody span
+- **Mini melody view** (see below)
 
-- There is **no requirement** for centralized server clock sync in the initial design. Natural **drift** between laptops is part of the aesthetic and the lesson.
-- If **shared musical references** (e.g. global tonic, shared scale family) are added later, they are **orthogonal** to the random seed and should be spelled out in a future revision of this doc.
+One loop expanded at a time (accordion) is the default expectation.
 
-## Technology direction
+### Expanded row (editable)
 
-- **Stack**: Vite + TypeScript + React for the application in `app/` (`package.json` name `ambient-101-app`, semver from `0.1.0` until a camp-ready release).
-- **Audio / theory**: **Tone.js** for scheduling, synthesis, and transport; **Tonal** (or `@tonaljs/*` as appropriate) for scales, degrees, and naming—aligned with v1 capabilities but without exposing code to participants.
+Same summary strip at top (or sticky), plus:
 
-## Repository layout (initial)
+- Note grid for melody definition
+- Instrument selector
+- Duration controls for **loop** and **melody** (see Time model)
+- Other per-loop settings as they are added
+
+### Dual clocks (why two playheads)
+
+Tape loops teach two different durations:
+
+| Clock | Domain | UI |
+|-------|--------|-----|
+| **Tape loop** | Full loop period (e.g. 30s) | Reel rotation + lap flash |
+| **Melody** | Musical content only (e.g. 2s of notes inside that 30s) | Mini melody view + horizontal playhead |
+
+The reel answers: *when does this loop come back around relative to the others?*  
+The mini melody answers: *when do notes fire inside one pass of the tape?*
+
+Those are intentionally separate so sparse long loops (short gesture, long silence) stay legible.
+
+### Mini melody view
+
+- **X-axis = melody content only**, not full loop duration. If the loop is 30s and sounding content spans 2s, the mini view is 2s wide—no empty 28s tail.
+- Notes render as a compact timeline (position/size from note times and lengths).
+- **Playhead** scans left → right over the mini view while `loopTime` is inside the melody window; sits at the end (or idles) during the silent tail; resets each loop lap.
+- **Expanded editor** may show the full loop timeline (0…loop duration) for placement; the collapsed mini view stays content-only.
+
+## Time model
+
+### Canonical storage: seconds on the tape
+
+- **`loopDuration`**: seconds—drives `Tone.Loop`, reel, and coprime-length pedagogy.
+- **Note events**: `startTime`, sounding duration, pitch, velocity—in seconds relative to loop start.
+- **`melodySpan`**: derived from content (start of first note → end of last sounding note), or an explicit pattern-length cap—used for validation and the mini view width.
+
+**Tempo (BPM)** and **bars/beats** are an **editing lens** for the grid (`step width ∝ 60/bpm`), not a replacement for loop duration. Always show derived **melody span** alongside loop duration (e.g. `2.4s / 30s`).
+
+### Validation (no dialogs)
+
+Invalid states must be **unreachable**, not corrected after the fact. No modal dialogs for duration conflicts.
+
+**Rules:**
+
+1. `melodySpan ≤ loopDuration`
+2. Every note: `startTime + soundingDuration ≤ loopDuration`
+
+**Bidirectional UI clamps:**
+
+| Control | Floor | Ceiling |
+|---------|-------|---------|
+| Loop duration | `melodySpan` | app maximum (e.g. 60s) |
+| Melody extent | — | `loopDuration` |
+
+If melody is 7s, the loop-duration control **cannot go below 7s**. If loop is 30s, melody **cannot extend past 30s**.
+
+**Preferred control**: Ableton-style **dials** with a **greyed inactive arc** for the forbidden range (e.g. loop dial shows 0–7s greyed when melody is 7s). Steppers, sliders with dead zones, and non-draggable grid boundaries are acceptable alternatives. Drag, scroll, and keyboard nudging all respect the same clamps.
+
+When the user shortens the pattern (delete notes), `melodySpan` drops and the loop-duration floor moves down live.
+
+When tempo or bar count changes, recompute `melodySpan` and apply the same ceilings—still no dialogs.
+
+## Scale and tonality
+
+- **Default for orchestra**: shared global key/scale (e.g. facilitator sets “everyone in C minor”) is enough for the group lesson.
+- **Per-loop scale**: optional later—useful for display and fold/highlight in the editor; only show in the collapsed strip when it differs from global.
+- **Representation**: stable **chromatic note storage + scale mask** so switching scale/fold/highlight does not destroy out-of-scale notes.
+
+## Multiple loops per browser
+
+- Several loops per tab: create, reorder, **mute/solo**, compare, designate a **favorite** for the finale.
+- **Finale** is a facilitation rule: one audible loop per laptop. Optional later: an “ensemble listen” mode that mutes non-selected loops.
+
+Currently: two fixed demo loops only.
+
+## Sequencer / composition (scoped)
+
+- Bounded step grid—not piano-roll parity.
+- **Presentation toggle**:
+  - **Highlight**: full pitch set in scope; scale tones emphasized.
+  - **Fold**: non-scale rows hidden; underlying chromatic data preserved.
+- **Explicit non-goals for camp-ready v1**: arbitrary polyphony editing, Euclidean/Markov generators, open-ended plugin architecture.
+
+## Randomness
+
+Any randomized behavior should expose a **random seed** for reproducible demos and debugging.
+
+## Orchestra “sync”
+
+No centralized server clock. **Drift between laptops** is intentional. Shared musical references (global tonic, scale family), if added, are orthogonal to random seed.
+
+## Technology
+
+- **App**: Vite + TypeScript + React in `app/` (`ambient-101-app`, semver `0.x` until camp freeze).
+- **Audio / theory**: Tone.js for scheduling and synthesis; Tonal for scales, degrees, and naming.
+
+## Repository layout
 
 ```
 /docs/design.md          — this document
-/legacy/sketch-v1/       — frozen reference implementation (p5 + scripts)
-/app/                    — Vite React app (scaffold)
+/legacy/sketch-v1/       — frozen p5 reference
+/app/                    — Vite React app (Phase 1 shipped)
 ```
 
-## Open decisions (to resolve during implementation)
+## Open decisions
 
-- Exact **grid size defaults** (steps per loop, octave span), **editing gestures** (toggle vs drag), and **undo** behavior.
-- **Preset/content** model: factory presets vs blank slate; import/export of patches (optional).
-- **Visualization**: minimal playhead/phase view vs richer loop timeline (balance polish vs schedule).
+- Exact **grid defaults** (steps, octave span), **editing gestures** (toggle vs drag), **undo**.
+- **Preset model**: factory presets vs blank slate; import/export (optional).
+- **Per-loop scale** in v1 or post-camp.
+- **Accordion**: strict one-expanded-row vs allow multiple.
+- **Favorite / mute / solo** control naming and finale UX.
