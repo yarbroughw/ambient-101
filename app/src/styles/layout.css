@@ -6,4 +6,5 @@
   --loop-row-height: calc(var(--loop-circle-size) + var(--loop-row-padding-y) * 2);
   --mini-melody-max-width: 275px;
   --content-meta-min-width: 92px;
+  --loop-label-width: 48px;
 }

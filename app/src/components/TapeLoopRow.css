@@ -1,6 +1,38 @@
 .tape-loop-row {
+  position: relative;
   background: var(--color-loop-bg);
   border: 1px solid var(--color-outline);
+}
+
+.tape-loop-row__delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 4;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-stop);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tape-loop-row__delete:hover:not(:disabled) {
+  color: #c44;
+}
+
+.tape-loop-row__delete:disabled {
+  opacity: 0.45;
+}
+
+.tape-loop-row.is-expanded {
+  background: color-mix(in srgb, var(--color-loop-bg) 92%, #fff);
 }
 
 @keyframes tape-loop-row-lap-flash {
@@ -28,7 +60,7 @@
   align-items: center;
   gap: 12px;
   min-height: var(--loop-row-height);
-  padding: var(--loop-row-padding-y) 10px;
+  padding: var(--loop-row-padding-y) 26px var(--loop-row-padding-y) 10px;
 }
 
 .tape-loop-row__controls {
@@ -181,12 +213,23 @@
 
 .tape-loop-row__label {
   margin: 0;
+  flex: 0 0 var(--loop-label-width);
+  width: var(--loop-label-width);
+  min-width: var(--loop-label-width);
+  max-width: var(--loop-label-width);
+  overflow: hidden;
+}
+
+.tape-loop-row__label-text {
+  display: block;
+  font-family: var(--font-mono);
   font-size: 10px;
   line-height: 1;
   text-transform: lowercase;
   color: var(--color-labels);
-  flex-shrink: 0;
-  min-width: 48px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tape-loop-row__tape-content {
@@ -289,9 +332,3 @@
   padding: 12px 10px 14px;
 }
 
-.tape-loop-row__editor-placeholder {
-  margin: 0;
-  font-size: 9px;
-  color: var(--color-labels);
-  text-transform: lowercase;
-}

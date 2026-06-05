@@ -1,0 +1,125 @@
+:root {
+  --melody-grid-cell-size: 16px;
+}
+
+.melody-grid__scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  padding-bottom: 2px;
+}
+
+.melody-grid__frame {
+  position: relative;
+  width: max-content;
+  min-width: 100%;
+}
+
+.melody-grid {
+  display: grid;
+  gap: 1px;
+  width: max-content;
+  min-width: 100%;
+}
+
+.melody-grid__playhead-layer {
+  position: absolute;
+  top: 15px;
+  left: 45px;
+  bottom: 0;
+  width: calc(
+    var(--melody-grid-column-count) * var(--melody-grid-cell-size) +
+      (var(--melody-grid-column-count) - 1) * 1px
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
+.melody-grid__playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #fff;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+}
+
+.melody-grid__corner {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--color-loop-bg);
+}
+
+.melody-grid__col-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 14px;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--color-labels);
+  user-select: none;
+}
+
+.melody-grid__row {
+  display: contents;
+}
+
+.melody-grid__row-label {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding-right: 4px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--color-outline);
+  background: var(--color-loop-bg);
+  user-select: none;
+}
+
+.melody-grid__row-label--extra {
+  color: var(--color-labels);
+  font-style: italic;
+}
+
+.melody-grid__cell {
+  width: var(--melody-grid-cell-size);
+  height: var(--melody-grid-cell-size);
+  padding: 0;
+  border: 1px solid rgba(150, 150, 150, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+}
+
+.melody-grid__cell--chromatic {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.melody-grid__cell:hover:not(:disabled) {
+  border-color: var(--color-outline);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.melody-grid__cell--active {
+  background: var(--color-active);
+  border-color: var(--color-active);
+  opacity: 0.9;
+}
+
+.melody-grid__cell--active:hover:not(:disabled) {
+  opacity: 1;
+}
+
+.melody-grid__cell:focus-visible {
+  outline: 1px solid var(--color-active);
+  outline-offset: 1px;
+}
+
+.melody-grid__cell:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}

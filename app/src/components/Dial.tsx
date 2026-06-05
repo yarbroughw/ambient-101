@@ -8,6 +8,7 @@ type DialProps = {
   max?: number
   step?: number
   disabled?: boolean
+  formatReadout?: (value: number) => string
   onChange: (value: number) => void
 }
 
@@ -56,6 +57,7 @@ export function Dial({
   max = 1,
   step = 0.01,
   disabled = false,
+  formatReadout,
   onChange,
 }: DialProps) {
   const dragRef = useRef<{ y: number; value: number } | null>(null)
@@ -151,7 +153,9 @@ export function Dial({
             />
           ) : null}
         </svg>
-        <span className="dial__readout">{Math.round(ratio * 100)}</span>
+        <span className="dial__readout">
+          {formatReadout ? formatReadout(value) : Math.round(ratio * 100)}
+        </span>
       </div>
       <span className="dial__label">{label}</span>
     </div>

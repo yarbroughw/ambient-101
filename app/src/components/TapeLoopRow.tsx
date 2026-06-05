@@ -1,11 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { melodyBounds, type LoopPattern } from '../audio/patternTypes'
+import { minLoopDurationForBpm } from '../lib/gridLayout'
 import type { TapeLoop } from '../audio/tapeLoop'
 import { useLoopLevel } from '../hooks/useLoopLevel'
 import { useLoopProgress } from '../hooks/useLoopProgress'
+import { LoopEditor } from './LoopEditor'
+import { LoopLabel } from './LoopLabel'
 import { LoopLevelMeter } from './LoopLevelMeter'
 import { MiniMelodyView } from './MiniMelodyView'
+import './LoopEditor.css'
 import './LoopLevelMeter.css'
+import './MelodyGrid.css'
 
 type TapeLoopRowProps = {
   pattern: LoopPattern
@@ -14,6 +19,7 @@ type TapeLoopRowProps = {
   expanded: boolean
   onRunningChange: (running: boolean) => void
   onExpandedChange: (expanded: boolean) => void
+  onDelete: () => void
   disabled?: boolean
 }
 
@@ -24,22 +30,24 @@ export function TapeLoopRow({
   expanded,
   onRunningChange,
   onExpandedChange,
+  onDelete,
   disabled = false,
 }: TapeLoopRowProps) {
   const [duration, setDuration] = useState(loop.duration)
-  const [editingLength, setEditingLength] = useState(false)
   const [testNonce, setTestNonce] = useState(0)
   const { angleDeg, lapFlashKey, loopTimeSec, melodyPlaybackActive } =
     useLoopProgress(loop, running, testNonce)
   const { level, peak } = useLoopLevel(loop, melodyPlaybackActive)
-  const { span: melodySpan, end: melodyEnd } = melodyBounds(pattern.notes)
-  const durationMin = Math.max(2, melodySpan)
+  const { end: melodyEnd } = melodyBounds(pattern.notes)
 
-  useEffect(() => {
-    if (!expanded) {
-      setEditingLength(false)
+  function handleLoopDurationChange(next: number) {
+    const floor = Math.max(2, minLoopDurationForBpm(pattern.bpm))
+    if (!Number.isFinite(next) || next < floor) {
+      return
     }
-  }, [expanded])
+    setDuration(next)
+    loop.setDuration(next)
+  }
 
   return (
     <article
@@ -47,6 +55,16 @@ export function TapeLoopRow({
       className={`tape-loop-row${running ? ' tape-loop-row--lap' : ''}${expanded ? ' is-expanded' : ''}${running ? ' is-running' : ''}`}
       aria-label={pattern.label}
     >
+      <button
+        type="button"
+        className="tape-loop-row__delete"
+        disabled={disabled}
+        aria-label={`Delete ${pattern.label}`}
+        onClick={onDelete}
+      >
+        ×
+      </button>
+
       <div className="tape-loop-row__summary">
         <div className="tape-loop-row__controls">
           <button
@@ -103,50 +121,12 @@ export function TapeLoopRow({
               />
             </div>
           ) : null}
-          {expanded && editingLength ? (
-            <input
-              className="tape-loop-row__duration-input"
-              type="number"
-              min={durationMin}
-              max={60}
-              step={0.5}
-              value={duration}
-              disabled={disabled}
-              autoFocus
-              aria-label={`${pattern.label} loop length in seconds`}
-              onBlur={() => setEditingLength(false)}
-              onChange={(e) => {
-                const next = Number(e.target.value)
-                if (!Number.isFinite(next) || next < durationMin) {
-                  return
-                }
-                setDuration(next)
-                loop.setDuration(next)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  setEditingLength(false)
-                }
-              }}
-            />
-          ) : expanded ? (
-            <button
-              type="button"
-              className="tape-loop-row__duration"
-              disabled={disabled}
-              title="Click to edit loop length"
-              onClick={() => setEditingLength(true)}
-            >
-              {duration.toFixed(1)}s
-            </button>
-          ) : (
-            <span className="tape-loop-row__duration-readonly">
-              {duration.toFixed(1)}s
-            </span>
-          )}
+          <span className="tape-loop-row__duration-readonly">
+            {duration.toFixed(1)}s
+          </span>
         </div>
 
-        <p className="tape-loop-row__label">{pattern.label}</p>
+        <LoopLabel label={pattern.label} />
 
         <div className="tape-loop-row__tape-content">
           <MiniMelodyView
@@ -173,10 +153,15 @@ export function TapeLoopRow({
       </div>
 
       {expanded ? (
-        <div className="tape-loop-row__editor" aria-label={`${pattern.label} editor`}>
-          <p className="tape-loop-row__editor-placeholder">
-            Sequencer editor coming soon — note grid, instrument selector, and duration dials.
-          </p>
+        <div className="tape-loop-row__editor">
+          <LoopEditor
+            pattern={pattern}
+            loopDuration={duration}
+            loopTimeSec={loopTimeSec}
+            showPlayhead={running}
+            disabled={disabled}
+            onLoopDurationChange={handleLoopDurationChange}
+          />
         </div>
       ) : null}
     </article>
