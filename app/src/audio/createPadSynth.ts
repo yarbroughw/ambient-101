@@ -1,20 +1,8 @@
 import * as Tone from 'tone'
+import { getGlobalEffectInput } from './globalEffects'
 import type { NoteSink } from './types'
 
-const OUTPUT_GAIN = 0.15
-
-let sharedReverb: Tone.Reverb | null = null
-
-function getSharedReverb(): Tone.Reverb {
-  if (!sharedReverb) {
-    sharedReverb = new Tone.Reverb({
-      decay: 6,
-      preDelay: 0.03,
-      wet: 0.75,
-    }).toDestination()
-  }
-  return sharedReverb
-}
+const OUTPUT_GAIN = 0.42
 
 type SynthChain = {
   synth: Tone.PolySynth
@@ -28,7 +16,7 @@ function buildSynthChain(): SynthChain {
   synth.set({
     oscillator: { type: 'sawtooth' },
     envelope: { attack: 1, decay: 1, sustain: 0.7, release: 4 },
-    volume: -12,
+    volume: -8,
   })
 
   const filter = new Tone.Filter({
@@ -37,12 +25,12 @@ function buildSynthChain(): SynthChain {
     rolloff: -12,
   })
   const gain = new Tone.Gain(OUTPUT_GAIN)
-  const meter = new Tone.Meter({ normalRange: true, smoothing: 0.65 })
+  const meter = new Tone.Meter({ normalRange: true, smoothing: 0.45 })
 
   synth.connect(filter)
   filter.connect(gain)
   gain.connect(meter)
-  meter.connect(getSharedReverb())
+  meter.connect(getGlobalEffectInput())
 
   return { synth, filter, gain, meter }
 }
