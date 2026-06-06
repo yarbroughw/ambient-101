@@ -175,9 +175,11 @@ export class TapeLoop {
     const wasRunning = this.running
     if (wasRunning) {
       this.stop()
-    } else {
-      this.disposeToneLoop()
-      this.toneLoop = new Tone.Loop(this.recording, this.durationSeconds)
+      this.start()
+      return
     }
+
+    this.disposeToneLoop()
+    this.toneLoop = new Tone.Loop(this.recording, this.durationSeconds)
   }
 }

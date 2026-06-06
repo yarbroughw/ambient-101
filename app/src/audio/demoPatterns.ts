@@ -3,7 +3,7 @@ import { compilePatternToSink } from './compilePattern'
 import { createLoopVoice } from './createPadSynth'
 import { createPluckLoopVoice } from './createPluckSynth'
 import { createSchedulableNoteSink } from './schedulableNoteSink'
-import type { LoopPattern } from './patternTypes'
+import type { LoopPattern, PatternNote } from './patternTypes'
 import { TapeLoop } from './tapeLoop'
 
 const SCALE = 'C4 minor'
@@ -62,6 +62,7 @@ const melody2Template: Omit<LoopPattern, 'id' | 'label'> = {
 export type DemoLoop = {
   pattern: LoopPattern
   loop: TapeLoop
+  rebindNotes: (notes: PatternNote[]) => void
 }
 
 function createVoiceForInstrument(instrument: string) {
@@ -71,7 +72,7 @@ function createVoiceForInstrument(instrument: string) {
   return createLoopVoice()
 }
 
-function bindPattern(pattern: LoopPattern): TapeLoop {
+function bindPattern(pattern: LoopPattern): DemoLoop {
   const loop = new TapeLoop(pattern.label, pattern.loopDuration)
   const voice = createVoiceForInstrument(pattern.instrument)
   const sink = createSchedulableNoteSink(
@@ -83,15 +84,18 @@ function bindPattern(pattern: LoopPattern): TapeLoop {
     (id) => loop.addScheduledNote(id),
   )
 
-  loop
-    .record(compilePatternToSink(pattern.notes, sink))
-    .bindAudioHooks({
-      silence: voice.silence,
-      prepare: voice.prepare,
-      getLevel: voice.getLevel,
-    })
+  function rebindNotes(notes: PatternNote[]) {
+    loop.record(compilePatternToSink(notes, sink))
+  }
 
-  return loop
+  rebindNotes(pattern.notes)
+  loop.bindAudioHooks({
+    silence: voice.silence,
+    prepare: voice.prepare,
+    getLevel: voice.getLevel,
+  })
+
+  return { pattern, loop, rebindNotes }
 }
 
 export function createMelody1Pattern(id: string, label: string): LoopPattern {
@@ -113,7 +117,7 @@ export function createMelody2Pattern(id: string, label: string): LoopPattern {
 }
 
 export function createTapeLoop(pattern: LoopPattern): DemoLoop {
-  return { pattern, loop: bindPattern(pattern) }
+  return bindPattern(pattern)
 }
 
 export function createDemoTapeLoops(): DemoLoop[] {
