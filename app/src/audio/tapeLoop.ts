@@ -84,6 +84,7 @@ export class TapeLoop {
       return
     }
 
+    this.testing = false
     this.prepareAudio?.()
     this.clearScheduledNotes()
     this.disposeToneLoop()
@@ -173,13 +174,26 @@ export class TapeLoop {
     }
 
     const wasRunning = this.running
+    const savedProgress =
+      wasRunning && this.toneLoop ? this.toneLoop.progress : 0
+
+    this.clearScheduledNotes()
+
+    if (this.toneLoop) {
+      this.toneLoop.stop(Tone.now())
+      this.toneLoop.cancel(Tone.now())
+    }
+    this.disposeToneLoop()
+
+    this.toneLoop = new Tone.Loop(this.recording, this.durationSeconds)
+
     if (wasRunning) {
-      this.stop()
-      this.start()
+      const offsetSec = savedProgress * this.durationSeconds
+      this.toneLoop.start(Tone.now() - offsetSec)
+      this.running = true
       return
     }
 
-    this.disposeToneLoop()
-    this.toneLoop = new Tone.Loop(this.recording, this.durationSeconds)
+    this.running = false
   }
 }

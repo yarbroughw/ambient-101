@@ -44,6 +44,17 @@ function readMeterLevel(meter: Tone.Meter): number {
 export function createPluckLoopVoice(): LoopVoice {
   let chain: SynthChain | null = buildSynthChain()
   let sink = createSynthNoteSink(chain.synth)
+  let volume = 1
+
+  function applyVolume() {
+    if (!chain) {
+      return
+    }
+
+    const t = Tone.now()
+    chain.gain.gain.cancelScheduledValues(t)
+    chain.gain.gain.rampTo(OUTPUT_GAIN * volume, 0.02)
+  }
 
   function disposeChain() {
     if (!chain) {
@@ -78,12 +89,20 @@ export function createPluckLoopVoice(): LoopVoice {
       disposeChain()
       chain = buildSynthChain()
       sink = createSynthNoteSink(chain.synth)
+      applyVolume()
     },
     getLevel() {
       if (!chain) {
         return 0
       }
       return readMeterLevel(chain.meter)
+    },
+    setVolume(amount: number) {
+      volume = Math.min(1, Math.max(0, amount))
+      applyVolume()
+    },
+    getVolume() {
+      return volume
     },
   }
 }

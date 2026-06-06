@@ -40,6 +40,8 @@ export type LoopVoice = {
   silence: () => void
   prepare: () => void
   getLevel: () => number
+  setVolume: (amount: number) => void
+  getVolume: () => number
 }
 
 function readMeterLevel(meter: Tone.Meter): number {
@@ -50,6 +52,17 @@ function readMeterLevel(meter: Tone.Meter): number {
 export function createLoopVoice(): LoopVoice {
   let chain: SynthChain | null = buildSynthChain()
   let sink = createSynthNoteSink(chain.synth)
+  let volume = 1
+
+  function applyVolume() {
+    if (!chain) {
+      return
+    }
+
+    const t = Tone.now()
+    chain.gain.gain.cancelScheduledValues(t)
+    chain.gain.gain.rampTo(OUTPUT_GAIN * volume, 0.02)
+  }
 
   function disposeChain() {
     if (!chain) {
@@ -84,12 +97,20 @@ export function createLoopVoice(): LoopVoice {
       disposeChain()
       chain = buildSynthChain()
       sink = createSynthNoteSink(chain.synth)
+      applyVolume()
     },
     getLevel() {
       if (!chain) {
         return 0
       }
       return readMeterLevel(chain.meter)
+    },
+    setVolume(amount: number) {
+      volume = Math.min(1, Math.max(0, amount))
+      applyVolume()
+    },
+    getVolume() {
+      return volume
     },
   }
 }

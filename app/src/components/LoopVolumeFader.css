@@ -1,0 +1,37 @@
+.loop-volume {
+  position: relative;
+  box-sizing: content-box;
+  width: 6px;
+  padding-left: 4px;
+  margin-left: -4px;
+  height: var(--loop-circle-size);
+  flex-shrink: 0;
+  cursor: ns-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.loop-volume--disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.loop-volume__notch {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+  pointer-events: none;
+}
+
+.loop-volume__triangle {
+  display: block;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid var(--color-outline);
+}
+
+.loop-volume:focus-visible .loop-volume__triangle {
+  border-left-color: var(--color-active);
+}

@@ -13,15 +13,17 @@ export function useLoopProgress(
   const [loopTimeSec, setLoopTimeSec] = useState(0)
   const [progress, setProgress] = useState(0)
   const [melodyPlaybackActive, setMelodyPlaybackActive] = useState(false)
+  const [testing, setTesting] = useState(false)
 
   useEffect(() => {
     let inLapWindow = false
     let frameId = 0
 
     const tick = () => {
-      const testing = loop.isTesting()
+      const isTesting = loop.isTesting() && !running
+      setTesting(isTesting)
 
-      if (!running && !testing) {
+      if (!running && !isTesting) {
         setMelodyPlaybackActive(false)
         setLoopTimeSec(0)
         setProgress(0)
@@ -62,5 +64,6 @@ export function useLoopProgress(
     loopTimeSec,
     progress: running ? progress : 0,
     melodyPlaybackActive,
+    testing,
   }
 }
