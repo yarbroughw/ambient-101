@@ -1,16 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
+import { AddLoopControls } from './components/AddLoopControls'
 import { GlobalEffectsToolbar } from './components/GlobalEffectsToolbar'
 import { MasterSpectrum } from './components/MasterSpectrum'
 import { StartAudioButton } from './components/StartAudioButton'
 import { TapeLoopRow } from './components/TapeLoopRow'
-import type { PatternNote } from './audio/patternTypes'
+import type { LoopPattern, PatternNote } from './audio/patternTypes'
+import { clampOctaveShift } from './lib/scaleSteps'
 import {
-  createDemoTapeLoops,
-  createMelody2Pattern,
+  createBlankPattern,
+  createPresetPattern,
   createTapeLoop,
-  nextMelody2IdAndLabel,
+  createTapeLoopsFromPatterns,
+  duplicatePattern,
+  LOOP_PRESETS,
+  nextAvailableIdAndLabel,
   type DemoLoop,
+  type LoopPresetId,
 } from './audio/demoPatterns'
+import { loadLoopPatterns, saveLoopPatterns } from './lib/loopStorage'
+import './components/AddLoopControls.css'
 import './components/MasterSpectrum.css'
 import './components/TapeLoopRow.css'
 import './App.css'
@@ -34,7 +42,7 @@ export default function App() {
 
   useEffect(() => {
     if (audioReady) {
-      setLoops(createDemoTapeLoops())
+      setLoops(createTapeLoopsFromPatterns(loadLoopPatterns()))
       return
     }
 
@@ -45,6 +53,14 @@ export default function App() {
     setRunningById({})
     setExpandedId(null)
   }, [audioReady])
+
+  useEffect(() => {
+    if (!audioReady || loops === null) {
+      return
+    }
+
+    saveLoopPatterns(loops.map(({ pattern }) => pattern))
+  }, [audioReady, loops])
 
   useEffect(() => {
     return () => {
@@ -136,6 +152,25 @@ export default function App() {
     setExpandedId(expanded ? id : null)
   }
 
+  function handleDuplicateLoop(id: string) {
+    setLoops((prev) => {
+      if (!prev) {
+        return prev
+      }
+
+      const index = prev.findIndex((entry) => entry.pattern.id === id)
+      if (index === -1) {
+        return prev
+      }
+
+      const duplicate = duplicatePattern(prev[index].pattern, prev)
+      const entry = createTapeLoop(duplicate)
+      const next = [...prev]
+      next.splice(index + 1, 0, entry)
+      return next
+    })
+  }
+
   function handleDeleteLoop(id: string) {
     setLoops((prev) => {
       if (!prev) {
@@ -161,15 +196,25 @@ export default function App() {
     setExpandedId((prev) => (prev === id ? null : prev))
   }
 
-  function handleAddLoop() {
+  function handleAddBlankLoop() {
     setLoops((prev) => {
       const existing = prev ?? []
-      const { id, label } = nextMelody2IdAndLabel(existing)
-      return [...existing, createTapeLoop(createMelody2Pattern(id, label))]
+      const { id, label } = nextAvailableIdAndLabel('loop', existing)
+      return [...existing, createTapeLoop(createBlankPattern(id, label))]
     })
   }
 
-  function handleNotesChange(id: string, notes: PatternNote[]) {
+  function handleAddPresetLoop(presetId: LoopPresetId) {
+    setLoops((prev) => {
+      const existing = prev ?? []
+      const preset = LOOP_PRESETS.find((entry) => entry.id === presetId)
+      const baseLabel = preset?.label ?? presetId
+      const { id, label } = nextAvailableIdAndLabel(baseLabel, existing)
+      return [...existing, createTapeLoop(createPresetPattern(presetId, id, label))]
+    })
+  }
+
+  function updatePattern(id: string, patch: Partial<LoopPattern>) {
     setLoops((prev) => {
       if (!prev) {
         return prev
@@ -180,8 +225,43 @@ export default function App() {
           return entry
         }
 
-        entry.rebindNotes(notes)
-        return { ...entry, pattern: { ...entry.pattern, notes } }
+        const nextPattern = { ...entry.pattern, ...patch }
+        entry.rebindPattern(nextPattern)
+        return { ...entry, pattern: nextPattern }
+      })
+    })
+  }
+
+  function handleNotesChange(id: string, notes: PatternNote[]) {
+    updatePattern(id, { notes })
+  }
+
+  function handleScaleChange(id: string, scale: string) {
+    updatePattern(id, { scale })
+  }
+
+  function handleOctaveShiftChange(id: string, octaveShift: number) {
+    updatePattern(id, { octaveShift: clampOctaveShift(octaveShift) })
+  }
+
+  function handleLabelChange(id: string, label: string) {
+    updatePattern(id, { label })
+  }
+
+  function handleVolumeChange(id: string, volume: number) {
+    const clamped = Math.min(1, Math.max(0, volume))
+    setLoops((prev) => {
+      if (!prev) {
+        return prev
+      }
+
+      return prev.map((entry) => {
+        if (entry.pattern.id !== id) {
+          return entry
+        }
+
+        entry.setVolume(clamped)
+        return { ...entry, pattern: { ...entry.pattern, volume: clamped } }
       })
     })
   }
@@ -197,8 +277,9 @@ export default function App() {
           return entry
         }
 
+        const nextPattern = { ...entry.pattern, loopDuration: duration }
         entry.loop.setDuration(duration)
-        return { ...entry, pattern: { ...entry.pattern, loopDuration: duration } }
+        return { ...entry, pattern: nextPattern }
       })
     })
   }
@@ -249,22 +330,27 @@ export default function App() {
               handleExpandedChange(pattern.id, expanded)
             }
             onNotesChange={(notes) => handleNotesChange(pattern.id, notes)}
+            onScaleChange={(scale) => handleScaleChange(pattern.id, scale)}
+            onOctaveShiftChange={(shift) =>
+              handleOctaveShiftChange(pattern.id, shift)
+            }
             onLoopDurationChange={(duration) =>
               handleLoopDurationChange(pattern.id, duration)
             }
+            onLabelChange={(label) => handleLabelChange(pattern.id, label)}
+            onVolumeChange={(volume) =>
+              handleVolumeChange(pattern.id, volume)
+            }
+            onDuplicate={() => handleDuplicateLoop(pattern.id)}
             onDelete={() => handleDeleteLoop(pattern.id)}
           />
         ))}
 
         {audioReady ? (
-          <button
-            type="button"
-            className="loop-stack__add"
-            aria-label="Add loop"
-            onClick={handleAddLoop}
-          >
-            +
-          </button>
+          <AddLoopControls
+            onAddBlank={handleAddBlankLoop}
+            onAddPreset={handleAddPresetLoop}
+          />
         ) : null}
       </section>
     </div>
