@@ -1,5 +1,5 @@
 export type PatternNote = {
-  pitch: string
+  scaleStep: number
   startTime: number
   duration: number
   velocity?: number
@@ -11,7 +11,9 @@ export type LoopPattern = {
   loopDuration: number
   bpm: number
   scale: string
+  octaveShift: number
   instrument: string
+  volume: number
   notes: PatternNote[]
 }
 

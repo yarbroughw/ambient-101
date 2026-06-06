@@ -40,6 +40,14 @@
   cursor: not-allowed;
 }
 
+.loop-editor__select--editable {
+  cursor: pointer;
+}
+
+.loop-editor__select--editable:disabled {
+  cursor: not-allowed;
+}
+
 .loop-editor__meta {
   font-family: var(--font-mono);
   font-size: 8px;
@@ -52,35 +60,48 @@
   text-transform: none;
 }
 
-.loop-editor__segmented {
+.loop-editor__octave {
   display: flex;
+  flex-direction: column;
+  gap: 2px;
   margin-left: auto;
+}
+
+.loop-editor__octave-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   border: 1px solid var(--color-outline);
 }
 
-.loop-editor__segment {
-  padding: 3px 8px;
+.loop-editor__octave-btn {
+  width: 22px;
+  height: 20px;
+  padding: 0;
   border: none;
   background: transparent;
-  font-family: var(--font-mono);
   font-size: 8px;
-  text-transform: lowercase;
+  line-height: 1;
   color: var(--color-outline);
   cursor: pointer;
 }
 
-.loop-editor__segment + .loop-editor__segment {
-  border-left: 1px solid var(--color-outline);
+.loop-editor__octave-btn:hover:not(:disabled) {
+  color: var(--color-btn-text);
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.loop-editor__segment--active {
-  background: var(--color-active);
-  color: #fff;
-}
-
-.loop-editor__segment:disabled {
+.loop-editor__octave-btn:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.loop-editor__octave-readout {
+  min-width: 22px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-align: center;
+  color: var(--color-outline);
 }
 
 .loop-editor__durations {

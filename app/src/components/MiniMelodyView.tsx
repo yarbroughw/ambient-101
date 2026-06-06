@@ -1,18 +1,22 @@
 import { Note } from 'tonal'
-import { melodyBounds, type PatternNote } from '../audio/patternTypes'
-import { melodyPlayheadRatio } from '../lib/melodyPlayhead'
+import type { LoopPattern } from '../audio/patternTypes'
+import {
+  gridPlayheadRatio,
+  melodyWindowDuration,
+} from '../lib/gridLayout'
+import { resolvePatternNotes } from '../lib/scaleSteps'
 
 const VERTICAL_PITCH_PADDING = 0.2
 
 type MiniMelodyViewProps = {
-  notes: PatternNote[]
+  pattern: Pick<LoopPattern, 'notes' | 'scale' | 'octaveShift' | 'bpm'>
   loopTimeSec: number
   showPlayhead: boolean
 }
 
-function pitchRange(notes: PatternNote[]): { min: number; max: number } {
-  const midis = notes
-    .map((n) => Note.midi(n.pitch))
+function pitchRange(pitches: string[]): { min: number; max: number } {
+  const midis = pitches
+    .map((pitch) => Note.midi(pitch))
     .filter((m): m is number => m != null)
 
   if (midis.length === 0) {
@@ -41,21 +45,15 @@ function laneTop(
 }
 
 export function MiniMelodyView({
-  notes,
+  pattern,
   loopTimeSec,
   showPlayhead,
 }: MiniMelodyViewProps) {
-  const bounds = melodyBounds(notes)
-  const { min, max } = pitchRange(notes)
-  const playheadRatio = melodyPlayheadRatio(loopTimeSec, bounds)
-
-  if (bounds.span <= 0) {
-    return (
-      <div className="mini-melody mini-melody--empty" aria-hidden>
-        <span className="mini-melody__placeholder">—</span>
-      </div>
-    )
-  }
+  const melodyWindow = melodyWindowDuration(pattern.bpm)
+  const resolved = resolvePatternNotes(pattern)
+  const pitches = resolved.map((note) => note.pitch)
+  const { min, max } = pitchRange(pitches)
+  const playheadRatio = gridPlayheadRatio(loopTimeSec, melodyWindow)
 
   return (
     <div
@@ -64,17 +62,17 @@ export function MiniMelodyView({
       role="img"
     >
       <div className="mini-melody__track">
-        {notes.map((note, index) => {
-          const left =
-            ((note.startTime - bounds.start) / bounds.span) * 100
-          const width = (note.duration / bounds.span) * 100
+        {resolved.map((note, index) => {
+          const left = (note.startTime / melodyWindow) * 100
+          const width = (note.duration / melodyWindow) * 100
+
           return (
             <span
-              key={`${note.pitch}-${note.startTime}-${index}`}
+              key={`${note.scaleStep}-${note.startTime}-${index}`}
               className="mini-melody__note"
               style={{
                 left: `${left}%`,
-                width: `${Math.max(width, 2)}%`,
+                width: `${Math.max(width, 0.5)}%`,
                 top: laneTop(note.pitch, min, max),
               }}
             />

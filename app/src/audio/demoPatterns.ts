@@ -1,68 +1,114 @@
-import { Scale } from 'tonal'
 import { compilePatternToSink } from './compilePattern'
 import { createLoopVoice } from './createPadSynth'
 import { createPluckLoopVoice } from './createPluckSynth'
 import { createSchedulableNoteSink } from './schedulableNoteSink'
-import type { LoopPattern, PatternNote } from './patternTypes'
+import { createGridNote, patternFitsGrid } from '../lib/gridLayout'
+import type { LoopPattern } from './patternTypes'
 import { TapeLoop } from './tapeLoop'
 
 const SCALE = 'C4 minor'
 
-function scaleDegree(degree: number): string {
-  const degrees = Scale.degrees(SCALE)
-  return degrees(degree) || 'C4'
-}
+const BASS_BPM = 72
 
 const bassPattern: LoopPattern = {
   id: 'bass',
   label: 'bass',
   loopDuration: 7,
-  bpm: 72,
+  bpm: BASS_BPM,
   scale: SCALE,
+  octaveShift: -2,
   instrument: 'pad',
+  volume: 1,
   notes: [
-    { pitch: scaleDegree(-19), startTime: 0, duration: 2.5, velocity: 0.45 },
-    { pitch: scaleDegree(-17), startTime: 3.5, duration: 2, velocity: 0.35 },
+    createGridNote(BASS_BPM, -5, 0, 12, 0.45),
+    createGridNote(BASS_BPM, -3, 17, 10, 0.35),
   ],
 }
+
+const MELODY1_BPM = 96
 
 const melody1Template: Omit<LoopPattern, 'id' | 'label'> = {
   loopDuration: 11,
-  bpm: 96,
+  bpm: MELODY1_BPM,
   scale: SCALE,
+  octaveShift: 0,
   instrument: 'pluck',
+  volume: 1,
   notes: [
-    { pitch: scaleDegree(2), startTime: 0, duration: 0.4, velocity: 0.5 },
-    { pitch: scaleDegree(4), startTime: 2, duration: 0.5, velocity: 1 },
-    { pitch: scaleDegree(5), startTime: 4.5, duration: 0.6, velocity: 0.45 },
-    { pitch: scaleDegree(7), startTime: 7, duration: 0.8, velocity: 0.4 },
+    createGridNote(MELODY1_BPM, 1, 0, 2, 0.5),
+    createGridNote(MELODY1_BPM, 3, 12, 3, 1),
+    createGridNote(MELODY1_BPM, 4, 20, 3, 0.45),
+    createGridNote(MELODY1_BPM, 6, 27, 4, 0.4),
   ],
 }
 
-const melody1Pattern: LoopPattern = {
-  id: 'melody1',
-  label: 'melody1',
-  ...melody1Template,
-}
+const MELODY2_BPM = 88
 
 const melody2Template: Omit<LoopPattern, 'id' | 'label'> = {
   loopDuration: 10,
-  bpm: 88,
+  bpm: MELODY2_BPM,
   scale: SCALE,
+  octaveShift: 0,
   instrument: 'pluck',
+  volume: 1,
   notes: [
-    { pitch: scaleDegree(7), startTime: 0, duration: 0.25, velocity: 0.55 },
-    { pitch: scaleDegree(5), startTime: 1.5, duration: 0.3, velocity: 0.65 },
-    { pitch: scaleDegree(4), startTime: 3.25, duration: 0.35, velocity: 0.5 },
-    { pitch: scaleDegree(2), startTime: 5.5, duration: 0.4, velocity: 0.45 },
-    { pitch: scaleDegree(1), startTime: 7.75, duration: 0.7, velocity: 0.4 },
+    createGridNote(MELODY2_BPM, 6, 0, 2, 0.55),
+    createGridNote(MELODY2_BPM, 4, 9, 2, 0.65),
+    createGridNote(MELODY2_BPM, 3, 18, 2, 0.5),
+    createGridNote(MELODY2_BPM, 1, 26, 2, 0.45),
+    createGridNote(MELODY2_BPM, 0, 30, 2, 0.4),
   ],
+}
+
+const blankTemplate: Omit<LoopPattern, 'id' | 'label'> = {
+  loopDuration: 10,
+  bpm: MELODY2_BPM,
+  scale: SCALE,
+  octaveShift: 0,
+  instrument: 'pluck',
+  volume: 1,
+  notes: [],
+}
+
+export type LoopPresetId = 'bass' | 'melody1' | 'melody2'
+
+export const LOOP_PRESETS: { id: LoopPresetId; label: string }[] = [
+  { id: 'bass', label: 'bass' },
+  { id: 'melody1', label: 'melody1' },
+  { id: 'melody2', label: 'melody2' },
+]
+
+const PRESET_TEMPLATES: Record<LoopPresetId, Omit<LoopPattern, 'id' | 'label'>> = {
+  bass: bassPattern,
+  melody1: melody1Template,
+  melody2: melody2Template,
+}
+
+for (const { id, label } of LOOP_PRESETS) {
+  const pattern = instantiateTemplate(PRESET_TEMPLATES[id], id, label)
+  if (!patternFitsGrid(pattern)) {
+    throw new Error(`Preset pattern "${id}" exceeds grid bounds`)
+  }
+}
+
+function instantiateTemplate(
+  template: Omit<LoopPattern, 'id' | 'label'>,
+  id: string,
+  label: string,
+): LoopPattern {
+  return {
+    id,
+    label,
+    ...template,
+    notes: template.notes.map((note) => ({ ...note })),
+  }
 }
 
 export type DemoLoop = {
   pattern: LoopPattern
   loop: TapeLoop
-  rebindNotes: (notes: PatternNote[]) => void
+  rebindPattern: (pattern: LoopPattern) => void
+  setVolume: (amount: number) => void
 }
 
 function createVoiceForInstrument(instrument: string) {
@@ -75,6 +121,7 @@ function createVoiceForInstrument(instrument: string) {
 function bindPattern(pattern: LoopPattern): DemoLoop {
   const loop = new TapeLoop(pattern.label, pattern.loopDuration)
   const voice = createVoiceForInstrument(pattern.instrument)
+  voice.setVolume(pattern.volume ?? 1)
   const sink = createSchedulableNoteSink(
     {
       triggerAttackRelease(note, duration, time, velocity = 1) {
@@ -84,67 +131,119 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
     (id) => loop.addScheduledNote(id),
   )
 
-  function rebindNotes(notes: PatternNote[]) {
-    loop.record(compilePatternToSink(notes, sink))
+  function rebindPattern(next: LoopPattern) {
+    voice.setVolume(next.volume ?? 1)
+    loop.record(compilePatternToSink(next, sink))
   }
 
-  rebindNotes(pattern.notes)
+  function setVolume(amount: number) {
+    voice.setVolume(amount)
+  }
+
+  rebindPattern(pattern)
   loop.bindAudioHooks({
     silence: voice.silence,
     prepare: voice.prepare,
     getLevel: voice.getLevel,
   })
 
-  return { pattern, loop, rebindNotes }
+  return { pattern, loop, rebindPattern, setVolume }
 }
 
-export function createMelody1Pattern(id: string, label: string): LoopPattern {
-  return {
-    id,
-    label,
-    ...melody1Template,
-    notes: melody1Template.notes.map((note) => ({ ...note })),
-  }
+export function createBlankPattern(id: string, label: string): LoopPattern {
+  return instantiateTemplate(blankTemplate, id, label)
 }
 
-export function createMelody2Pattern(id: string, label: string): LoopPattern {
-  return {
-    id,
-    label,
-    ...melody2Template,
-    notes: melody2Template.notes.map((note) => ({ ...note })),
-  }
+export function createPresetPattern(
+  presetId: LoopPresetId,
+  id: string,
+  label: string,
+): LoopPattern {
+  return instantiateTemplate(PRESET_TEMPLATES[presetId], id, label)
 }
 
 export function createTapeLoop(pattern: LoopPattern): DemoLoop {
   return bindPattern(pattern)
 }
 
-export function createDemoTapeLoops(): DemoLoop[] {
-  return [
-    createTapeLoop(bassPattern),
-    createTapeLoop(melody1Pattern),
-  ]
+export function createTapeLoopsFromPatterns(patterns: LoopPattern[]): DemoLoop[] {
+  return patterns.map((pattern) => createTapeLoop(pattern))
 }
 
-export function nextMelody1IdAndLabel(
+export function nextAvailableIdAndLabel(
+  baseLabel: string,
   loops: Pick<DemoLoop, 'pattern'>[],
 ): { id: string; label: string } {
-  let index = 2
-  while (loops.some((entry) => entry.pattern.id === `melody1-${index}`)) {
-    index += 1
+  if (!labelTaken(baseLabel, loops)) {
+    return { id: baseLabel, label: baseLabel }
   }
-  const suffix = `melody1-${index}`
-  return { id: suffix, label: suffix }
+
+  const trailingNumber = baseLabel.match(/^(.*?)(\d+)$/)
+  if (trailingNumber) {
+    const base = trailingNumber[1]
+    let number = Number.parseInt(trailingNumber[2], 10) + 1
+    let candidate = `${base}${number}`
+    while (labelTaken(candidate, loops)) {
+      number += 1
+      candidate = `${base}${number}`
+    }
+    return { id: candidate, label: candidate }
+  }
+
+  let number = 2
+  let candidate = `${baseLabel}${number}`
+  while (labelTaken(candidate, loops)) {
+    number += 1
+    candidate = `${baseLabel}${number}`
+  }
+  return { id: candidate, label: candidate }
 }
 
-export function nextMelody2IdAndLabel(
+function labelTaken(
+  candidate: string,
+  loops: Pick<DemoLoop, 'pattern'>[],
+): boolean {
+  return loops.some(
+    (entry) =>
+      entry.pattern.id === candidate || entry.pattern.label === candidate,
+  )
+}
+
+export function nextDuplicateIdAndLabel(
+  sourceLabel: string,
   loops: Pick<DemoLoop, 'pattern'>[],
 ): { id: string; label: string } {
-  let index = 2
-  while (loops.some((entry) => entry.pattern.id === `melody2-${index}`)) {
-    index += 1
+  const trailingNumber = sourceLabel.match(/^(.*?)(\d+)$/)
+
+  if (trailingNumber) {
+    const base = trailingNumber[1]
+    let number = Number.parseInt(trailingNumber[2], 10) + 1
+    let candidate = `${base}${number}`
+    while (labelTaken(candidate, loops)) {
+      number += 1
+      candidate = `${base}${number}`
+    }
+    return { id: candidate, label: candidate }
   }
-  const suffix = `melody2-${index}`
-  return { id: suffix, label: suffix }
+
+  let suffix = 2
+  let candidate = `${sourceLabel}-${suffix}`
+  while (labelTaken(candidate, loops)) {
+    suffix += 1
+    candidate = `${sourceLabel}-${suffix}`
+  }
+  return { id: candidate, label: candidate }
+}
+
+export function duplicatePattern(
+  source: LoopPattern,
+  loops: Pick<DemoLoop, 'pattern'>[],
+): LoopPattern {
+  const { id, label } = nextDuplicateIdAndLabel(source.label, loops)
+  return {
+    ...source,
+    id,
+    label,
+    notes: source.notes.map((note) => ({ ...note })),
+  }
 }

@@ -1,7 +1,5 @@
-import { useState } from 'react'
 import type { LoopPattern, PatternNote } from '../audio/patternTypes'
 import { minLoopDurationForBpm } from '../lib/gridLayout'
-import type { ScalePresentation } from '../lib/scaleRows'
 import { DurationControls } from './DurationControls'
 import { EditorToolbar } from './EditorToolbar'
 import { MelodyGrid } from './MelodyGrid'
@@ -14,6 +12,8 @@ type LoopEditorProps = {
   showPlayhead: boolean
   disabled?: boolean
   onNotesChange: (notes: PatternNote[]) => void
+  onScaleChange: (scale: string) => void
+  onOctaveShiftChange: (octaveShift: number) => void
   onLoopDurationChange: (sec: number) => void
 }
 
@@ -24,10 +24,10 @@ export function LoopEditor({
   showPlayhead,
   disabled = false,
   onNotesChange,
+  onScaleChange,
+  onOctaveShiftChange,
   onLoopDurationChange,
 }: LoopEditorProps) {
-  const [presentation, setPresentation] = useState<ScalePresentation>('fold')
-
   const melodyWindowSec = minLoopDurationForBpm(pattern.bpm)
   const loopDurationMin = Math.max(2, melodyWindowSec)
 
@@ -43,19 +43,18 @@ export function LoopEditor({
       <EditorToolbar
         bpm={pattern.bpm}
         scale={pattern.scale}
+        octaveShift={pattern.octaveShift}
         instrument={pattern.instrument}
-        presentation={presentation}
         disabled={disabled}
-        onPresentationChange={setPresentation}
+        onScaleChange={onScaleChange}
+        onOctaveShiftChange={onOctaveShiftChange}
       />
 
       <MelodyGrid
-        notes={pattern.notes}
+        pattern={pattern}
         loopTimeSec={loopTimeSec}
         showPlayhead={showPlayhead}
         bpm={pattern.bpm}
-        scale={pattern.scale}
-        presentation={presentation}
         disabled={disabled}
         onNotesChange={onNotesChange}
       />
