@@ -4,33 +4,6 @@
   border: 1px solid var(--color-outline);
 }
 
-.tape-loop-row__delete {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  z-index: 4;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--color-stop);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tape-loop-row__delete:hover:not(:disabled) {
-  color: #c44;
-}
-
-.tape-loop-row__delete:disabled {
-  opacity: 0.45;
-}
-
 .tape-loop-row.is-expanded {
   background: color-mix(in srgb, var(--color-loop-bg) 92%, #fff);
 }
@@ -60,7 +33,7 @@
   align-items: center;
   gap: 12px;
   min-height: var(--loop-row-height);
-  padding: var(--loop-row-padding-y) 26px var(--loop-row-padding-y) 10px;
+  padding: var(--loop-row-padding-y) 10px;
 }
 
 .tape-loop-row__controls {
@@ -314,17 +287,61 @@
   z-index: 1;
 }
 
-.tape-loop-row__expand {
+.tape-loop-row__actions {
+  display: flex;
   flex-shrink: 0;
+  gap: 4px;
+}
+
+.tape-loop-row__action {
   width: 24px;
   height: 24px;
   padding: 0;
   border: 1px solid var(--color-outline);
   background: transparent;
   color: var(--color-outline);
-  font-size: 10px;
-  line-height: 1;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tape-loop-row__action-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.tape-loop-row__action--edit.is-active {
+  background: var(--color-outline);
+  border-color: var(--color-outline);
+  color: var(--color-loop-bg);
+}
+
+.tape-loop-row__action--edit:hover:not(:disabled):not(.is-active) {
+  border-color: var(--color-outline);
+  color: var(--color-btn-text);
+}
+
+.tape-loop-row__action--edit.is-active:hover:not(:disabled) {
+  background: var(--color-btn-text);
+  border-color: var(--color-btn-text);
+  color: var(--color-loop-bg);
+}
+
+.tape-loop-row__action--delete {
+  color: var(--color-stop);
+  border-color: color-mix(in srgb, var(--color-stop) 55%, var(--color-outline));
+}
+
+.tape-loop-row__action--delete:hover:not(:disabled) {
+  color: #c44;
+  border-color: #c44;
+}
+
+.tape-loop-row__action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .tape-loop-row__editor {
