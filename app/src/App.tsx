@@ -3,6 +3,7 @@ import { GlobalEffectsToolbar } from './components/GlobalEffectsToolbar'
 import { MasterSpectrum } from './components/MasterSpectrum'
 import { StartAudioButton } from './components/StartAudioButton'
 import { TapeLoopRow } from './components/TapeLoopRow'
+import type { PatternNote } from './audio/patternTypes'
 import {
   createDemoTapeLoops,
   createMelody2Pattern,
@@ -20,7 +21,16 @@ export default function App() {
   const [runningById, setRunningById] = useState<Record<string, boolean>>({})
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const loopsRef = useRef(loops)
+  const runningByIdRef = useRef(runningById)
+  const audioReadyRef = useRef(audioReady)
   loopsRef.current = loops
+  runningByIdRef.current = runningById
+  audioReadyRef.current = audioReady
+
+  const loopIds = loops?.map(({ pattern }) => pattern.id) ?? []
+  const runningCount = loopIds.filter((id) => runningById[id]).length
+  const allPlaying = loopIds.length > 0 && runningCount === loopIds.length
+  const allStopped = runningCount === 0
 
   useEffect(() => {
     if (audioReady) {
@@ -42,6 +52,58 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    function shouldIgnoreSpace(target: EventTarget | null): boolean {
+      if (!(target instanceof HTMLElement)) {
+        return false
+      }
+
+      if (target.closest('input, textarea, select, [contenteditable="true"]')) {
+        return true
+      }
+
+      return target.closest('.melody-grid__cell') != null
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.code !== 'Space' || event.repeat) {
+        return
+      }
+
+      if (!audioReadyRef.current || shouldIgnoreSpace(event.target)) {
+        return
+      }
+
+      const currentLoops = loopsRef.current
+      if (!currentLoops?.length) {
+        return
+      }
+
+      const running = runningByIdRef.current
+      const anyPlaying = currentLoops.some(({ pattern }) => running[pattern.id])
+
+      event.preventDefault()
+
+      if (anyPlaying) {
+        for (const { loop } of currentLoops) {
+          loop.stop()
+        }
+        setRunningById({})
+        return
+      }
+
+      const nextRunning: Record<string, boolean> = {}
+      for (const { pattern, loop } of currentLoops) {
+        loop.start()
+        nextRunning[pattern.id] = true
+      }
+      setRunningById(nextRunning)
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   function setRunning(id: string, running: boolean) {
     setRunningById((prev) => ({ ...prev, [id]: running }))
   }
@@ -50,20 +112,24 @@ export default function App() {
     if (!loops) {
       return
     }
+
+    const nextRunning: Record<string, boolean> = { ...runningById }
     for (const { pattern, loop } of loops) {
       loop.start()
-      setRunning(pattern.id, true)
+      nextRunning[pattern.id] = true
     }
+    setRunningById(nextRunning)
   }
 
   function stopAll() {
     if (!loops) {
       return
     }
-    for (const { pattern, loop } of loops) {
+
+    for (const { loop } of loops) {
       loop.stop()
-      setRunning(pattern.id, false)
     }
+    setRunningById({})
   }
 
   function handleExpandedChange(id: string, expanded: boolean) {
@@ -103,6 +169,40 @@ export default function App() {
     })
   }
 
+  function handleNotesChange(id: string, notes: PatternNote[]) {
+    setLoops((prev) => {
+      if (!prev) {
+        return prev
+      }
+
+      return prev.map((entry) => {
+        if (entry.pattern.id !== id) {
+          return entry
+        }
+
+        entry.rebindNotes(notes)
+        return { ...entry, pattern: { ...entry.pattern, notes } }
+      })
+    })
+  }
+
+  function handleLoopDurationChange(id: string, duration: number) {
+    setLoops((prev) => {
+      if (!prev) {
+        return prev
+      }
+
+      return prev.map((entry) => {
+        if (entry.pattern.id !== id) {
+          return entry
+        }
+
+        entry.loop.setDuration(duration)
+        return { ...entry, pattern: { ...entry.pattern, loopDuration: duration } }
+      })
+    })
+  }
+
   return (
     <div className="app">
       <div className="toolbar">
@@ -114,7 +214,7 @@ export default function App() {
               <button
                 type="button"
                 className="ensemble-btn ensemble-btn--play"
-                disabled={!loops?.length}
+                disabled={!loops?.length || allPlaying}
                 onClick={startAll}
               >
                 play all
@@ -122,7 +222,7 @@ export default function App() {
               <button
                 type="button"
                 className="ensemble-btn ensemble-btn--stop"
-                disabled={!loops?.length}
+                disabled={!loops?.length || allStopped}
                 onClick={stopAll}
               >
                 stop all
@@ -147,6 +247,10 @@ export default function App() {
             onRunningChange={(running) => setRunning(pattern.id, running)}
             onExpandedChange={(expanded) =>
               handleExpandedChange(pattern.id, expanded)
+            }
+            onNotesChange={(notes) => handleNotesChange(pattern.id, notes)}
+            onLoopDurationChange={(duration) =>
+              handleLoopDurationChange(pattern.id, duration)
             }
             onDelete={() => handleDeleteLoop(pattern.id)}
           />
