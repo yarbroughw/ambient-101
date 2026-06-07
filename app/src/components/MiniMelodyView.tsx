@@ -9,7 +9,7 @@ import { resolvePatternNotes } from '../lib/scaleSteps'
 const VERTICAL_PITCH_PADDING = 0.2
 
 type MiniMelodyViewProps = {
-  pattern: Pick<LoopPattern, 'notes' | 'scale' | 'octaveShift' | 'bpm'>
+  pattern: Pick<LoopPattern, 'notes' | 'root' | 'scale' | 'octaveShift' | 'bpm'>
   loopTimeSec: number
   showPlayhead: boolean
 }

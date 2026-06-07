@@ -21,7 +21,7 @@ import { gridScaleRows, stepToPitch } from '../lib/scaleSteps'
 import './MelodyGrid.css'
 
 type MelodyGridProps = {
-  pattern: Pick<LoopPattern, 'notes' | 'scale' | 'octaveShift' | 'instrument'>
+  pattern: Pick<LoopPattern, 'notes' | 'root' | 'scale' | 'octaveShift' | 'instrument'>
   loopTimeSec: number
   showPlayhead: boolean
   bpm: number
@@ -82,28 +82,30 @@ export function MelodyGrid({
   disabled = false,
   onNotesChange,
 }: MelodyGridProps) {
-  const { notes, scale, octaveShift, instrument } = pattern
+  const { notes, root, scale, octaveShift, instrument } = pattern
+  const tonality = useMemo(() => ({ root, scale }), [root, scale])
   const layout = useMemo(() => gridLayout(bpm), [bpm])
   const rows = useMemo(
-    () => gridScaleRows(scale, octaveShift),
-    [scale, octaveShift],
+    () => gridScaleRows(tonality, octaveShift),
+    [tonality, octaveShift],
   )
   const playheadRatio = gridPlayheadRatio(loopTimeSec, layout.gridDuration)
   const [drag, setDrag] = useState<DragState | null>(null)
+  const [hoveredScaleStep, setHoveredScaleStep] = useState<number | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
   const notesRef = useRef(notes)
   const stepSecRef = useRef(layout.stepSec)
   const onNotesChangeRef = useRef(onNotesChange)
-  const patternRef = useRef({ scale, octaveShift, instrument })
+  const patternRef = useRef({ tonality, octaveShift, instrument })
   notesRef.current = notes
   stepSecRef.current = layout.stepSec
   onNotesChangeRef.current = onNotesChange
-  patternRef.current = { scale, octaveShift, instrument }
+  patternRef.current = { tonality, octaveShift, instrument }
 
   function previewStep(scaleStep: number, durationSec: number) {
-    const { scale: s, octaveShift: o, instrument: i } = patternRef.current
-    previewGridNote(stepToPitch(s, scaleStep, o), durationSec, i)
+    const { tonality: t, octaveShift: o, instrument: i } = patternRef.current
+    previewGridNote(stepToPitch(t, scaleStep, o), durationSec, i)
   }
 
   function endDrag() {
@@ -119,7 +121,7 @@ export function MelodyGrid({
 
     const styles = getComputedStyle(grid)
     const labelWidth =
-      Number.parseFloat(styles.getPropertyValue('--melody-grid-label-width')) || 52
+      Number.parseFloat(styles.getPropertyValue('--melody-grid-step-width')) || 26
     const cellSize =
       Number.parseFloat(styles.getPropertyValue('--melody-grid-cell-size')) || 13
 
@@ -311,6 +313,9 @@ export function MelodyGrid({
     return drag
   }
 
+  const activeScaleStep =
+    drag?.kind === 'paint' ? drag.scaleStep : hoveredScaleStep
+
   return (
     <div className="melody-grid__scroll">
       <div
@@ -325,10 +330,10 @@ export function MelodyGrid({
           role="grid"
           aria-label="Melody step grid"
           style={{
-            gridTemplateColumns: `var(--melody-grid-label-width) repeat(${layout.columnCount}, var(--melody-grid-cell-size))`,
+            gridTemplateColumns: `var(--melody-grid-step-width) repeat(${layout.columnCount}, var(--melody-grid-cell-size)) var(--melody-grid-pitch-width)`,
           }}
         >
-          <div className="melody-grid__corner" role="presentation" />
+          <div className="melody-grid__corner melody-grid__corner--step" role="presentation" />
           {Array.from({ length: layout.columnCount }, (_, col) => (
             <div
               key={`col-${col}`}
@@ -339,20 +344,26 @@ export function MelodyGrid({
               {col % 16 === 0 ? col / 16 + 1 : col % 4 === 0 ? '·' : ''}
             </div>
           ))}
+          <div className="melody-grid__corner melody-grid__corner--pitch" role="presentation" />
 
           {rows.map((row, rowIndex) => {
             const gridRow = rowIndex + 2
             const rowNotes = notes.filter((note) => note.scaleStep === row.scaleStep)
             const ghost = ghostPaintForRow(row.scaleStep)
+            const rowHighlighted = activeScaleStep === row.scaleStep
+            const labelClass = rowHighlighted
+              ? 'melody-grid__axis-label melody-grid__axis-label--active'
+              : 'melody-grid__axis-label'
+            const rootClass =
+              row.scaleStep === 0 ? ' melody-grid__axis-label--root' : ''
 
             return (
               <div key={row.scaleStep} className="melody-grid__row" role="row">
                 <div
-                  className={`melody-grid__row-label${row.scaleStep === 0 ? ' melody-grid__row-label--root' : ''}`}
+                  className={`${labelClass} melody-grid__axis-label--step${rootClass}`}
                   role="rowheader"
                   style={{ gridRow, gridColumn: 1 }}
                 >
-                  <span className="melody-grid__row-pitch">{row.pitchName}</span>
                   <span className="melody-grid__row-step">{row.stepLabel}</span>
                 </div>
 
@@ -381,9 +392,32 @@ export function MelodyGrid({
                       onKeyDown={(event) =>
                         handleCellKeyDown(row.scaleStep, col, event)
                       }
+                      onMouseEnter={() => setHoveredScaleStep(row.scaleStep)}
+                      onMouseLeave={() =>
+                        setHoveredScaleStep((current) =>
+                          current === row.scaleStep ? null : current,
+                        )
+                      }
+                      onFocus={() => setHoveredScaleStep(row.scaleStep)}
+                      onBlur={() =>
+                        setHoveredScaleStep((current) =>
+                          current === row.scaleStep ? null : current,
+                        )
+                      }
                     />
                   )
                 })}
+
+                <div
+                  className={`${labelClass} melody-grid__axis-label--pitch${rootClass}`}
+                  role="rowheader"
+                  style={{
+                    gridRow,
+                    gridColumn: layout.columnCount + 2,
+                  }}
+                >
+                  <span className="melody-grid__row-pitch">{row.pitchName}</span>
+                </div>
 
                 {rowNotes.map((note) => {
                   const startCol = noteStartColumn(note, layout.stepSec)

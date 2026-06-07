@@ -7,6 +7,7 @@ type DialProps = {
   min?: number
   max?: number
   step?: number
+  size?: number
   disabled?: boolean
   formatReadout?: (value: number) => string
   onChange: (value: number) => void
@@ -56,6 +57,7 @@ export function Dial({
   min = 0,
   max = 1,
   step = 0.01,
+  size = 32,
   disabled = false,
   formatReadout,
   onChange,
@@ -64,8 +66,7 @@ export function Dial({
 
   const ratio = (value - min) / (max - min)
   const valueAngle = START_DEG + ratio * SWEEP_DEG
-  const size = 32
-  const stroke = 3
+  const stroke = size >= 40 ? 3.5 : 3
   const radius = (size - stroke) / 2
   const center = size / 2
   const trackPath = describeArc(center, center, radius, START_DEG, START_DEG + SWEEP_DEG)
@@ -78,7 +79,10 @@ export function Dial({
   }
 
   return (
-    <div className={`dial${disabled ? ' dial--disabled' : ''}`}>
+    <div
+      className={`dial${disabled ? ' dial--disabled' : ''}${size >= 40 ? ' dial--lg' : ''}`}
+      style={{ ['--dial-size' as string]: `${size}px` }}
+    >
       <div
         className="dial__control"
         role="slider"

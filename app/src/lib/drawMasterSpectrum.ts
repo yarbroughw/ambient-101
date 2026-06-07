@@ -1,3 +1,5 @@
+import { readCssColorString, rgbaFromCssVar } from './themeColors'
+
 const MIN_FREQ = 20
 const MAX_FREQ = 6000
 const FLOOR_DB = -120
@@ -11,12 +13,10 @@ export function drawMasterSpectrum(
   smoothBuffer: number[],
   sampleRate: number,
 ): void {
-  ctx.fillStyle = getComputedStyle(document.documentElement)
-    .getPropertyValue('--color-canvas-bg')
-    .trim() || '#c8cdd2'
+  ctx.fillStyle = readCssColorString('--color-canvas-bg', '#c8cdd2')
   ctx.fillRect(0, 0, width, height)
 
-  ctx.fillStyle = 'rgba(112, 92, 252, 0.4)'
+  ctx.fillStyle = rgbaFromCssVar('--color-active', 0.4, [112, 92, 252])
   ctx.beginPath()
   ctx.moveTo(0, height)
 

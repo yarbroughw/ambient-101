@@ -41,6 +41,8 @@ export function minLoopDurationForBpm(bpm: number): number {
  * BPM floor for a given loop length: tempo cannot be slow enough that the
  * 32-step grid window exceeds the tape.
  */
+export const MELODY_BPM_MAX = 240
+
 export function minBpmForLoopDuration(loopDuration: number): number {
   if (loopDuration <= 0) {
     return 1

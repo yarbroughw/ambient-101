@@ -4,7 +4,68 @@
   --loop-circle-size: 44px;
   --loop-row-padding-y: 13px;
   --loop-row-height: calc(var(--loop-circle-size) + var(--loop-row-padding-y) * 2);
-  --mini-melody-max-width: 275px;
+  --mini-melody-max-width: 225px;
   --content-meta-min-width: 92px;
   --loop-label-width: 48px;
+  --reel-lane-controls-width: 81px;
+  --reel-lane-level-width: 18px;
+  --reel-lane-actions-width: 52px;
+}
+
+.reel-lane {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--loop-row-height);
+}
+
+.reel-lane__controls {
+  flex: 0 0 var(--reel-lane-controls-width);
+  width: var(--reel-lane-controls-width);
+  min-width: var(--reel-lane-controls-width);
+}
+
+.reel-lane__level {
+  flex: 0 0 var(--reel-lane-level-width);
+  width: var(--reel-lane-level-width);
+  min-width: var(--reel-lane-level-width);
+}
+
+.reel-lane__reel {
+  flex: 0 0 var(--loop-circle-size);
+  width: var(--loop-circle-size);
+  min-width: var(--loop-circle-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reel-lane__label {
+  flex: 0 0 var(--loop-label-width);
+  width: var(--loop-label-width);
+  min-width: var(--loop-label-width);
+}
+
+.reel-lane__tape {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.reel-lane__meta {
+  flex: 1 1 auto;
+  min-width: var(--content-meta-min-width);
+  width: auto;
+  max-width: none;
+  overflow: hidden;
+}
+
+.reel-lane__actions {
+  flex: 0 0 var(--reel-lane-actions-width);
+  width: var(--reel-lane-actions-width);
+  min-width: var(--reel-lane-actions-width);
+  display: flex;
+  justify-content: flex-end;
 }

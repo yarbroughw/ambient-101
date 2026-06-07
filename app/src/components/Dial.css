@@ -8,8 +8,8 @@
 
 .dial__control {
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: var(--dial-size, 32px);
+  height: var(--dial-size, 32px);
   cursor: ns-resize;
   touch-action: none;
 }
@@ -47,6 +47,10 @@
   font-size: 7px;
   color: var(--color-outline);
   pointer-events: none;
+}
+
+.dial--lg .dial__readout {
+  font-size: 8px;
 }
 
 .dial__label {

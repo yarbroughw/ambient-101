@@ -36,10 +36,6 @@
 }
 
 .tape-loop-row__summary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: var(--loop-row-height);
   padding: var(--loop-row-padding-y) 10px;
 }
 
@@ -47,6 +43,7 @@
   display: flex;
   flex-shrink: 0;
   gap: 0;
+  width: 100%;
 }
 
 .tape-loop-btn {
@@ -221,14 +218,15 @@
   align-items: center;
   gap: 0;
   flex-shrink: 0;
+  width: 100%;
+}
+
+.reel-lane__label .tape-loop-row__label {
+  width: 100%;
 }
 
 .tape-loop-row__label {
   margin: 0;
-  flex: 0 0 var(--loop-label-width);
-  width: var(--loop-label-width);
-  min-width: var(--loop-label-width);
-  max-width: var(--loop-label-width);
   overflow: hidden;
 }
 
@@ -281,11 +279,9 @@
 }
 
 .tape-loop-row__tape-content {
-  flex: 1;
-  display: flex;
   align-items: stretch;
-  gap: 10px;
   min-width: 0;
+  width: 100%;
 }
 
 .tape-loop-row__content-meta {
@@ -293,31 +289,36 @@
   flex-direction: column;
   justify-content: center;
   gap: 2px;
-  flex: 0 0 auto;
-  min-width: var(--content-meta-min-width);
+  width: 100%;
+  min-width: 0;
   font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 400;
   line-height: 1.2;
   color: var(--color-outline);
+  overflow: hidden;
 }
 
 .tape-loop-row__content-meta span {
+  display: block;
   font-weight: inherit;
   color: inherit;
   text-transform: lowercase;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.tape-loop-row__content-meta span:first-child {
+.tape-loop-row__content-meta span:first-child,
+.tape-loop-row__content-meta .tape-loop-row__meta-scale {
   text-transform: none;
 }
 
 .mini-melody {
-  flex: 1 1 auto;
-  width: 100%;
+  flex: 0 0 var(--mini-melody-max-width);
+  width: var(--mini-melody-max-width);
+  min-width: var(--mini-melody-max-width);
   max-width: var(--mini-melody-max-width);
-  min-width: 88px;
   height: var(--loop-circle-size);
 }
 
@@ -325,7 +326,7 @@
   position: relative;
   height: 100%;
   border: 1px solid var(--color-outline);
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--color-mini-melody-bg);
   overflow: hidden;
 }
 
@@ -355,6 +356,8 @@
   display: flex;
   flex-shrink: 0;
   gap: 4px;
+  width: 100%;
+  justify-content: flex-end;
 }
 
 .tape-loop-row__action {
@@ -410,6 +413,6 @@
 
 .tape-loop-row__editor {
   border-top: 1px solid var(--color-outline);
-  padding: 12px 10px 14px;
+  padding: 0 10px 14px;
 }
 
