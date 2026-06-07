@@ -25,8 +25,8 @@ const bassPattern: LoopPattern = {
   reverb: LOOP_REVERB_DEFAULT,
   delay: LOOP_DELAY_DEFAULT,
   notes: [
-    createGridNote(BASS_BPM, -5, 0, 12, 0.45),
-    createGridNote(BASS_BPM, -3, 17, 10, 0.35),
+    createGridNote(-5, 0, 12, 0.45),
+    createGridNote(-3, 17, 10, 0.35),
   ],
 }
 
@@ -43,10 +43,10 @@ const melody1Template: Omit<LoopPattern, 'id' | 'label'> = {
   reverb: LOOP_REVERB_DEFAULT,
   delay: LOOP_DELAY_DEFAULT,
   notes: [
-    createGridNote(MELODY1_BPM, 1, 0, 2, 0.5),
-    createGridNote(MELODY1_BPM, 3, 12, 3, 1),
-    createGridNote(MELODY1_BPM, 4, 20, 3, 0.45),
-    createGridNote(MELODY1_BPM, 6, 27, 4, 0.4),
+    createGridNote(1, 0, 2, 0.5),
+    createGridNote(3, 12, 3, 1),
+    createGridNote(4, 20, 3, 0.45),
+    createGridNote(6, 27, 4, 0.4),
   ],
 }
 
@@ -63,11 +63,11 @@ const melody2Template: Omit<LoopPattern, 'id' | 'label'> = {
   reverb: LOOP_REVERB_DEFAULT,
   delay: LOOP_DELAY_DEFAULT,
   notes: [
-    createGridNote(MELODY2_BPM, 6, 0, 2, 0.55),
-    createGridNote(MELODY2_BPM, 4, 9, 2, 0.65),
-    createGridNote(MELODY2_BPM, 3, 18, 2, 0.5),
-    createGridNote(MELODY2_BPM, 1, 26, 2, 0.45),
-    createGridNote(MELODY2_BPM, 0, 30, 2, 0.4),
+    createGridNote(6, 0, 2, 0.55),
+    createGridNote(4, 9, 2, 0.65),
+    createGridNote(3, 18, 2, 0.5),
+    createGridNote(1, 26, 2, 0.45),
+    createGridNote(0, 30, 2, 0.4),
   ],
 }
 

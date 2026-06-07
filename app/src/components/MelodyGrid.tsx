@@ -10,8 +10,6 @@ import {
   noteCoversCell,
   noteEndColumn,
   noteKey,
-  noteStartColumn,
-  noteColumnSpan,
   placeNoteSpan,
   removeNote,
   resizeNoteEnd,
@@ -191,7 +189,6 @@ export function MelodyGrid({
           active.scaleStep,
           active.anchorCol,
           active.currentCol,
-          stepSec,
         )
         onNotesChangeRef.current(nextNotes)
 
@@ -204,7 +201,6 @@ export function MelodyGrid({
             currentNotes,
             active.note,
             active.currentEndCol,
-            stepSec,
           ),
         )
       }
@@ -228,7 +224,7 @@ export function MelodyGrid({
     col: number,
     event: React.PointerEvent<HTMLButtonElement>,
   ) {
-    if (disabled || findNoteAt(notes, scaleStep, col, layout.stepSec)) {
+    if (disabled || findNoteAt(notes, scaleStep, col)) {
       return
     }
 
@@ -255,12 +251,12 @@ export function MelodyGrid({
     event.preventDefault()
     event.stopPropagation()
 
-    const startCol = noteStartColumn(note, layout.stepSec)
+    const startCol = note.startCol
     const resize: ResizeDrag = {
       kind: 'resize',
       note,
       startCol,
-      currentEndCol: noteEndColumn(note, layout.stepSec),
+      currentEndCol: noteEndColumn(note),
     }
     dragRef.current = resize
     setDrag(resize)
@@ -286,13 +282,13 @@ export function MelodyGrid({
     }
 
     event.preventDefault()
-    const existing = findNoteAt(notes, scaleStep, col, layout.stepSec)
+    const existing = findNoteAt(notes, scaleStep, col)
     if (existing) {
       onNotesChange(removeNote(notes, existing))
       return
     }
 
-    const nextNotes = placeNoteSpan(notes, scaleStep, col, col, layout.stepSec)
+    const nextNotes = placeNoteSpan(notes, scaleStep, col, col)
     onNotesChange(nextNotes)
     previewStep(scaleStep, layout.stepSec)
   }
@@ -303,7 +299,7 @@ export function MelodyGrid({
     if (resizing) {
       return drag.currentEndCol - drag.startCol + 1
     }
-    return noteColumnSpan(note, layout.stepSec)
+    return note.spanCols
   }
 
   function ghostPaintForRow(scaleStep: number): PaintDrag | null {
@@ -370,7 +366,7 @@ export function MelodyGrid({
                 {Array.from({ length: layout.columnCount }, (_, col) => {
                   const startTime = cellStartTime(col, layout.stepSec)
                   const covered = notes.some((note) =>
-                    noteCoversCell(note, row.scaleStep, col, layout.stepSec),
+                    noteCoversCell(note, row.scaleStep, col),
                   )
 
                   return (
@@ -420,7 +416,7 @@ export function MelodyGrid({
                 </div>
 
                 {rowNotes.map((note) => {
-                  const startCol = noteStartColumn(note, layout.stepSec)
+                  const startCol = note.startCol
                   const span = barSpanForNote(note)
                   const resizing =
                     drag?.kind === 'resize' &&

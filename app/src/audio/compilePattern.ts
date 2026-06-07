@@ -1,9 +1,10 @@
+import { noteDurationSec, noteStartTime } from '../lib/gridLayout'
 import { stepToPitch } from '../lib/scaleSteps'
 import type { LoopPattern } from './patternTypes'
 import type { NoteSink, TapeLoopCallback } from './types'
 
 export function compilePatternToSink(
-  pattern: Pick<LoopPattern, 'notes' | 'root' | 'scale' | 'octaveShift'>,
+  pattern: Pick<LoopPattern, 'notes' | 'root' | 'scale' | 'octaveShift' | 'bpm'>,
   sink: NoteSink,
 ): TapeLoopCallback {
   return (time) => {
@@ -14,8 +15,8 @@ export function compilePatternToSink(
           note.scaleStep,
           pattern.octaveShift,
         ),
-        note.duration,
-        time + note.startTime,
+        noteDurationSec(note, pattern.bpm),
+        time + noteStartTime(note, pattern.bpm),
         note.velocity ?? 1,
       )
     }

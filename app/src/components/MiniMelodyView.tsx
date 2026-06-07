@@ -1,6 +1,7 @@
 import { Note } from 'tonal'
 import type { LoopPattern } from '../audio/patternTypes'
 import {
+  GRID_COLUMN_COUNT,
   gridPlayheadRatio,
   melodyWindowDuration,
 } from '../lib/gridLayout'
@@ -63,12 +64,12 @@ export function MiniMelodyView({
     >
       <div className="mini-melody__track">
         {resolved.map((note, index) => {
-          const left = (note.startTime / melodyWindow) * 100
-          const width = (note.duration / melodyWindow) * 100
+          const left = (note.startCol / GRID_COLUMN_COUNT) * 100
+          const width = (note.spanCols / GRID_COLUMN_COUNT) * 100
 
           return (
             <span
-              key={`${note.scaleStep}-${note.startTime}-${index}`}
+              key={`${note.scaleStep}-${note.startCol}-${index}`}
               className="mini-melody__note"
               style={{
                 left: `${left}%`,

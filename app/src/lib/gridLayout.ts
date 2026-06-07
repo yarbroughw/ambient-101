@@ -16,13 +16,6 @@ export type GridLayout = {
   gridDuration: number
 }
 
-export type GridCell = {
-  row: number
-  col: number
-  scaleStep: number
-  startTime: number
-}
-
 export function stepDurationSec(bpm: number): number {
   return 60 / bpm / 4
 }
@@ -64,6 +57,14 @@ export function cellStartTime(col: number, stepSec: number): number {
   return col * stepSec
 }
 
+export function noteStartTime(note: PatternNote, bpm: number): number {
+  return note.startCol * stepDurationSec(bpm)
+}
+
+export function noteDurationSec(note: PatternNote, bpm: number): number {
+  return note.spanCols * stepDurationSec(bpm)
+}
+
 export function gridPlayheadRatio(
   loopTimeSec: number,
   gridDuration: number,
@@ -81,10 +82,6 @@ export function gridPlayheadRatio(
   }
 
   return loopTimeSec / gridDuration
-}
-
-export function columnForTime(time: number, stepSec: number): number {
-  return Math.round(time / stepSec)
 }
 
 export type GridPointerMetrics = {
@@ -109,46 +106,35 @@ export function columnAtClientX(
   return Math.min(columnCount - 1, Math.max(0, col))
 }
 
-export function noteStartColumn(note: PatternNote, stepSec: number): number {
-  return Math.floor(note.startTime / stepSec + 1e-9)
-}
-
-export function noteColumnSpan(note: PatternNote, stepSec: number): number {
-  return Math.max(1, Math.round(note.duration / stepSec))
-}
-
-export function noteEndColumn(note: PatternNote, stepSec: number): number {
-  return noteStartColumn(note, stepSec) + noteColumnSpan(note, stepSec) - 1
+export function noteEndColumn(note: PatternNote): number {
+  return note.startCol + note.spanCols - 1
 }
 
 export function noteKey(note: PatternNote): string {
-  return `${note.scaleStep}:${note.startTime}`
+  return `${note.scaleStep}:${note.startCol}`
 }
 
 export function findNoteAt(
   notes: PatternNote[],
   scaleStep: number,
   col: number,
-  stepSec: number,
 ): PatternNote | undefined {
-  return notes.find((note) => noteCoversCell(note, scaleStep, col, stepSec))
+  return notes.find((note) => noteCoversCell(note, scaleStep, col))
 }
 
 export function createNoteSpan(
   scaleStep: number,
   startCol: number,
   endCol: number,
-  stepSec: number,
   velocity = 0.7,
 ): PatternNote {
   const minCol = Math.min(startCol, endCol)
   const maxCol = Math.max(startCol, endCol)
-  const span = maxCol - minCol + 1
 
   return {
     scaleStep,
-    startTime: cellStartTime(minCol, stepSec),
-    duration: span * stepSec,
+    startCol: minCol,
+    spanCols: maxCol - minCol + 1,
     velocity,
   }
 }
@@ -158,7 +144,6 @@ export function replaceRowNotesInSpan(
   scaleStep: number,
   startCol: number,
   endCol: number,
-  stepSec: number,
   replacement: PatternNote | null,
 ): PatternNote[] {
   const minCol = Math.min(startCol, endCol)
@@ -169,9 +154,8 @@ export function replaceRowNotesInSpan(
       return true
     }
 
-    const noteStart = noteStartColumn(note, stepSec)
-    const noteEnd = noteEndColumn(note, stepSec)
-    return maxCol < noteStart || minCol > noteEnd
+    const noteEnd = noteEndColumn(note)
+    return maxCol < note.startCol || minCol > noteEnd
   })
 
   if (!replacement) {
@@ -193,17 +177,15 @@ export function resizeNoteEnd(
   notes: PatternNote[],
   target: PatternNote,
   endCol: number,
-  stepSec: number,
 ): PatternNote[] {
-  const startCol = noteStartColumn(target, stepSec)
-  const minEnd = startCol
+  const minEnd = target.startCol
   const maxEnd = GRID_COLUMN_COUNT - 1
   const clampedEnd = Math.min(maxEnd, Math.max(minEnd, endCol))
-  const span = clampedEnd - startCol + 1
+  const spanCols = clampedEnd - target.startCol + 1
 
   const resized: PatternNote = {
     ...target,
-    duration: span * stepSec,
+    spanCols,
   }
 
   const key = noteKey(target)
@@ -211,9 +193,8 @@ export function resizeNoteEnd(
   return replaceRowNotesInSpan(
     without,
     target.scaleStep,
-    startCol,
+    target.startCol,
     clampedEnd,
-    stepSec,
     resized,
   )
 }
@@ -223,68 +204,101 @@ export function placeNoteSpan(
   scaleStep: number,
   startCol: number,
   endCol: number,
-  stepSec: number,
   velocity = 0.7,
 ): PatternNote[] {
   const minCol = Math.min(startCol, endCol)
   const maxCol = Math.max(startCol, endCol)
-  const note = createNoteSpan(scaleStep, minCol, maxCol, stepSec, velocity)
-  return replaceRowNotesInSpan(notes, scaleStep, minCol, maxCol, stepSec, note)
+  const note = createNoteSpan(scaleStep, minCol, maxCol, velocity)
+  return replaceRowNotesInSpan(notes, scaleStep, minCol, maxCol, note)
 }
 
 export function noteCoversCell(
   note: PatternNote,
   scaleStep: number,
   col: number,
-  stepSec: number,
 ): boolean {
   if (note.scaleStep !== scaleStep) {
     return false
   }
 
-  const cellStart = cellStartTime(col, stepSec)
-  const cellEnd = cellStart + stepSec
-  const noteEnd = note.startTime + note.duration
-
-  return note.startTime < cellEnd && noteEnd > cellStart
+  return col >= note.startCol && col < note.startCol + note.spanCols
 }
 
 export function createGridNote(
-  bpm: number,
   scaleStep: number,
   startCol: number,
   spanCols: number,
   velocity = 0.7,
 ): PatternNote {
-  const stepSec = stepDurationSec(bpm)
   return {
     scaleStep,
-    startTime: cellStartTime(startCol, stepSec),
-    duration: spanCols * stepSec,
+    startCol,
+    spanCols,
     velocity,
   }
 }
 
-export function noteFitsGrid(note: PatternNote, bpm: number): boolean {
-  const stepSec = stepDurationSec(bpm)
-  const window = melodyWindowDuration(bpm)
-
+export function noteFitsGrid(note: PatternNote): boolean {
   if (note.scaleStep < GRID_SCALE_STEP_MIN || note.scaleStep > GRID_SCALE_STEP_MAX) {
     return false
   }
 
-  if (note.startTime < 0 || note.startTime + note.duration > window + 1e-9) {
+  if (note.spanCols < 1) {
     return false
   }
 
-  const startCol = noteStartColumn(note, stepSec)
-  const endCol = noteEndColumn(note, stepSec)
-  return startCol >= 0 && endCol < GRID_COLUMN_COUNT
+  return note.startCol >= 0 && note.startCol + note.spanCols <= GRID_COLUMN_COUNT
 }
 
 export function patternFitsGrid(
-  pattern: Pick<LoopPattern, 'notes' | 'bpm'>,
+  pattern: Pick<LoopPattern, 'notes'>,
 ): boolean {
-  return pattern.notes.every((note) => noteFitsGrid(note, pattern.bpm))
+  return pattern.notes.every((note) => noteFitsGrid(note))
 }
 
+/** Convert legacy second-based notes from persisted storage. */
+export function migrateLegacyNote(
+  note: {
+    scaleStep: number
+    startTime?: number
+    duration?: number
+    startCol?: number
+    spanCols?: number
+    velocity?: number
+  },
+  bpm: number,
+): PatternNote | null {
+  if (
+    typeof note.startCol === 'number' &&
+    Number.isFinite(note.startCol) &&
+    typeof note.spanCols === 'number' &&
+    Number.isFinite(note.spanCols)
+  ) {
+    return {
+      scaleStep: note.scaleStep,
+      startCol: note.startCol,
+      spanCols: note.spanCols,
+      velocity: note.velocity,
+    }
+  }
+
+  if (
+    typeof note.startTime !== 'number' ||
+    !Number.isFinite(note.startTime) ||
+    typeof note.duration !== 'number' ||
+    !Number.isFinite(note.duration)
+  ) {
+    return null
+  }
+
+  const stepSec = stepDurationSec(bpm)
+  const startCol = Math.floor(note.startTime / stepSec + 1e-9)
+  const spanCols = Math.max(1, Math.round(note.duration / stepSec))
+
+  return {
+    scaleStep: note.scaleStep,
+    startCol,
+    spanCols,
+    velocity: note.velocity,
+  }
+}

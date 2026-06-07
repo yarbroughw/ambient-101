@@ -1,39 +1,57 @@
 import { LOOP_DELAY_DEFAULT, LOOP_REVERB_DEFAULT } from '../audio/loopEffects'
 import type { LoopPattern, PatternNote } from '../audio/patternTypes'
+import { migrateLegacyNote } from './gridLayout'
 import { normalizePatternTonality, normalizeRoot } from './scaleSteps'
 
 const STORAGE_KEY = 'ambient-101:loops'
-const STORAGE_VERSION = 1
+const STORAGE_VERSION = 2
 
 type PersistedLoops = {
   version: number
   loops: LoopPattern[]
 }
 
-function isPatternNote(value: unknown): value is PatternNote {
+type StoredPatternNote = {
+  scaleStep: number
+  startTime?: number
+  duration?: number
+  startCol?: number
+  spanCols?: number
+  velocity?: number
+}
+
+type StoredLoopPattern = Omit<LoopPattern, 'notes'> & {
+  notes: StoredPatternNote[]
+}
+
+function isStoredPatternNote(value: unknown): value is StoredPatternNote {
   if (!value || typeof value !== 'object') {
     return false
   }
 
-  const note = value as PatternNote
+  const note = value as StoredPatternNote
   return (
     typeof note.scaleStep === 'number' &&
     Number.isFinite(note.scaleStep) &&
-    typeof note.startTime === 'number' &&
-    Number.isFinite(note.startTime) &&
-    typeof note.duration === 'number' &&
-    Number.isFinite(note.duration) &&
     (note.velocity === undefined ||
-      (typeof note.velocity === 'number' && Number.isFinite(note.velocity)))
+      (typeof note.velocity === 'number' && Number.isFinite(note.velocity))) &&
+    ((typeof note.startCol === 'number' &&
+      Number.isFinite(note.startCol) &&
+      typeof note.spanCols === 'number' &&
+      Number.isFinite(note.spanCols)) ||
+      (typeof note.startTime === 'number' &&
+        Number.isFinite(note.startTime) &&
+        typeof note.duration === 'number' &&
+        Number.isFinite(note.duration)))
   )
 }
 
-function isLoopPattern(value: unknown): value is LoopPattern {
+function isStoredLoopPattern(value: unknown): value is StoredLoopPattern {
   if (!value || typeof value !== 'object') {
     return false
   }
 
-  const pattern = value as LoopPattern
+  const pattern = value as StoredLoopPattern
   return (
     typeof pattern.id === 'string' &&
     pattern.id.length > 0 &&
@@ -58,8 +76,14 @@ function isLoopPattern(value: unknown): value is LoopPattern {
     (pattern.delay === undefined ||
       (typeof pattern.delay === 'number' && Number.isFinite(pattern.delay))) &&
     Array.isArray(pattern.notes) &&
-    pattern.notes.every(isPatternNote)
+    pattern.notes.every(isStoredPatternNote)
   )
+}
+
+function migrateStoredNotes(notes: StoredPatternNote[], bpm: number): PatternNote[] {
+  return notes
+    .map((note) => migrateLegacyNote(note, bpm))
+    .filter((note): note is PatternNote => note !== null)
 }
 
 function normalizePattern(pattern: LoopPattern): LoopPattern {
@@ -83,7 +107,14 @@ function parseStoredLoops(raw: string): LoopPattern[] {
   const parsed: unknown = JSON.parse(raw)
 
   if (Array.isArray(parsed)) {
-    return parsed.filter(isLoopPattern).map(normalizePattern)
+    return parsed
+      .filter(isStoredLoopPattern)
+      .map((pattern) =>
+        normalizePattern({
+          ...pattern,
+          notes: migrateStoredNotes(pattern.notes, pattern.bpm),
+        }),
+      )
   }
 
   if (!parsed || typeof parsed !== 'object') {
@@ -95,7 +126,14 @@ function parseStoredLoops(raw: string): LoopPattern[] {
     return []
   }
 
-  return stored.loops.filter(isLoopPattern).map(normalizePattern)
+  return stored.loops
+    .filter(isStoredLoopPattern)
+    .map((pattern) =>
+      normalizePattern({
+        ...pattern,
+        notes: migrateStoredNotes(pattern.notes, pattern.bpm),
+      }),
+    )
 }
 
 export function loadLoopPatterns(): LoopPattern[] {

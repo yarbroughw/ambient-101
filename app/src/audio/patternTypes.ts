@@ -1,7 +1,7 @@
 export type PatternNote = {
   scaleStep: number
-  startTime: number
-  duration: number
+  startCol: number
+  spanCols: number
   velocity?: number
 }
 
@@ -31,7 +31,7 @@ export function melodyBounds(notes: PatternNote[]): MelodyBounds {
     return { start: 0, end: 0, span: 0 }
   }
 
-  const start = Math.min(...notes.map((n) => n.startTime))
-  const end = Math.max(...notes.map((n) => n.startTime + n.duration))
+  const start = Math.min(...notes.map((n) => n.startCol))
+  const end = Math.max(...notes.map((n) => n.startCol + n.spanCols))
   return { start, end, span: end - start }
 }
