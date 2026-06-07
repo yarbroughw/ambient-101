@@ -27,8 +27,8 @@ The app in `app/` is a **camp-usable composition surface**: user-authored loops,
 - **`TapeLoop`**: `Tone.Loop`-driven period per loop; `start` / `stop` / `test(playbackDurationSec)`; wall-clock `getProgress()` for visuals; editable loop duration. **Hot-reload** on pattern edits preserves loop phase while running (no full restart).
 - **Declarative patterns**: `LoopPattern` / `PatternNote` types; `compilePatternToSink()` schedules notes; pitch derived at playback from `scale` + `scaleStep` + `octaveShift` via `stepToPitch()`.
 - **Schedulable note sink**: notes on the Transport so `stop` cancels future hits; `prepare` / `silence` on transport changes.
-- **Per-loop voice**: **pad** or **pluck** synth → filter → gain → meter → **global effects bus**; per-reel volume on the voice gain.
-- **Global effects bus** (`globalEffects.ts`): dry/wet reverb and ping-pong delay sends, master volume, FFT analyser tap on the master output.
+- **Per-loop voice**: **pad** or **pluck** synth → filter → gain → meter → **per-reel effects bus** (`loopEffects.ts`: dry/wet reverb + ping-pong delay) → master input; per-reel volume on the voice gain.
+- **Global master** (`globalEffects.ts`): master volume + FFT analyser tap on the master output.
 - **Preset templates** (`demoPatterns.ts`): `bass`, `melody1`, `melody2` workshop fixtures—available via the presets menu, not loaded by default.
 
 ### Pattern model
@@ -42,6 +42,7 @@ The app in `app/` is a **camp-usable composition surface**: user-authored loops,
 | `bpm` | Melody tempo; sets grid step length and playhead speed |
 | `loopDuration` | Tape period (reel, `Tone.Loop`); independent of grid width |
 | `volume` | Per-reel level (0–1) |
+| `reverb`, `delay` | Per-reel FX send (0–1); defaults 0.75 / 0.3 |
 | `instrument` | `pad` or `pluck` |
 
 Notes are constrained to the **32-column grid** and **23 scale-step rows** at authoring time (`patternFitsGrid`, `noteFitsGrid`).
@@ -49,13 +50,13 @@ Notes are constrained to the **32-column grid** and **23 scale-step rows** at au
 ### Persistence
 
 - **`localStorage`** (`loopStorage.ts`, key `ambient-101:loops`): versioned JSON blob; saves on every pattern change—no save button or notification.
-- Restored when audio starts: stack order, labels, notes, BPM, scale, octave, duration, instrument, volume.
-- **Not persisted**: playback state, expanded row, global FX, mute/solo/favorite (not yet implemented).
+- Restored when audio starts: stack order, labels, notes, BPM, scale, octave, duration, instrument, volume, reverb, delay.
+- **Not persisted**: playback state, expanded row, master volume, mute/solo/favorite (not yet implemented).
 
 ### UI
 
 - **Workshop palette** from sketch-v1 (`theme.css`). Layout tokens in `layout.css`. App shell max-width 720px, UI scale 1.1×.
-- **Toolbar** (three-column grid): play all / stop all | **master FFT spectrum** | **global FX** (reverb, delay, volume dials).
+- **Toolbar** (three-column grid): play all / stop all | **master FFT spectrum** | **master volume** dial.
 - **Loop stack**: full-width **horizontal `TapeLoopRow` bars**, stacked vertically. One row expanded at a time (accordion). **Spacebar**: stop all if any reel is playing, else start all.
 - **Add controls**: **+** adds a blank loop; **presets ▾** adds `bass`, `melody1`, or `melody2`.
 
@@ -66,7 +67,7 @@ Notes are constrained to the **32-column grid** and **23 scale-step rows** at au
 | Transport | play / stop / test (speaker icon; pulses during test) |
 | Volume | Ableton-style triangle fader + level meter |
 | Reel | 12 o’clock tick, rotating playhead dot, lap flash at cycle start |
-| Duration | Read-only loop seconds in reel center |
+| Duration | Read-only cooldown seconds in reel center (stored as `loopDuration`) |
 | Label | Click to edit inline |
 | Mini melody view | Fixed-width note timeline over **melody window** + playhead |
 | Metadata | BPM, instrument, scale — display only |
@@ -77,9 +78,8 @@ Notes are constrained to the **32-column grid** and **23 scale-step rows** at au
 
 | Region | Behavior |
 |--------|----------|
-| Toolbar | Instrument (disabled), scale dropdown, BPM readout, octave ▲/▼ |
+| **Subheader bar** | Aligned with collapsed header: **cooldown** dial (under reel), **BPM** dial (under label), scale + instrument + octave + **reverb** / **delay** dials (tape lane, FX to the right of inst/oct) |
 | **Melody grid** | 32×23 step grid; drag to paint spans; right-edge resize; click bar to delete; keyboard toggle on focused cell |
-| **Duration controls** | `melody / loop` readout (e.g. `5.0s / 11.0s`); loop duration dial (floor = melody window, max = 60s); static melody window display |
 
 ### Dual clocks (shipped)
 
@@ -87,10 +87,10 @@ Tape loops teach two different durations:
 
 | Clock | Domain | UI |
 |-------|--------|-----|
-| **Tape loop** | Full loop period (e.g. 11s) | Reel rotation + lap flash |
-| **Melody window** | Fixed 32-step grid at BPM (`480 / bpm` seconds) | Mini melody view, expanded grid playhead, test duration |
+| **Cooldown** (`loopDuration`) | Full tape period before the melody repeats (e.g. 11s) | Reel rotation, lap flash, **cooldown** dial |
+| **Melody window** | Fixed 32-step grid at BPM (`480 / bpm` seconds) | Mini melody view, expanded grid playhead, test duration, **BPM** dial |
 
-The reel answers: *when does this loop come back around relative to the others?*  
+The reel answers: *when does this tape come back around relative to the others?* (instructor language: **cooldown**)  
 The melody window answers: *where in the composable grid do notes live, and how fast does the playhead cross it?*
 
 ### Mini melody view (shipped)
@@ -112,9 +112,7 @@ Ordered toward camp-ready polish. Items within a phase can be parallelized.
 
 ### 1. Time model completion
 
-- **BPM dial** with bidirectional clamps against loop duration (`minBpmForLoopDuration` exists; not wired in UI).
-- **Dial inactive arcs** — grey out forbidden ranges on loop/BPM dials (FX dials today have no inactive arc).
-- **Dual duration in collapsed summary** — editor shows `melody / loop`; reel center still shows loop only.
+- **Dial inactive arcs** — grey out forbidden ranges on cooldown/BPM dials (FX dials today have no inactive arc).
 
 ### 2. Orchestra controls
 
@@ -130,7 +128,7 @@ Ordered toward camp-ready polish. Items within a phase can be parallelized.
 
 ### 4. Polish
 
-- Persist **global FX** to `localStorage`.
+- Persist **master volume** to `localStorage`.
 - Reel ring level visualization (meter data exists; side meter used today).
 - Random seed exposure for any randomized behavior.
 - Undo (open decision).
@@ -173,10 +171,10 @@ Invalid states must be **unreachable**, not corrected after the fact.
 
 | Control | Floor | Ceiling |
 |---------|-------|---------|
-| **Loop duration** | melody window (`480 / bpm`) | app maximum (60s) |
-| **Melody BPM** | `480 / loopDuration` (grid must fit on tape) | app maximum (e.g. 240) |
+| **Cooldown** (`loopDuration`) | melody window (`480 / bpm`) | app maximum (60s) |
+| **Melody BPM** | `480 / loopDuration` (grid must fit on tape) | app maximum (240) |
 
-Equivalently: **melody window ≤ loop duration** at all times.
+Equivalently: **melody window ≤ cooldown** at all times.
 
 **Additional rules (enforced in UI):**
 
@@ -184,9 +182,7 @@ Equivalently: **melody window ≤ loop duration** at all times.
 2. Every note: `startTime + duration ≤ melody window` (grid extent)
 3. Every note: `scaleStep` within −11…+11
 
-**Preferred control**: Ableton-style **dials** with greyed inactive arcs for forbidden ranges (loop dial shipped; BPM and inactive arcs not yet).
-
-**Display:** show **melody window / loop** in the editor (`DurationControls`).
+**Preferred control**: Ableton-style **dials** with greyed inactive arcs for forbidden ranges (cooldown + BPM dials shipped; inactive arcs not yet).
 
 ## Scale and tonality
 
