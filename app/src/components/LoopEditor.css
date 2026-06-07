@@ -127,7 +127,9 @@
 }
 
 .loop-editor__tonality-column .loop-editor__select,
+.loop-editor__tonality-column .scale-type-select__native,
 .loop-editor__voice-column .loop-editor__select,
+.loop-editor__voice-column .scale-type-select__native,
 .loop-editor__octave-controls {
   width: 100%;
   max-width: 100%;

@@ -7,9 +7,8 @@ import {
   globalSelectValue,
   MIXED_VALUE,
   ROOT_PITCH_CLASSES,
-  scaleTypeLabel,
-  WORKSHOP_SCALE_TYPES,
 } from '../lib/scaleSteps'
+import { ScaleTypeSelect } from './ScaleTypeSelect'
 import './Dial.css'
 
 type GlobalEffectsToolbarProps = {
@@ -75,20 +74,15 @@ export function GlobalEffectsToolbar({
         </label>
         <label className="toolbar__tonality-field">
           <span className="toolbar__tonality-label">scale</span>
-          <select
+          <ScaleTypeSelect
             className="toolbar__tonality-select"
+            variant="toolbar"
             value={scaleValue}
             disabled={disabled || noReels}
-            aria-label="Global scale"
-            onChange={(event) => handleScaleChange(event.target.value)}
-          >
-            {scaleMixed ? <option value={MIXED_VALUE}>*</option> : null}
-            {WORKSHOP_SCALE_TYPES.map((option) => (
-              <option key={option} value={option}>
-                {scaleTypeLabel(option)}
-              </option>
-            ))}
-          </select>
+            ariaLabel="Global scale"
+            mixed={scaleMixed}
+            onChange={handleScaleChange}
+          />
         </label>
       </div>
       <Dial

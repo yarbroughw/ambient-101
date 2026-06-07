@@ -33,7 +33,7 @@ function ensurePreviewVoice(instrument: 'pad' | 'pluck'): PreviewVoice {
     type: 'lowpass',
     rolloff: -12,
   })
-  const gain = new Tone.Gain(instrument === 'pluck' ? 0.38 : 0.42)
+  const gain = new Tone.Gain(instrument === 'pluck' ? 0.5 : 0.55)
 
   synth.connect(filter)
   filter.connect(gain)

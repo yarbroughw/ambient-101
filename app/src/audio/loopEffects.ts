@@ -52,7 +52,7 @@ export function createLoopEffectsBus(
 
   function refreshMix(): void {
     const t = Tone.now()
-    const dryLevel = (1 - reverbLevel) * (1 - delayLevel)
+    const dryLevel = 1 - reverbLevel
     dry.gain.cancelAndHoldAtTime(t)
     dry.gain.rampTo(dryLevel, 0.05)
     reverbSend.gain.cancelAndHoldAtTime(t)

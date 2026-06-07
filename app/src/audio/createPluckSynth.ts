@@ -7,7 +7,7 @@ import {
 } from './loopEffects'
 import { createSynthNoteSink, type LoopVoice } from './createPadSynth'
 
-const OUTPUT_GAIN = 0.38
+const OUTPUT_GAIN = 0.5
 
 type SynthChain = {
   synth: Tone.PolySynth

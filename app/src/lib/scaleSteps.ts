@@ -150,6 +150,40 @@ export function scaleTypeLabel(scaleType: string): string {
   return scaleType
 }
 
+const SCALE_TYPE_ABBREV: Record<WorkshopScaleType, string> = {
+  minor: 'minor',
+  major: 'major',
+  dorian: 'dorian',
+  phrygian: 'phrygian',
+  lydian: 'lydian',
+  mixolydian: 'mixolyd.',
+  locrian: 'locrian',
+  'harmonic minor': 'harm. minor',
+  'melodic minor': 'mel. minor',
+  'minor pentatonic': 'min. pent.',
+  'major pentatonic': 'maj. pent.',
+  'phrygian dominant': 'phryg. dom.',
+  'lydian dominant': 'lyd. dom.',
+  'harmonic major': 'harm. major',
+  'hungarian minor': 'hung. minor',
+  altered: 'altered',
+  'whole tone': 'whole tone',
+  diminished: 'diminished',
+  hirajoshi: 'hirajoshi',
+  'in-sen': 'in-sen',
+  egyptian: 'egyptian',
+  'major blues': 'maj. blues',
+  'minor blues': 'min. blues',
+}
+
+export function scaleTypeAbbrevLabel(scaleType: string): string {
+  if (isWorkshopScaleType(scaleType)) {
+    return SCALE_TYPE_ABBREV[scaleType]
+  }
+
+  return scaleType
+}
+
 export const MIXED_VALUE = '__mixed__'
 
 export function globalSelectValue(values: string[], fallback: string): string {

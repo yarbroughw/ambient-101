@@ -3,11 +3,10 @@ import {
   OCTAVE_SHIFT_MAX,
   OCTAVE_SHIFT_MIN,
   ROOT_PITCH_CLASSES,
-  scaleTypeLabel,
-  WORKSHOP_SCALE_TYPES,
 } from '../lib/scaleSteps'
 import { MELODY_BPM_MAX } from '../lib/gridLayout'
 import { Dial } from './Dial'
+import { ScaleTypeSelect } from './ScaleTypeSelect'
 import './LoopEditor.css'
 
 type EditorSubheaderProps = {
@@ -122,19 +121,13 @@ export function EditorSubheader({
 
             <label className="loop-editor__inline-field">
               <span className="loop-editor__inline-label">scale</span>
-              <select
+              <ScaleTypeSelect
                 className="loop-editor__select loop-editor__select--editable"
                 value={scale}
                 disabled={disabled}
-                aria-label="Scale"
-                onChange={(event) => onScaleChange(event.target.value)}
-              >
-                {WORKSHOP_SCALE_TYPES.map((option) => (
-                  <option key={option} value={option}>
-                    {scaleTypeLabel(option)}
-                  </option>
-                ))}
-              </select>
+                ariaLabel="Scale"
+                onChange={onScaleChange}
+              />
             </label>
           </div>
 

@@ -2,9 +2,12 @@ import * as Tone from 'tone'
 
 const VOLUME_DEFAULT = 1
 
+const LIMITER_THRESHOLD_DB = -6
+
 let initialized = false
 let input: Tone.Gain | null = null
 let master: Tone.Gain | null = null
+let limiter: Tone.Limiter | null = null
 let analyser: Tone.Analyser | null = null
 let volumeAmount = VOLUME_DEFAULT
 
@@ -24,11 +27,13 @@ function ensureGlobalEffects(): void {
 
   input = new Tone.Gain(1)
   master = new Tone.Gain(volumeAmount)
+  limiter = new Tone.Limiter(LIMITER_THRESHOLD_DB)
   analyser = new Tone.Analyser('fft', 4096)
 
   input.connect(master)
-  master.connect(analyser)
-  master.toDestination()
+  master.connect(limiter)
+  limiter.connect(analyser)
+  analyser.toDestination()
 
   refreshVolume()
   initialized = true

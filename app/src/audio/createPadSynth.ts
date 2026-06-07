@@ -7,7 +7,7 @@ import {
 } from './loopEffects'
 import type { NoteSink } from './types'
 
-const OUTPUT_GAIN = 0.42
+const OUTPUT_GAIN = 0.55
 
 type SynthChain = {
   synth: Tone.PolySynth
