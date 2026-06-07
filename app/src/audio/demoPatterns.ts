@@ -1,4 +1,5 @@
 import { compilePatternToSink } from './compilePattern'
+import { LOOP_DELAY_DEFAULT, LOOP_REVERB_DEFAULT } from './loopEffects'
 import { createLoopVoice } from './createPadSynth'
 import { createPluckLoopVoice } from './createPluckSynth'
 import { createSchedulableNoteSink } from './schedulableNoteSink'
@@ -6,7 +7,8 @@ import { createGridNote, patternFitsGrid } from '../lib/gridLayout'
 import type { LoopPattern } from './patternTypes'
 import { TapeLoop } from './tapeLoop'
 
-const SCALE = 'C4 minor'
+const ROOT = 'C'
+const SCALE = 'minor'
 
 const BASS_BPM = 72
 
@@ -15,10 +17,13 @@ const bassPattern: LoopPattern = {
   label: 'bass',
   loopDuration: 7,
   bpm: BASS_BPM,
+  root: ROOT,
   scale: SCALE,
   octaveShift: -2,
   instrument: 'pad',
   volume: 1,
+  reverb: LOOP_REVERB_DEFAULT,
+  delay: LOOP_DELAY_DEFAULT,
   notes: [
     createGridNote(BASS_BPM, -5, 0, 12, 0.45),
     createGridNote(BASS_BPM, -3, 17, 10, 0.35),
@@ -30,10 +35,13 @@ const MELODY1_BPM = 96
 const melody1Template: Omit<LoopPattern, 'id' | 'label'> = {
   loopDuration: 11,
   bpm: MELODY1_BPM,
+  root: ROOT,
   scale: SCALE,
   octaveShift: 0,
   instrument: 'pluck',
   volume: 1,
+  reverb: LOOP_REVERB_DEFAULT,
+  delay: LOOP_DELAY_DEFAULT,
   notes: [
     createGridNote(MELODY1_BPM, 1, 0, 2, 0.5),
     createGridNote(MELODY1_BPM, 3, 12, 3, 1),
@@ -47,10 +55,13 @@ const MELODY2_BPM = 88
 const melody2Template: Omit<LoopPattern, 'id' | 'label'> = {
   loopDuration: 10,
   bpm: MELODY2_BPM,
+  root: ROOT,
   scale: SCALE,
   octaveShift: 0,
   instrument: 'pluck',
   volume: 1,
+  reverb: LOOP_REVERB_DEFAULT,
+  delay: LOOP_DELAY_DEFAULT,
   notes: [
     createGridNote(MELODY2_BPM, 6, 0, 2, 0.55),
     createGridNote(MELODY2_BPM, 4, 9, 2, 0.65),
@@ -63,10 +74,13 @@ const melody2Template: Omit<LoopPattern, 'id' | 'label'> = {
 const blankTemplate: Omit<LoopPattern, 'id' | 'label'> = {
   loopDuration: 10,
   bpm: MELODY2_BPM,
+  root: ROOT,
   scale: SCALE,
   octaveShift: 0,
   instrument: 'pluck',
   volume: 1,
+  reverb: LOOP_REVERB_DEFAULT,
+  delay: LOOP_DELAY_DEFAULT,
   notes: [],
 }
 
@@ -109,18 +123,28 @@ export type DemoLoop = {
   loop: TapeLoop
   rebindPattern: (pattern: LoopPattern) => void
   setVolume: (amount: number) => void
+  setReverb: (amount: number) => void
+  setDelay: (amount: number) => void
 }
 
-function createVoiceForInstrument(instrument: string) {
+function createVoiceForInstrument(
+  instrument: string,
+  reverb: number,
+  delay: number,
+) {
   if (instrument === 'pluck') {
-    return createPluckLoopVoice()
+    return createPluckLoopVoice(reverb, delay)
   }
-  return createLoopVoice()
+  return createLoopVoice(reverb, delay)
 }
 
 function bindPattern(pattern: LoopPattern): DemoLoop {
   const loop = new TapeLoop(pattern.label, pattern.loopDuration)
-  const voice = createVoiceForInstrument(pattern.instrument)
+  const voice = createVoiceForInstrument(
+    pattern.instrument,
+    pattern.reverb,
+    pattern.delay,
+  )
   voice.setVolume(pattern.volume ?? 1)
   const sink = createSchedulableNoteSink(
     {
@@ -133,11 +157,21 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
 
   function rebindPattern(next: LoopPattern) {
     voice.setVolume(next.volume ?? 1)
+    voice.setReverb(next.reverb)
+    voice.setDelay(next.delay)
     loop.record(compilePatternToSink(next, sink))
   }
 
   function setVolume(amount: number) {
     voice.setVolume(amount)
+  }
+
+  function setReverb(amount: number) {
+    voice.setReverb(amount)
+  }
+
+  function setDelay(amount: number) {
+    voice.setDelay(amount)
   }
 
   rebindPattern(pattern)
@@ -147,7 +181,7 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
     getLevel: voice.getLevel,
   })
 
-  return { pattern, loop, rebindPattern, setVolume }
+  return { pattern, loop, rebindPattern, setVolume, setReverb, setDelay }
 }
 
 export function createBlankPattern(id: string, label: string): LoopPattern {

@@ -1,5 +1,10 @@
 import * as Tone from 'tone'
-import { getGlobalEffectInput } from './globalEffects'
+import {
+  createLoopEffectsBus,
+  LOOP_DELAY_DEFAULT,
+  LOOP_REVERB_DEFAULT,
+  type LoopEffectsBus,
+} from './loopEffects'
 import type { NoteSink } from './types'
 
 const OUTPUT_GAIN = 0.42
@@ -11,7 +16,7 @@ type SynthChain = {
   meter: Tone.Meter
 }
 
-function buildSynthChain(): SynthChain {
+function buildSynthChain(destination: Tone.InputNode): SynthChain {
   const synth = new Tone.PolySynth(Tone.Synth)
   synth.set({
     oscillator: { type: 'sawtooth' },
@@ -30,7 +35,7 @@ function buildSynthChain(): SynthChain {
   synth.connect(filter)
   filter.connect(gain)
   gain.connect(meter)
-  meter.connect(getGlobalEffectInput())
+  meter.connect(destination)
 
   return { synth, filter, gain, meter }
 }
@@ -42,6 +47,8 @@ export type LoopVoice = {
   getLevel: () => number
   setVolume: (amount: number) => void
   getVolume: () => number
+  setReverb: (amount: number) => void
+  setDelay: (amount: number) => void
 }
 
 function readMeterLevel(meter: Tone.Meter): number {
@@ -49,10 +56,16 @@ function readMeterLevel(meter: Tone.Meter): number {
   return typeof value === 'number' ? value : 0
 }
 
-export function createLoopVoice(): LoopVoice {
-  let chain: SynthChain | null = buildSynthChain()
+export function createLoopVoice(
+  reverb = LOOP_REVERB_DEFAULT,
+  delay = LOOP_DELAY_DEFAULT,
+): LoopVoice {
+  let effects: LoopEffectsBus | null = createLoopEffectsBus(reverb, delay)
+  let chain: SynthChain | null = buildSynthChain(effects.input)
   let sink = createSynthNoteSink(chain.synth)
   let volume = 1
+  let reverbAmount = reverb
+  let delayAmount = delay
 
   function applyVolume() {
     if (!chain) {
@@ -83,6 +96,20 @@ export function createLoopVoice(): LoopVoice {
     chain = null
   }
 
+  function disposeEffects() {
+    effects?.dispose()
+    effects = null
+  }
+
+  function rebuildChain() {
+    disposeChain()
+    disposeEffects()
+    effects = createLoopEffectsBus(reverbAmount, delayAmount)
+    chain = buildSynthChain(effects.input)
+    sink = createSynthNoteSink(chain.synth)
+    applyVolume()
+  }
+
   return {
     get sink() {
       if (!chain) {
@@ -92,12 +119,10 @@ export function createLoopVoice(): LoopVoice {
     },
     silence() {
       disposeChain()
+      disposeEffects()
     },
     prepare() {
-      disposeChain()
-      chain = buildSynthChain()
-      sink = createSynthNoteSink(chain.synth)
-      applyVolume()
+      rebuildChain()
     },
     getLevel() {
       if (!chain) {
@@ -111,6 +136,14 @@ export function createLoopVoice(): LoopVoice {
     },
     getVolume() {
       return volume
+    },
+    setReverb(amount: number) {
+      reverbAmount = Math.min(1, Math.max(0, amount))
+      effects?.setReverb(reverbAmount)
+    },
+    setDelay(amount: number) {
+      delayAmount = Math.min(1, Math.max(0, amount))
+      effects?.setDelay(delayAmount)
     },
   }
 }

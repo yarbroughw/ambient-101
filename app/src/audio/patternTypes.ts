@@ -10,10 +10,13 @@ export type LoopPattern = {
   label: string
   loopDuration: number
   bpm: number
+  root: string
   scale: string
   octaveShift: number
   instrument: string
   volume: number
+  reverb: number
+  delay: number
   notes: PatternNote[]
 }
 

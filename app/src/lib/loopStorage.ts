@@ -1,4 +1,6 @@
+import { LOOP_DELAY_DEFAULT, LOOP_REVERB_DEFAULT } from '../audio/loopEffects'
 import type { LoopPattern, PatternNote } from '../audio/patternTypes'
+import { normalizePatternTonality, normalizeRoot } from './scaleSteps'
 
 const STORAGE_KEY = 'ambient-101:loops'
 const STORAGE_VERSION = 1
@@ -43,21 +45,33 @@ function isLoopPattern(value: unknown): value is LoopPattern {
     Number.isFinite(pattern.bpm) &&
     typeof pattern.scale === 'string' &&
     pattern.scale.length > 0 &&
+    (pattern.root === undefined ||
+      (typeof pattern.root === 'string' && pattern.root.length > 0)) &&
     typeof pattern.octaveShift === 'number' &&
     Number.isFinite(pattern.octaveShift) &&
     typeof pattern.instrument === 'string' &&
     pattern.instrument.length > 0 &&
     typeof pattern.volume === 'number' &&
     Number.isFinite(pattern.volume) &&
+    (pattern.reverb === undefined ||
+      (typeof pattern.reverb === 'number' && Number.isFinite(pattern.reverb))) &&
+    (pattern.delay === undefined ||
+      (typeof pattern.delay === 'number' && Number.isFinite(pattern.delay))) &&
     Array.isArray(pattern.notes) &&
     pattern.notes.every(isPatternNote)
   )
 }
 
 function normalizePattern(pattern: LoopPattern): LoopPattern {
+  const tonality = normalizePatternTonality(pattern.root, pattern.scale)
+
   return {
     ...pattern,
+    root: normalizeRoot(tonality.root),
+    scale: tonality.scale,
     volume: Math.min(1, Math.max(0, pattern.volume)),
+    reverb: Math.min(1, Math.max(0, pattern.reverb ?? LOOP_REVERB_DEFAULT)),
+    delay: Math.min(1, Math.max(0, pattern.delay ?? LOOP_DELAY_DEFAULT)),
     notes: pattern.notes.map((note) => ({
       ...note,
       velocity: note.velocity ?? 1,
