@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { LoopPattern, PatternNote } from '../audio/patternTypes'
 import { melodyWindowDuration, minLoopDurationForBpm } from '../lib/gridLayout'
-import { scaleLabel } from '../lib/scaleSteps'
+import { tonalityLabel } from '../lib/scaleSteps'
 import type { TapeLoop } from '../audio/tapeLoop'
 import { useLoopLevel } from '../hooks/useLoopLevel'
 import { useLoopProgress } from '../hooks/useLoopProgress'
@@ -91,11 +91,15 @@ type TapeLoopRowProps = {
   onRunningChange: (running: boolean) => void
   onExpandedChange: (expanded: boolean) => void
   onNotesChange: (notes: PatternNote[]) => void
+  onRootChange: (root: string) => void
   onScaleChange: (scale: string) => void
   onOctaveShiftChange: (octaveShift: number) => void
+  onBpmChange: (bpm: number) => void
   onLoopDurationChange: (sec: number) => void
   onLabelChange: (label: string) => void
   onVolumeChange: (volume: number) => void
+  onReverbChange: (reverb: number) => void
+  onDelayChange: (delay: number) => void
   onDuplicate: () => void
   onDelete: () => void
   disabled?: boolean
@@ -109,11 +113,15 @@ export function TapeLoopRow({
   onRunningChange,
   onExpandedChange,
   onNotesChange,
+  onRootChange,
   onScaleChange,
   onOctaveShiftChange,
+  onBpmChange,
   onLoopDurationChange,
   onLabelChange,
   onVolumeChange,
+  onReverbChange,
+  onDelayChange,
   onDuplicate,
   onDelete,
   disabled = false,
@@ -147,8 +155,8 @@ export function TapeLoopRow({
         />
       </div>
 
-      <div className="tape-loop-row__summary">
-        <div className="tape-loop-row__controls">
+      <div className="tape-loop-row__summary reel-lane">
+        <div className="reel-lane__controls tape-loop-row__controls">
           <button
             type="button"
             className="tape-loop-btn tape-loop-btn--play"
@@ -187,7 +195,7 @@ export function TapeLoopRow({
           </button>
         </div>
 
-        <div className="tape-loop-row__level-group">
+        <div className="reel-lane__level tape-loop-row__level-group">
           <LoopVolumeFader
             value={pattern.volume}
             disabled={disabled}
@@ -196,7 +204,7 @@ export function TapeLoopRow({
           <LoopLevelMeter level={level} peak={peak} active={melodyPlaybackActive} />
         </div>
 
-        <div className="tape-loop-row__reel" aria-hidden>
+        <div className="reel-lane__reel tape-loop-row__reel" aria-hidden>
           <div className="tape-loop-row__ring" />
           <div className="tape-loop-row__tick" />
           {running ? (
@@ -210,31 +218,43 @@ export function TapeLoopRow({
               />
             </div>
           ) : null}
-          <span className="tape-loop-row__duration-readonly">
+          <span
+            className="tape-loop-row__duration-readonly"
+            title="cooldown"
+          >
             {pattern.loopDuration.toFixed(1)}s
           </span>
         </div>
 
+        <div className="reel-lane__label">
         <LoopLabel
           label={pattern.label}
           disabled={disabled}
           onLabelChange={onLabelChange}
         />
+        </div>
 
-        <div className="tape-loop-row__tape-content">
+        <div className="reel-lane__tape tape-loop-row__tape-content">
           <MiniMelodyView
             pattern={pattern}
             loopTimeSec={loopTimeSec}
             showPlayhead={melodyPlaybackActive}
           />
-          <div className="tape-loop-row__content-meta">
-            <span>BPM: {pattern.bpm}</span>
-            <span>instrument: {pattern.instrument}</span>
-            <span>scale: {scaleLabel(pattern.scale)}</span>
+          <div className="reel-lane__meta tape-loop-row__content-meta">
+            <span title={`BPM: ${pattern.bpm}`}>BPM: {pattern.bpm}</span>
+            <span title={`instrument: ${pattern.instrument}`}>
+              instrument: {pattern.instrument}
+            </span>
+            <span
+              className="tape-loop-row__meta-scale"
+              title={`scale: ${tonalityLabel({ root: pattern.root, scale: pattern.scale })}`}
+            >
+              scale: {tonalityLabel({ root: pattern.root, scale: pattern.scale })}
+            </span>
           </div>
         </div>
 
-        <div className="tape-loop-row__actions">
+        <div className="reel-lane__actions tape-loop-row__actions">
           <button
             type="button"
             className={`tape-loop-row__action tape-loop-row__action--edit${expanded ? ' is-active' : ''}`}
@@ -278,9 +298,13 @@ export function TapeLoopRow({
             showPlayhead={melodyPlaybackActive}
             disabled={disabled}
             onNotesChange={onNotesChange}
+            onRootChange={onRootChange}
             onScaleChange={onScaleChange}
             onOctaveShiftChange={onOctaveShiftChange}
+            onBpmChange={onBpmChange}
             onLoopDurationChange={handleLoopDurationChange}
+            onReverbChange={onReverbChange}
+            onDelayChange={onDelayChange}
           />
         </div>
       ) : null}

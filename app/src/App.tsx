@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { AddLoopControls } from './components/AddLoopControls'
+import { PaletteSelector } from './components/PaletteSelector'
 import { GlobalEffectsToolbar } from './components/GlobalEffectsToolbar'
 import { MasterSpectrum } from './components/MasterSpectrum'
 import { StartAudioButton } from './components/StartAudioButton'
 import { TapeLoopRow } from './components/TapeLoopRow'
 import type { LoopPattern, PatternNote } from './audio/patternTypes'
-import { clampOctaveShift } from './lib/scaleSteps'
+import { clampOctaveShift, normalizeRoot } from './lib/scaleSteps'
 import {
   createBlankPattern,
   createPresetPattern,
@@ -236,6 +237,10 @@ export default function App() {
     updatePattern(id, { notes })
   }
 
+  function handleRootChange(id: string, root: string) {
+    updatePattern(id, { root: normalizeRoot(root) })
+  }
+
   function handleScaleChange(id: string, scale: string) {
     updatePattern(id, { scale })
   }
@@ -266,6 +271,42 @@ export default function App() {
     })
   }
 
+  function handleReverbChange(id: string, reverb: number) {
+    const clamped = Math.min(1, Math.max(0, reverb))
+    setLoops((prev) => {
+      if (!prev) {
+        return prev
+      }
+
+      return prev.map((entry) => {
+        if (entry.pattern.id !== id) {
+          return entry
+        }
+
+        entry.setReverb(clamped)
+        return { ...entry, pattern: { ...entry.pattern, reverb: clamped } }
+      })
+    })
+  }
+
+  function handleDelayChange(id: string, delay: number) {
+    const clamped = Math.min(1, Math.max(0, delay))
+    setLoops((prev) => {
+      if (!prev) {
+        return prev
+      }
+
+      return prev.map((entry) => {
+        if (entry.pattern.id !== id) {
+          return entry
+        }
+
+        entry.setDelay(clamped)
+        return { ...entry, pattern: { ...entry.pattern, delay: clamped } }
+      })
+    })
+  }
+
   function handleLoopDurationChange(id: string, duration: number) {
     setLoops((prev) => {
       if (!prev) {
@@ -284,37 +325,81 @@ export default function App() {
     })
   }
 
+  function handleBpmChange(id: string, bpm: number) {
+    updatePattern(id, { bpm })
+  }
+
+  function handleGlobalRootChange(root: string) {
+    const normalized = normalizeRoot(root)
+    setLoops((prev) => {
+      if (!prev) {
+        return prev
+      }
+
+      return prev.map((entry) => {
+        const nextPattern = { ...entry.pattern, root: normalized }
+        entry.rebindPattern(nextPattern)
+        return { ...entry, pattern: nextPattern }
+      })
+    })
+  }
+
+  function handleGlobalScaleChange(scale: string) {
+    setLoops((prev) => {
+      if (!prev) {
+        return prev
+      }
+
+      return prev.map((entry) => {
+        const nextPattern = { ...entry.pattern, scale }
+        entry.rebindPattern(nextPattern)
+        return { ...entry, pattern: nextPattern }
+      })
+    })
+  }
+
+  const reelRoots = loops?.map(({ pattern }) => pattern.root) ?? []
+  const reelScaleTypes = loops?.map(({ pattern }) => pattern.scale) ?? []
+
+  if (!audioReady) {
+    return (
+      <div className="app app--startup">
+        <StartAudioButton onReady={() => setAudioReady(true)} />
+      </div>
+    )
+  }
+
   return (
     <div className="app">
+      <PaletteSelector />
       <div className="toolbar">
         <div className="toolbar__left">
-          {!audioReady ? (
-            <StartAudioButton onReady={() => setAudioReady(true)} />
-          ) : (
-            <>
-              <button
-                type="button"
-                className="ensemble-btn ensemble-btn--play"
-                disabled={!loops?.length || allPlaying}
-                onClick={startAll}
-              >
-                play all
-              </button>
-              <button
-                type="button"
-                className="ensemble-btn ensemble-btn--stop"
-                disabled={!loops?.length || allStopped}
-                onClick={stopAll}
-              >
-                stop all
-              </button>
-            </>
-          )}
+          <button
+            type="button"
+            className="ensemble-btn ensemble-btn--play"
+            disabled={!loops?.length || allPlaying}
+            onClick={startAll}
+          >
+            play all
+          </button>
+          <button
+            type="button"
+            className="ensemble-btn ensemble-btn--stop"
+            disabled={!loops?.length || allStopped}
+            onClick={stopAll}
+          >
+            stop all
+          </button>
         </div>
         <div className="toolbar__spectrum">
-          <MasterSpectrum active={audioReady} />
+          <MasterSpectrum active />
         </div>
-        <GlobalEffectsToolbar disabled={!audioReady} />
+        <GlobalEffectsToolbar
+          reelRoots={reelRoots}
+          reelScaleTypes={reelScaleTypes}
+          onGlobalRootChange={handleGlobalRootChange}
+          onGlobalScaleChange={handleGlobalScaleChange}
+        />
       </div>
 
       <section className="loop-stack" aria-label="Tape loops">
@@ -330,10 +415,12 @@ export default function App() {
               handleExpandedChange(pattern.id, expanded)
             }
             onNotesChange={(notes) => handleNotesChange(pattern.id, notes)}
+            onRootChange={(root) => handleRootChange(pattern.id, root)}
             onScaleChange={(scale) => handleScaleChange(pattern.id, scale)}
             onOctaveShiftChange={(shift) =>
               handleOctaveShiftChange(pattern.id, shift)
             }
+            onBpmChange={(bpm) => handleBpmChange(pattern.id, bpm)}
             onLoopDurationChange={(duration) =>
               handleLoopDurationChange(pattern.id, duration)
             }
@@ -341,17 +428,19 @@ export default function App() {
             onVolumeChange={(volume) =>
               handleVolumeChange(pattern.id, volume)
             }
+            onReverbChange={(reverb) =>
+              handleReverbChange(pattern.id, reverb)
+            }
+            onDelayChange={(delay) => handleDelayChange(pattern.id, delay)}
             onDuplicate={() => handleDuplicateLoop(pattern.id)}
             onDelete={() => handleDeleteLoop(pattern.id)}
           />
         ))}
 
-        {audioReady ? (
-          <AddLoopControls
-            onAddBlank={handleAddBlankLoop}
-            onAddPreset={handleAddPresetLoop}
-          />
-        ) : null}
+        <AddLoopControls
+          onAddBlank={handleAddBlankLoop}
+          onAddPreset={handleAddPresetLoop}
+        />
       </section>
     </div>
   )

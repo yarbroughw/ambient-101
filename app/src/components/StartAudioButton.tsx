@@ -26,13 +26,15 @@ export function StartAudioButton({ onReady }: StartAudioButtonProps) {
     <div className="start-audio">
       <button
         type="button"
-        className="ensemble-btn ensemble-btn--play"
+        className="ensemble-btn ensemble-btn--play start-audio__button"
         onClick={handleClick}
         disabled={busy}
       >
-        {busy ? 'starting…' : 'start audio'}
+        {busy ? 'starting…' : 'start'}
       </button>
-      {error ? <p className="hint" style={{ color: 'var(--color-stop)' }}>{error}</p> : null}
+      {error ? (
+        <p className="start-audio__error">{error}</p>
+      ) : null}
     </div>
   )
 }

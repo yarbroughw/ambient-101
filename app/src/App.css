@@ -2,6 +2,15 @@
   position: relative;
 }
 
+.app--startup {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-canvas-bg);
+}
+
 .toolbar {
   display: grid;
   grid-template-columns: 1fr minmax(140px, 280px) 1fr;
@@ -32,6 +41,46 @@
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+}
+
+.toolbar__tonality {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toolbar__tonality-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolbar__tonality-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  text-transform: lowercase;
+  color: var(--color-labels);
+  flex: 0 0 28px;
+}
+
+.toolbar__tonality-select {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-btn-text);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--color-outline);
+  padding: 2px 4px;
+  cursor: pointer;
+  min-width: 88px;
+}
+
+.toolbar__tonality-select--root {
+  min-width: 44px;
+}
+
+.toolbar__tonality-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .toolbar__effects-fx {
@@ -67,7 +116,18 @@
 }
 
 .start-audio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   margin: 0;
+}
+
+.start-audio__error {
+  margin: 0;
+  font-size: 10px;
+  color: var(--color-stop);
+  text-transform: lowercase;
 }
 
 .hint {
