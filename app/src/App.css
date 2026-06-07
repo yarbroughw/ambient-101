@@ -23,6 +23,7 @@
 .toolbar__spectrum {
   justify-self: center;
   width: 100%;
+  min-width: 140px;
 }
 
 .toolbar__left {

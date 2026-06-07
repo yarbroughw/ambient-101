@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import * as Tone from 'tone'
 import { getMasterAnalyser } from '../audio/globalEffects'
 import { drawMasterSpectrum } from '../lib/drawMasterSpectrum'
 import './MasterSpectrum.css'
@@ -42,16 +43,18 @@ export function MasterSpectrum({ active }: MasterSpectrumProps) {
 
     const tick = () => {
       const analyser = getMasterAnalyser()
-      const values = analyser.getValue() as Float32Array
+      const values = analyser.getValue()
       const rect = canvas.getBoundingClientRect()
-      drawMasterSpectrum(
-        ctx,
-        values,
-        rect.width,
-        rect.height,
-        smoothRef.current,
-        analyser.context.sampleRate,
-      )
+      if (rect.width > 0 && rect.height > 0) {
+        drawMasterSpectrum(
+          ctx,
+          values,
+          rect.width,
+          rect.height,
+          smoothRef.current,
+          Tone.getContext().sampleRate,
+        )
+      }
       frameId = requestAnimationFrame(tick)
     }
 
