@@ -1,15 +1,16 @@
-/* Colors match sketch-v1 (see /legacy/sketch-v1/modules/colors.js in the repo). */
+/* Default palette — twilight sky, cool canvas, warm tape rows. */
 :root {
-  --color-play: #8bb95a;
-  --color-stop: #e17a6b;
-  --color-test: #f0c749;
-  --color-active: #705cfc;
-  --color-loop-bg: #e8dcc0;
-  --color-canvas-bg: #c8cdd2;
-  --color-outline: #969696;
-  --color-labels: #808080;
-  --color-btn-text: #383838;
-  --color-spectrum-border: rgba(87, 86, 86, 0.3);
+  --color-play: #58a848;
+  --color-stop: #b84848;
+  --color-test: #d8b840;
+  --color-active: #6858c8;
+  --color-loop-bg: #ddd4c4;
+  --color-mini-melody-bg: #aeb8c8;
+  --color-canvas-bg: #9ea8b8;
+  --color-outline: #707888;
+  --color-labels: #585868;
+  --color-btn-text: #1e2230;
+  --color-spectrum-border: rgba(70, 80, 110, 0.45);
 
   --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
 }

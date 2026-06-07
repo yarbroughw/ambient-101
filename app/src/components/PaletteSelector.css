@@ -1,0 +1,64 @@
+.palette-selector {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px solid var(--color-outline);
+  background: color-mix(in srgb, var(--color-loop-bg) 88%, var(--color-canvas-bg));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.palette-selector__control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.palette-selector__label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  text-transform: lowercase;
+  color: var(--color-labels);
+}
+
+.palette-selector__select {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-btn-text);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--color-outline);
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.palette-selector__preview {
+  display: flex;
+  gap: 3px;
+}
+
+.palette-selector__chip {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid color-mix(in srgb, var(--color-outline) 70%, transparent);
+}
+
+.palette-selector__chip--canvas {
+  background: var(--color-canvas-bg);
+}
+
+.palette-selector__chip--loop {
+  background: var(--color-loop-bg);
+}
+
+.palette-selector__chip--melody {
+  background: var(--color-mini-melody-bg);
+}
+
+.palette-selector__chip--active {
+  background: var(--color-active);
+}
