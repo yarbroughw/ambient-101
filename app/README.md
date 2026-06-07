@@ -15,3 +15,11 @@ npm run dev
 npm run build
 npm run preview
 ```
+
+## Testing
+
+```bash
+npm test          # run once
+npm run test:watch
+npm run test:coverage
+```
