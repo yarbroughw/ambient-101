@@ -13,6 +13,7 @@ import {
   migrateLegacyNote,
   minBpmForLoopDuration,
   minLoopDurationForBpm,
+  moveNote,
   noteCoversCell,
   noteDurationSec,
   noteEndColumn,
@@ -24,6 +25,8 @@ import {
   removeNote,
   replaceRowNotesInSpan,
   resizeNoteEnd,
+  resizeNoteStart,
+  rowAtClientY,
   stepDurationSec,
 } from './gridLayout'
 
@@ -211,6 +214,70 @@ describe('resizeNoteEnd', () => {
   it('clamps end column to grid bounds', () => {
     const result = resizeNoteEnd([note], note, 100)
     expect(result[0]?.spanCols).toBe(GRID_COLUMN_COUNT - note.startCol)
+  })
+})
+
+describe('resizeNoteStart', () => {
+  const note = createTestNote({ scaleStep: 0, startCol: 4, spanCols: 2 })
+
+  it('extends note span to the requested start column', () => {
+    const result = resizeNoteStart([note], note, 1)
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ startCol: 1, spanCols: 5 })
+  })
+
+  it('clamps start column to grid bounds', () => {
+    const result = resizeNoteStart([note], note, -5)
+    expect(result[0]).toMatchObject({ startCol: 0, spanCols: 6 })
+  })
+})
+
+describe('moveNote', () => {
+  const note = createTestNote({ scaleStep: 0, startCol: 4, spanCols: 2 })
+  const other = createTestNote({ scaleStep: 2, startCol: 0, spanCols: 1 })
+
+  it('moves a note to a new column and row', () => {
+    const result = moveNote([note, other], note, 8, 2)
+    expect(result).toHaveLength(2)
+    expect(result).toContainEqual({
+      scaleStep: 2,
+      startCol: 8,
+      spanCols: 2,
+      velocity: 0.7,
+    })
+  })
+
+  it('clamps position to grid bounds', () => {
+    const result = moveNote([note], note, 100, 20)
+    expect(result[0]).toMatchObject({
+      startCol: GRID_COLUMN_COUNT - note.spanCols,
+      scaleStep: 11,
+    })
+  })
+})
+
+describe('rowAtClientY', () => {
+  const metrics = {
+    columnCount: GRID_COLUMN_COUNT,
+    labelWidth: 40,
+    cellSize: 10,
+    gap: 2,
+    headerHeight: 14,
+    rowCount: 5,
+  }
+
+  it('returns null above the first data row', () => {
+    expect(rowAtClientY(100, { top: 100 }, metrics)).toBeNull()
+  })
+
+  it('maps pointer position to row index', () => {
+    const dataTop = 100 + 14 + 2
+    expect(rowAtClientY(dataTop + 12, { top: 100 }, metrics)).toBe(1)
+  })
+
+  it('returns null below the last row', () => {
+    const dataTop = 100 + 14 + 2
+    expect(rowAtClientY(dataTop + 100, { top: 100 }, metrics)).toBeNull()
   })
 })
 

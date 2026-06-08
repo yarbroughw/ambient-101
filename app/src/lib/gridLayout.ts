@@ -106,6 +106,31 @@ export function columnAtClientX(
   return Math.min(columnCount - 1, Math.max(0, col))
 }
 
+export type GridRowMetrics = GridPointerMetrics & {
+  headerHeight: number
+  rowCount: number
+}
+
+export function rowAtClientY(
+  clientY: number,
+  gridRect: Pick<DOMRect, 'top'>,
+  metrics: GridRowMetrics,
+): number | null {
+  const { cellSize, gap, headerHeight, rowCount } = metrics
+  const dataTop = gridRect.top + headerHeight + gap
+  const relativeY = clientY - dataTop
+  if (relativeY < 0) {
+    return null
+  }
+
+  const rowIndex = Math.floor(relativeY / (cellSize + gap))
+  if (rowIndex < 0 || rowIndex >= rowCount) {
+    return null
+  }
+
+  return rowIndex
+}
+
 export function noteEndColumn(note: PatternNote): number {
   return note.startCol + note.spanCols - 1
 }
@@ -196,6 +221,65 @@ export function resizeNoteEnd(
     target.startCol,
     clampedEnd,
     resized,
+  )
+}
+
+export function resizeNoteStart(
+  notes: PatternNote[],
+  target: PatternNote,
+  startCol: number,
+): PatternNote[] {
+  const endCol = noteEndColumn(target)
+  const clampedStart = Math.min(endCol, Math.max(0, startCol))
+  const spanCols = endCol - clampedStart + 1
+
+  const resized: PatternNote = {
+    ...target,
+    startCol: clampedStart,
+    spanCols,
+  }
+
+  const key = noteKey(target)
+  const without = notes.filter((note) => noteKey(note) !== key)
+  return replaceRowNotesInSpan(
+    without,
+    target.scaleStep,
+    clampedStart,
+    endCol,
+    resized,
+  )
+}
+
+export function moveNote(
+  notes: PatternNote[],
+  target: PatternNote,
+  startCol: number,
+  scaleStep: number,
+): PatternNote[] {
+  const clampedStart = Math.min(
+    GRID_COLUMN_COUNT - target.spanCols,
+    Math.max(0, startCol),
+  )
+  const clampedScaleStep = Math.min(
+    GRID_SCALE_STEP_MAX,
+    Math.max(GRID_SCALE_STEP_MIN, scaleStep),
+  )
+  const endCol = clampedStart + target.spanCols - 1
+
+  const moved: PatternNote = {
+    ...target,
+    startCol: clampedStart,
+    scaleStep: clampedScaleStep,
+  }
+
+  const key = noteKey(target)
+  const without = notes.filter((note) => noteKey(note) !== key)
+  return replaceRowNotesInSpan(
+    without,
+    clampedScaleStep,
+    clampedStart,
+    endCol,
+    moved,
   )
 }
 
