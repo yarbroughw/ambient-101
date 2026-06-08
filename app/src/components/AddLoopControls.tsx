@@ -1,14 +1,21 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { LOOP_PRESETS, type LoopPresetId } from '../audio/demoPatterns'
+import { ImportReelModal, type ImportReelResult } from './ImportReelModal'
 import './AddLoopControls.css'
 
 type AddLoopControlsProps = {
   onAddBlank: () => void
   onAddPreset: (presetId: LoopPresetId) => void
+  onImport: (raw: string) => ImportReelResult
 }
 
-export function AddLoopControls({ onAddBlank, onAddPreset }: AddLoopControlsProps) {
+export function AddLoopControls({
+  onAddBlank,
+  onAddPreset,
+  onImport,
+}: AddLoopControlsProps) {
   const [open, setOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const menuId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -38,50 +45,70 @@ export function AddLoopControls({ onAddBlank, onAddPreset }: AddLoopControlsProp
   }, [open])
 
   return (
-    <div className="loop-stack__add-row">
-      <button
-        type="button"
-        className="loop-stack__add"
-        aria-label="Add blank loop"
-        onClick={onAddBlank}
-      >
-        +
-      </button>
-
-      <div className="add-loop-presets" ref={rootRef}>
+    <>
+      <div className="loop-stack__add-row">
         <button
           type="button"
-          className={`add-loop-presets__trigger${open ? ' is-open' : ''}`}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          aria-controls={menuId}
-          onClick={() => setOpen((prev) => !prev)}
+          className="loop-stack__add"
+          aria-label="Add blank loop"
+          onClick={onAddBlank}
         >
-          presets
-          <span className="add-loop-presets__caret" aria-hidden>
-            ▾
-          </span>
+          +
         </button>
 
-        {open ? (
-          <div id={menuId} className="add-loop-presets__menu" role="menu">
-            {LOOP_PRESETS.map((preset) => (
+        <div className="add-loop-presets" ref={rootRef}>
+          <button
+            type="button"
+            className={`add-loop-presets__trigger${open ? ' is-open' : ''}`}
+            aria-haspopup="menu"
+            aria-expanded={open}
+            aria-controls={menuId}
+            onClick={() => setOpen((prev) => !prev)}
+          >
+            presets
+            <span className="add-loop-presets__caret" aria-hidden>
+              ▾
+            </span>
+          </button>
+
+          {open ? (
+            <div id={menuId} className="add-loop-presets__menu" role="menu">
+              {LOOP_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className="add-loop-presets__item"
+                  role="menuitem"
+                  onClick={() => {
+                    onAddPreset(preset.id)
+                    setOpen(false)
+                  }}
+                >
+                  {preset.label}
+                </button>
+              ))}
+              <div className="add-loop-presets__divider" role="separator" />
               <button
-                key={preset.id}
                 type="button"
                 className="add-loop-presets__item"
                 role="menuitem"
                 onClick={() => {
-                  onAddPreset(preset.id)
                   setOpen(false)
+                  setImportOpen(true)
                 }}
               >
-                {preset.label}
+                import JSON
               </button>
-            ))}
-          </div>
-        ) : null}
+            </div>
+          ) : null}
+        </div>
       </div>
-    </div>
+
+      <ImportReelModal
+        open={importOpen}
+        onImport={onImport}
+        onClose={() => setImportOpen(false)}
+      />
+    </>
   )
 }

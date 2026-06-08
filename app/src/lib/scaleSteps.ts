@@ -165,7 +165,7 @@ const SCALE_TYPE_ABBREV: Record<WorkshopScaleType, string> = {
   'phrygian dominant': 'phryg. dom.',
   'lydian dominant': 'lyd. dom.',
   'harmonic major': 'harm. major',
-  'hungarian minor': 'hung. minor',
+  'hungarian minor': 'hun. minor',
   altered: 'altered',
   'whole tone': 'whole tone',
   diminished: 'diminished',

@@ -1,0 +1,62 @@
+.toolbar__pace-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  width: 30px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.toolbar__pace-label {
+  flex-shrink: 0;
+}
+
+.toolbar__pace {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  flex: 1;
+  min-height: 0;
+}
+
+.toolbar__pace-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--color-outline);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-labels);
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.toolbar__pace-btn:hover:not(:disabled) {
+  border-color: var(--color-btn-text);
+  color: var(--color-btn-text);
+}
+
+.toolbar__pace-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.toolbar__pace-readout {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--color-btn-text);
+  width: 100%;
+  min-width: 0;
+  padding: 1px 0;
+  text-align: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}

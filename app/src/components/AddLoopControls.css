@@ -47,6 +47,7 @@
   position: absolute;
   top: 100%;
   right: 0;
+  width: max-content;
   min-width: 100%;
   margin-top: 4px;
   padding: 4px 0;
@@ -72,4 +73,11 @@
 
 .add-loop-presets__item:hover {
   background: rgba(255, 255, 255, 0.22);
+}
+
+.add-loop-presets__divider {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--color-outline);
+  opacity: 0.65;
 }

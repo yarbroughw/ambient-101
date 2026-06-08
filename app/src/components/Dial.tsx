@@ -9,12 +9,14 @@ type DialProps = {
   step?: number
   size?: number
   disabled?: boolean
+  className?: string
   formatReadout?: (value: number) => string
   onChange: (value: number) => void
 }
 
 const SWEEP_DEG = 270
 const START_DEG = 225
+const TOOLBAR_DIAL_SIZE = 70
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -59,16 +61,19 @@ export function Dial({
   step = 0.01,
   size = 32,
   disabled = false,
+  className = '',
   formatReadout,
   onChange,
 }: DialProps) {
   const dragRef = useRef<{ y: number; value: number } | null>(null)
+  const isToolbar = className.includes('dial--toolbar')
+  const visualSize = isToolbar ? TOOLBAR_DIAL_SIZE : size
 
   const ratio = (value - min) / (max - min)
   const valueAngle = START_DEG + ratio * SWEEP_DEG
-  const stroke = size >= 40 ? 3.5 : 3
-  const radius = (size - stroke) / 2
-  const center = size / 2
+  const stroke = visualSize >= 40 ? 3.5 : 3
+  const radius = (visualSize - stroke) / 2
+  const center = visualSize / 2
   const trackPath = describeArc(center, center, radius, START_DEG, START_DEG + SWEEP_DEG)
   const valuePath =
     ratio > 0 ? describeArc(center, center, radius, START_DEG, valueAngle) : ''
@@ -80,8 +85,12 @@ export function Dial({
 
   return (
     <div
-      className={`dial${disabled ? ' dial--disabled' : ''}${size >= 40 ? ' dial--lg' : ''}`}
-      style={{ ['--dial-size' as string]: `${size}px` }}
+      className={`dial${disabled ? ' dial--disabled' : ''}${visualSize >= 40 ? ' dial--lg' : ''}${className ? ` ${className}` : ''}`}
+      style={
+        className.includes('dial--toolbar')
+          ? undefined
+          : { ['--dial-size' as string]: `${size}px` }
+      }
     >
       <div
         className="dial__control"
@@ -135,9 +144,9 @@ export function Dial({
       >
         <svg
           className="dial__svg"
-          width={size}
-          height={size}
-          viewBox={`0 0 ${size} ${size}`}
+          width={isToolbar ? '100%' : visualSize}
+          height={isToolbar ? '100%' : visualSize}
+          viewBox={`0 0 ${visualSize} ${visualSize}`}
           aria-hidden
         >
           <path

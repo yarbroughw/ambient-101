@@ -1,21 +1,16 @@
 .palette-selector {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  z-index: 20;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 6px;
-  border: 1px solid var(--color-outline);
-  background: color-mix(in srgb, var(--color-loop-bg) 88%, var(--color-canvas-bg));
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .palette-selector__control {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
 .palette-selector__label {
@@ -23,6 +18,7 @@
   font-size: 8px;
   text-transform: lowercase;
   color: var(--color-labels);
+  flex: 0 0 auto;
 }
 
 .palette-selector__select {
@@ -33,11 +29,14 @@
   border: 1px solid var(--color-outline);
   padding: 2px 4px;
   cursor: pointer;
+  flex: 1;
+  min-width: 0;
 }
 
 .palette-selector__preview {
   display: flex;
   gap: 3px;
+  flex-shrink: 0;
 }
 
 .palette-selector__chip {

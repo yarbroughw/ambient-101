@@ -1,7 +1,6 @@
 .master-spectrum {
   width: 100%;
-  max-width: 280px;
-  height: 30px;
+  height: var(--toolbar-height);
 }
 
 .master-spectrum__canvas {

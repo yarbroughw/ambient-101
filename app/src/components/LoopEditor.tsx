@@ -4,13 +4,22 @@ import {
   minBpmForLoopDuration,
   minLoopDurationForBpm,
 } from '../lib/gridLayout'
+import {
+  composedBpmFromDisplay,
+  composedLoopDurationFromDisplay,
+  clampPaceScale,
+  LOOP_DURATION_MAX,
+  type PaceOptions,
+} from '../lib/globalPace'
 import { EditorSubheader } from './EditorSubheader'
 import { MelodyGrid } from './MelodyGrid'
 import './LoopEditor.css'
 
 type LoopEditorProps = {
   pattern: LoopPattern
-  loopDuration: number
+  paceOptions: PaceOptions
+  playbackLoopDuration: number
+  playbackBpm: number
   loopTimeSec: number
   showPlayhead: boolean
   disabled?: boolean
@@ -22,6 +31,7 @@ type LoopEditorProps = {
   onLoopDurationChange: (sec: number) => void
   onReverbChange: (reverb: number) => void
   onDelayChange: (delay: number) => void
+  onInstrumentChange: (instrument: string) => void
 }
 
 function clampBpm(bpm: number, loopDuration: number): number {
@@ -31,7 +41,9 @@ function clampBpm(bpm: number, loopDuration: number): number {
 
 export function LoopEditor({
   pattern,
-  loopDuration,
+  paceOptions,
+  playbackLoopDuration,
+  playbackBpm,
   loopTimeSec,
   showPlayhead,
   disabled = false,
@@ -43,17 +55,25 @@ export function LoopEditor({
   onLoopDurationChange,
   onReverbChange,
   onDelayChange,
+  onInstrumentChange,
 }: LoopEditorProps) {
+  const paceScale = clampPaceScale(paceOptions.paceScale)
   const melodyWindowSec = minLoopDurationForBpm(pattern.bpm)
   const loopDurationMin = Math.max(2, melodyWindowSec)
-  const bpmMin = minBpmForLoopDuration(loopDuration)
+  const bpmMin = minBpmForLoopDuration(pattern.loopDuration)
+  const displayLoopDurationMin = loopDurationMin / paceScale
+  const displayLoopDurationMax = LOOP_DURATION_MAX / paceScale
+  const displayBpmMin = paceOptions.paceAffectsMelody
+    ? Math.ceil(bpmMin * paceScale)
+    : bpmMin
 
-  function handleLoopDurationChange(next: number) {
-    if (!Number.isFinite(next)) {
+  function handleLoopDurationChange(displayNext: number) {
+    if (!Number.isFinite(displayNext)) {
       return
     }
 
-    const clamped = Math.max(loopDurationMin, next)
+    const composed = composedLoopDurationFromDisplay(displayNext, paceScale)
+    const clamped = Math.max(loopDurationMin, composed)
     onLoopDurationChange(clamped)
 
     const nextBpmMin = minBpmForLoopDuration(clamped)
@@ -62,16 +82,17 @@ export function LoopEditor({
     }
   }
 
-  function handleBpmChange(next: number) {
-    if (!Number.isFinite(next)) {
+  function handleBpmChange(displayNext: number) {
+    if (!Number.isFinite(displayNext)) {
       return
     }
 
-    const clamped = clampBpm(next, loopDuration)
+    const composed = composedBpmFromDisplay(displayNext, paceOptions)
+    const clamped = clampBpm(composed, pattern.loopDuration)
     onBpmChange(clamped)
 
     const nextMelodyWindow = minLoopDurationForBpm(clamped)
-    if (loopDuration < nextMelodyWindow) {
+    if (pattern.loopDuration < nextMelodyWindow) {
       onLoopDurationChange(Math.max(2, nextMelodyWindow))
     }
   }
@@ -79,14 +100,15 @@ export function LoopEditor({
   return (
     <div className="loop-editor" aria-label={`${pattern.label} editor`}>
       <EditorSubheader
-        bpm={pattern.bpm}
-        bpmMin={bpmMin}
+        bpm={playbackBpm}
+        bpmMin={displayBpmMin}
         root={pattern.root}
         scale={pattern.scale}
         octaveShift={pattern.octaveShift}
         instrument={pattern.instrument}
-        loopDuration={loopDuration}
-        loopDurationMin={loopDurationMin}
+        loopDuration={playbackLoopDuration}
+        loopDurationMin={displayLoopDurationMin}
+        loopDurationMax={displayLoopDurationMax}
         disabled={disabled}
         onRootChange={onRootChange}
         onScaleChange={onScaleChange}
@@ -97,13 +119,14 @@ export function LoopEditor({
         delay={pattern.delay}
         onReverbChange={onReverbChange}
         onDelayChange={onDelayChange}
+        onInstrumentChange={onInstrumentChange}
       />
 
       <MelodyGrid
         pattern={pattern}
         loopTimeSec={loopTimeSec}
         showPlayhead={showPlayhead}
-        bpm={pattern.bpm}
+        bpm={playbackBpm}
         disabled={disabled}
         onNotesChange={onNotesChange}
       />

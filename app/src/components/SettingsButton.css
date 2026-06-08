@@ -1,0 +1,33 @@
+.settings-btn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: none;
+  color: var(--color-labels);
+  cursor: pointer;
+}
+
+.settings-btn:hover:not(:disabled) {
+  color: var(--color-btn-text);
+}
+
+.settings-btn:focus-visible {
+  outline: 1px solid var(--color-active);
+  outline-offset: 2px;
+}
+
+.settings-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.settings-btn__icon {
+  width: 20px;
+  height: 20px;
+}

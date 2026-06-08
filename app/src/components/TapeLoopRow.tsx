@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import type { LoopPattern, PatternNote } from '../audio/patternTypes'
 import { melodyWindowDuration, minLoopDurationForBpm } from '../lib/gridLayout'
+import {
+  formatDisplayBpm,
+  formatDisplayLoopDuration,
+  type PaceOptions,
+} from '../lib/globalPace'
 import { tonalityLabel } from '../lib/scaleSteps'
 import type { TapeLoop } from '../audio/tapeLoop'
 import { useLoopLevel } from '../hooks/useLoopLevel'
@@ -85,6 +90,9 @@ function SpeakerIcon() {
 
 type TapeLoopRowProps = {
   pattern: LoopPattern
+  paceOptions: PaceOptions
+  playbackLoopDuration: number
+  playbackBpm: number
   loop: TapeLoop
   running: boolean
   expanded: boolean
@@ -100,6 +108,7 @@ type TapeLoopRowProps = {
   onVolumeChange: (volume: number) => void
   onReverbChange: (reverb: number) => void
   onDelayChange: (delay: number) => void
+  onInstrumentChange: (instrument: string) => void
   onDuplicate: () => void
   onDelete: () => void
   disabled?: boolean
@@ -107,6 +116,9 @@ type TapeLoopRowProps = {
 
 export function TapeLoopRow({
   pattern,
+  paceOptions,
+  playbackLoopDuration,
+  playbackBpm,
   loop,
   running,
   expanded,
@@ -122,6 +134,7 @@ export function TapeLoopRow({
   onVolumeChange,
   onReverbChange,
   onDelayChange,
+  onInstrumentChange,
   onDuplicate,
   onDelete,
   disabled = false,
@@ -131,7 +144,7 @@ export function TapeLoopRow({
   const { angleDeg, lapFlashKey, loopTimeSec, melodyPlaybackActive, testing } =
     useLoopProgress(loop, running, testNonce)
   const { level, peak } = useLoopLevel(loop, melodyPlaybackActive)
-  const melodyWindowSec = melodyWindowDuration(pattern.bpm)
+  const melodyWindowSec = melodyWindowDuration(playbackBpm)
 
   function handleLoopDurationChange(next: number) {
     const floor = Math.max(2, minLoopDurationForBpm(pattern.bpm))
@@ -150,6 +163,7 @@ export function TapeLoopRow({
       <div className="tape-loop-row__header-menu">
         <LoopMenu
           label={pattern.label}
+          pattern={pattern}
           disabled={disabled}
           onDuplicate={onDuplicate}
         />
@@ -222,7 +236,7 @@ export function TapeLoopRow({
             className="tape-loop-row__duration-readonly"
             title="cooldown"
           >
-            {pattern.loopDuration.toFixed(1)}s
+            {formatDisplayLoopDuration(playbackLoopDuration)}s
           </span>
         </div>
 
@@ -236,12 +250,14 @@ export function TapeLoopRow({
 
         <div className="reel-lane__tape tape-loop-row__tape-content">
           <MiniMelodyView
-            pattern={pattern}
+            pattern={{ ...pattern, bpm: playbackBpm }}
             loopTimeSec={loopTimeSec}
             showPlayhead={melodyPlaybackActive}
           />
           <div className="reel-lane__meta tape-loop-row__content-meta">
-            <span title={`BPM: ${pattern.bpm}`}>BPM: {pattern.bpm}</span>
+            <span title={`BPM: ${formatDisplayBpm(playbackBpm)}`}>
+              BPM: {formatDisplayBpm(playbackBpm)}
+            </span>
             <span title={`instrument: ${pattern.instrument}`}>
               instrument: {pattern.instrument}
             </span>
@@ -293,7 +309,9 @@ export function TapeLoopRow({
         <div className="tape-loop-row__editor">
           <LoopEditor
             pattern={pattern}
-            loopDuration={pattern.loopDuration}
+            paceOptions={paceOptions}
+            playbackLoopDuration={playbackLoopDuration}
+            playbackBpm={playbackBpm}
             loopTimeSec={loopTimeSec}
             showPlayhead={melodyPlaybackActive}
             disabled={disabled}
@@ -305,6 +323,7 @@ export function TapeLoopRow({
             onLoopDurationChange={handleLoopDurationChange}
             onReverbChange={onReverbChange}
             onDelayChange={onDelayChange}
+            onInstrumentChange={onInstrumentChange}
           />
         </div>
       ) : null}

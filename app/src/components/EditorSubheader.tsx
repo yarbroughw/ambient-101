@@ -1,3 +1,8 @@
+import { INSTRUMENT_IDS } from '../audio/instruments/types'
+import {
+  formatDisplayBpm,
+  formatDisplayLoopDuration,
+} from '../lib/globalPace'
 import {
   clampOctaveShift,
   OCTAVE_SHIFT_MAX,
@@ -29,6 +34,7 @@ type EditorSubheaderProps = {
   onLoopDurationChange: (sec: number) => void
   onReverbChange: (reverb: number) => void
   onDelayChange: (delay: number) => void
+  onInstrumentChange: (instrument: string) => void
 }
 
 const REEL_DIAL_SIZE = 44
@@ -53,6 +59,7 @@ export function EditorSubheader({
   onLoopDurationChange,
   onReverbChange,
   onDelayChange,
+  onInstrumentChange,
 }: EditorSubheaderProps) {
   function handleOctaveDown() {
     onOctaveShiftChange(clampOctaveShift(octaveShift - 1))
@@ -80,7 +87,7 @@ export function EditorSubheader({
           step={0.5}
           size={REEL_DIAL_SIZE}
           disabled={disabled}
-          formatReadout={(value) => `${value.toFixed(1)}`}
+          formatReadout={(value) => formatDisplayLoopDuration(value)}
           onChange={onLoopDurationChange}
         />
       </div>
@@ -94,7 +101,7 @@ export function EditorSubheader({
           step={1}
           size={REEL_DIAL_SIZE}
           disabled={disabled}
-          formatReadout={(value) => `${Math.round(value)}`}
+          formatReadout={(value) => `${formatDisplayBpm(value)}`}
           onChange={onBpmChange}
         />
       </div>
@@ -135,13 +142,17 @@ export function EditorSubheader({
             <label className="loop-editor__inline-field">
               <span className="loop-editor__inline-label">inst</span>
               <select
-                className="loop-editor__select"
+                className="loop-editor__select loop-editor__select--editable"
                 value={instrument}
-                disabled
+                disabled={disabled}
                 aria-label="Instrument"
+                onChange={(event) => onInstrumentChange(event.target.value)}
               >
-                <option value="pad">pad</option>
-                <option value="pluck">pluck</option>
+                {INSTRUMENT_IDS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
               </select>
             </label>
 

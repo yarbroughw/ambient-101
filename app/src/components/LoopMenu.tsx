@@ -1,4 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import type { LoopPattern } from '../audio/patternTypes'
+import { copyTextToClipboard } from '../lib/clipboard'
+import { serializeLoopPattern } from '../lib/loopStorage'
 import './LoopMenu.css'
 
 function DotsIcon() {
@@ -13,12 +16,14 @@ function DotsIcon() {
 
 type LoopMenuProps = {
   label: string
+  pattern: LoopPattern
   disabled?: boolean
   onDuplicate: () => void
 }
 
-export function LoopMenu({ label, disabled = false, onDuplicate }: LoopMenuProps) {
+export function LoopMenu({ label, pattern, disabled = false, onDuplicate }: LoopMenuProps) {
   const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
   const menuId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -47,8 +52,31 @@ export function LoopMenu({ label, disabled = false, onDuplicate }: LoopMenuProps
     }
   }, [open])
 
+  useEffect(() => {
+    if (!copied) {
+      return
+    }
+
+    const timeout = window.setTimeout(() => setCopied(false), 1500)
+    return () => window.clearTimeout(timeout)
+  }, [copied])
+
   function close() {
     setOpen(false)
+  }
+
+  async function handleCopyJson() {
+    const ok = await copyTextToClipboard(serializeLoopPattern(pattern))
+    if (!ok) {
+      close()
+      return
+    }
+
+    setCopied(true)
+    window.setTimeout(() => {
+      setCopied(false)
+      close()
+    }, 1200)
   }
 
   return (
@@ -83,10 +111,11 @@ export function LoopMenu({ label, disabled = false, onDuplicate }: LoopMenuProps
             type="button"
             className="loop-menu__item"
             role="menuitem"
-            disabled
-            title="Coming soon"
+            onClick={() => {
+              void handleCopyJson()
+            }}
           >
-            export
+            {copied ? 'copied' : 'copy JSON'}
           </button>
         </div>
       ) : null}
