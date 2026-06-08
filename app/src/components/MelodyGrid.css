@@ -156,37 +156,43 @@
   min-height: var(--melody-grid-cell-size);
   margin: 0;
   pointer-events: auto;
+  border: 1px solid color-mix(in srgb, var(--color-active) 75%, #000);
+  border-radius: 2px;
+  background: var(--color-active);
+  opacity: 0.9;
+  overflow: hidden;
+}
+
+.melody-grid__bar:hover {
+  opacity: 1;
 }
 
 .melody-grid__bar-body {
   flex: 1 1 auto;
   min-width: 0;
   padding: 0;
-  border: 1px solid var(--color-active);
-  border-right: none;
-  background: var(--color-active);
-  opacity: 0.9;
-  cursor: pointer;
+  border: none;
+  background: transparent;
+  cursor: grab;
 }
 
-.melody-grid__bar-body:hover:not(:disabled) {
-  opacity: 1;
+.melody-grid__bar-body:active:not(:disabled) {
+  cursor: grabbing;
 }
 
 .melody-grid__bar-handle {
-  flex: 0 0 5px;
+  flex: 0 0 4px;
   cursor: ew-resize;
-  background: color-mix(in srgb, var(--color-active) 55%, #fff);
-  border: 1px solid var(--color-active);
-  border-left: none;
+  background: transparent;
+  border: none;
 }
 
 .melody-grid__bar-handle:hover {
-  background: color-mix(in srgb, var(--color-active) 35%, #fff);
+  background: color-mix(in srgb, var(--color-active) 65%, #000);
 }
 
-.melody-grid__bar--resizing .melody-grid__bar-body {
-  opacity: 0.75;
+.melody-grid__bar--active {
+  opacity: 0.8;
 }
 
 .melody-grid__bar--ghost {

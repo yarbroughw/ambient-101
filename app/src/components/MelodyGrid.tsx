@@ -2,21 +2,27 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { previewGridNote } from '../audio/previewGridNote'
 import type { LoopPattern, PatternNote } from '../audio/patternTypes'
 import {
+  GRID_COLUMN_COUNT,
   cellStartTime,
   columnAtClientX,
   findNoteAt,
   gridLayout,
   gridPlayheadRatio,
+  moveNote,
   noteCoversCell,
   noteEndColumn,
   noteKey,
   placeNoteSpan,
   removeNote,
   resizeNoteEnd,
+  resizeNoteStart,
+  rowAtClientY,
   type GridPointerMetrics,
 } from '../lib/gridLayout'
-import { gridScaleRows, stepToPitch } from '../lib/scaleSteps'
+import { GRID_SCALE_STEP_MAX, GRID_SCALE_STEP_MIN, gridScaleRows, stepToPitch } from '../lib/scaleSteps'
 import './MelodyGrid.css'
+
+const GRID_HEADER_HEIGHT = 14
 
 type MelodyGridProps = {
   pattern: Pick<LoopPattern, 'notes' | 'root' | 'scale' | 'octaveShift' | 'instrument'>
@@ -34,18 +40,48 @@ type PaintDrag = {
   currentCol: number
 }
 
-type ResizeDrag = {
-  kind: 'resize'
+type ResizeEndDrag = {
+  kind: 'resize-end'
   note: PatternNote
-  startCol: number
+  originEndCol: number
+  anchorCol: number
   currentEndCol: number
 }
 
-type DragState = PaintDrag | ResizeDrag
+type ResizeStartDrag = {
+  kind: 'resize-start'
+  note: PatternNote
+  originStartCol: number
+  originEndCol: number
+  anchorCol: number
+  currentStartCol: number
+}
+
+type MoveDrag = {
+  kind: 'move'
+  note: PatternNote
+  originStartCol: number
+  originScaleStep: number
+  anchorCol: number
+  anchorRowIndex: number
+  currentCol: number
+  currentRowIndex: number
+  didMove: boolean
+}
+
+type DragState = PaintDrag | ResizeEndDrag | ResizeStartDrag | MoveDrag
 
 type GridCellTarget = {
   scaleStep: number
   col: number
+}
+
+type NoteDisplay = {
+  note: PatternNote
+  startCol: number
+  span: number
+  scaleStep: number
+  isActive: boolean
 }
 
 function cellFromTarget(target: EventTarget | null): GridCellTarget | null {
@@ -93,10 +129,12 @@ export function MelodyGrid({
   const gridRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
   const notesRef = useRef(notes)
+  const rowsRef = useRef(rows)
   const stepSecRef = useRef(layout.stepSec)
   const onNotesChangeRef = useRef(onNotesChange)
   const patternRef = useRef({ tonality, octaveShift, instrument })
   notesRef.current = notes
+  rowsRef.current = rows
   stepSecRef.current = layout.stepSec
   onNotesChangeRef.current = onNotesChange
   patternRef.current = { tonality, octaveShift, instrument }
@@ -141,6 +179,68 @@ export function MelodyGrid({
     return columnAtClientX(clientX, grid.getBoundingClientRect(), metrics)
   }
 
+  function rowAtPointer(clientY: number): number | null {
+    const grid = gridRef.current
+    const metrics = pointerMetrics()
+    if (!grid || !metrics) {
+      return null
+    }
+
+    return rowAtClientY(clientY, grid.getBoundingClientRect(), {
+      ...metrics,
+      headerHeight: GRID_HEADER_HEIGHT,
+      rowCount: rowsRef.current.length,
+    })
+  }
+
+  function displayStateForNote(note: PatternNote, active: DragState | null): NoteDisplay {
+    if (active?.kind === 'resize-end' && noteKey(active.note) === noteKey(note)) {
+      return {
+        note,
+        startCol: note.startCol,
+        span: active.currentEndCol - note.startCol + 1,
+        scaleStep: note.scaleStep,
+        isActive: true,
+      }
+    }
+
+    if (active?.kind === 'resize-start' && noteKey(active.note) === noteKey(note)) {
+      return {
+        note,
+        startCol: active.currentStartCol,
+        span: active.originEndCol - active.currentStartCol + 1,
+        scaleStep: note.scaleStep,
+        isActive: true,
+      }
+    }
+
+    if (active?.kind === 'move' && noteKey(active.note) === noteKey(note)) {
+      const deltaCol = active.currentCol - active.anchorCol
+      const deltaStep = active.anchorRowIndex - active.currentRowIndex
+      return {
+        note,
+        startCol: Math.min(
+          GRID_COLUMN_COUNT - note.spanCols,
+          Math.max(0, active.originStartCol + deltaCol),
+        ),
+        span: note.spanCols,
+        scaleStep: Math.min(
+          GRID_SCALE_STEP_MAX,
+          Math.max(GRID_SCALE_STEP_MIN, active.originScaleStep + deltaStep),
+        ),
+        isActive: true,
+      }
+    }
+
+    return {
+      note,
+      startCol: note.startCol,
+      span: note.spanCols,
+      scaleStep: note.scaleStep,
+      isActive: false,
+    }
+  }
+
   useEffect(() => {
     if (!drag) {
       return
@@ -163,13 +263,52 @@ export function MelodyGrid({
         return
       }
 
+      if (active.kind === 'move') {
+        const col = columnAtPointer(event.clientX)
+        const rowIndex = rowAtPointer(event.clientY)
+        if (col === null || rowIndex === null) {
+          return
+        }
+
+        const didMove =
+          active.didMove ||
+          col !== active.anchorCol ||
+          rowIndex !== active.anchorRowIndex
+
+        const next: MoveDrag = {
+          ...active,
+          currentCol: col,
+          currentRowIndex: rowIndex,
+          didMove,
+        }
+        dragRef.current = next
+        setDrag(next)
+        return
+      }
+
       const col = columnAtPointer(event.clientX)
       if (col === null) {
         return
       }
 
-      const endCol = Math.max(active.startCol, col)
-      const next: ResizeDrag = { ...active, currentEndCol: endCol }
+      if (active.kind === 'resize-end') {
+        const delta = col - active.anchorCol
+        const endCol = Math.min(
+          GRID_COLUMN_COUNT - 1,
+          Math.max(active.note.startCol, active.originEndCol + delta),
+        )
+        const next: ResizeEndDrag = { ...active, currentEndCol: endCol }
+        dragRef.current = next
+        setDrag(next)
+        return
+      }
+
+      const delta = col - active.anchorCol
+      const startCol = Math.min(
+        active.originEndCol,
+        Math.max(0, active.originStartCol + delta),
+      )
+      const next: ResizeStartDrag = { ...active, currentStartCol: startCol }
       dragRef.current = next
       setDrag(next)
     }
@@ -195,7 +334,7 @@ export function MelodyGrid({
         const minCol = Math.min(active.anchorCol, active.currentCol)
         const maxCol = Math.max(active.anchorCol, active.currentCol)
         previewStep(active.scaleStep, (maxCol - minCol + 1) * stepSec)
-      } else {
+      } else if (active.kind === 'resize-end') {
         onNotesChangeRef.current(
           resizeNoteEnd(
             currentNotes,
@@ -203,6 +342,27 @@ export function MelodyGrid({
             active.currentEndCol,
           ),
         )
+      } else if (active.kind === 'resize-start') {
+        onNotesChangeRef.current(
+          resizeNoteStart(
+            currentNotes,
+            active.note,
+            active.currentStartCol,
+          ),
+        )
+      } else if (active.didMove) {
+        const deltaCol = active.currentCol - active.anchorCol
+        const deltaStep = active.anchorRowIndex - active.currentRowIndex
+        onNotesChangeRef.current(
+          moveNote(
+            currentNotes,
+            active.note,
+            active.originStartCol + deltaCol,
+            active.originScaleStep + deltaStep,
+          ),
+        )
+      } else {
+        onNotesChangeRef.current(removeNote(currentNotes, active.note))
       }
 
       endDrag()
@@ -240,7 +400,7 @@ export function MelodyGrid({
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
-  function handleResizePointerDown(
+  function handleResizeEndPointerDown(
     note: PatternNote,
     event: React.PointerEvent<HTMLDivElement>,
   ) {
@@ -251,11 +411,12 @@ export function MelodyGrid({
     event.preventDefault()
     event.stopPropagation()
 
-    const startCol = note.startCol
-    const resize: ResizeDrag = {
-      kind: 'resize',
+    const anchorCol = columnAtPointer(event.clientX) ?? noteEndColumn(note)
+    const resize: ResizeEndDrag = {
+      kind: 'resize-end',
       note,
-      startCol,
+      originEndCol: noteEndColumn(note),
+      anchorCol,
       currentEndCol: noteEndColumn(note),
     }
     dragRef.current = resize
@@ -263,13 +424,62 @@ export function MelodyGrid({
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
-  function handleBarClick(note: PatternNote, event: React.MouseEvent) {
+  function handleResizeStartPointerDown(
+    note: PatternNote,
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
     if (disabled) {
       return
     }
 
+    event.preventDefault()
     event.stopPropagation()
-    onNotesChange(removeNote(notes, note))
+
+    const anchorCol = columnAtPointer(event.clientX) ?? note.startCol
+    const resize: ResizeStartDrag = {
+      kind: 'resize-start',
+      note,
+      originStartCol: note.startCol,
+      originEndCol: noteEndColumn(note),
+      anchorCol,
+      currentStartCol: note.startCol,
+    }
+    dragRef.current = resize
+    setDrag(resize)
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  function handleMovePointerDown(
+    note: PatternNote,
+    event: React.PointerEvent<HTMLButtonElement>,
+  ) {
+    if (disabled) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    const col = columnAtPointer(event.clientX)
+    const rowIndex = rowAtPointer(event.clientY)
+    if (col === null || rowIndex === null) {
+      return
+    }
+
+    const move: MoveDrag = {
+      kind: 'move',
+      note,
+      originStartCol: note.startCol,
+      originScaleStep: note.scaleStep,
+      anchorCol: col,
+      anchorRowIndex: rowIndex,
+      currentCol: col,
+      currentRowIndex: rowIndex,
+      didMove: false,
+    }
+    dragRef.current = move
+    setDrag(move)
+    event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   function handleCellKeyDown(
@@ -291,15 +501,6 @@ export function MelodyGrid({
     const nextNotes = placeNoteSpan(notes, scaleStep, col, col)
     onNotesChange(nextNotes)
     previewStep(scaleStep, layout.stepSec)
-  }
-
-  function barSpanForNote(note: PatternNote): number {
-    const resizing =
-      drag?.kind === 'resize' && noteKey(drag.note) === noteKey(note)
-    if (resizing) {
-      return drag.currentEndCol - drag.startCol + 1
-    }
-    return note.spanCols
   }
 
   function ghostPaintForRow(scaleStep: number): PaintDrag | null {
@@ -344,7 +545,9 @@ export function MelodyGrid({
 
           {rows.map((row, rowIndex) => {
             const gridRow = rowIndex + 2
-            const rowNotes = notes.filter((note) => note.scaleStep === row.scaleStep)
+            const rowDisplays = notes
+              .map((note) => displayStateForNote(note, drag))
+              .filter((display) => display.scaleStep === row.scaleStep)
             const ghost = ghostPaintForRow(row.scaleStep)
             const rowHighlighted = activeScaleStep === row.scaleStep
             const labelClass = rowHighlighted
@@ -415,36 +618,45 @@ export function MelodyGrid({
                   <span className="melody-grid__row-pitch">{row.pitchName}</span>
                 </div>
 
-                {rowNotes.map((note) => {
-                  const startCol = note.startCol
-                  const span = barSpanForNote(note)
-                  const resizing =
-                    drag?.kind === 'resize' &&
-                    noteKey(drag.note) === noteKey(note)
+                {rowDisplays.map((display) => {
+                  const barClass = display.isActive
+                    ? 'melody-grid__bar melody-grid__bar--active'
+                    : 'melody-grid__bar'
 
                   return (
                     <div
-                      key={noteKey(note)}
-                      className={`melody-grid__bar${resizing ? ' melody-grid__bar--resizing' : ''}`}
+                      key={noteKey(display.note)}
+                      className={barClass}
                       style={{
                         gridRow,
-                        gridColumn: `${startCol + 2} / span ${span}`,
+                        gridColumn: `${display.startCol + 2} / span ${display.span}`,
                       }}
                     >
+                      <div
+                        className="melody-grid__bar-handle melody-grid__bar-handle--start"
+                        role="separator"
+                        aria-orientation="vertical"
+                        aria-label={`Extend note start at step ${row.stepLabel}`}
+                        onPointerDown={(event) =>
+                          handleResizeStartPointerDown(display.note, event)
+                        }
+                      />
                       <button
                         type="button"
                         className="melody-grid__bar-body"
-                        aria-label={`Remove note at step ${row.stepLabel}`}
+                        aria-label={`Move or remove note at step ${row.stepLabel}`}
                         disabled={disabled}
-                        onClick={(event) => handleBarClick(note, event)}
+                        onPointerDown={(event) =>
+                          handleMovePointerDown(display.note, event)
+                        }
                       />
                       <div
-                        className="melody-grid__bar-handle"
+                        className="melody-grid__bar-handle melody-grid__bar-handle--end"
                         role="separator"
                         aria-orientation="vertical"
-                        aria-label={`Extend note at step ${row.stepLabel}`}
+                        aria-label={`Extend note end at step ${row.stepLabel}`}
                         onPointerDown={(event) =>
-                          handleResizePointerDown(note, event)
+                          handleResizeEndPointerDown(display.note, event)
                         }
                       />
                     </div>
