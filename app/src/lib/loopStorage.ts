@@ -1,12 +1,13 @@
 import { LOOP_DELAY_DEFAULT, LOOP_REVERB_DEFAULT } from '../audio/loopEffects'
 import type { LoopPattern, PatternNote } from '../audio/patternTypes'
+import { normalizeInstrument } from '../audio/instruments/types'
 import { migrateLegacyNote } from './gridLayout'
 import { normalizePatternTonality, normalizeRoot } from './scaleSteps'
 
 const STORAGE_KEY = 'ambient-101:loops'
 const STORAGE_VERSION = 2
 
-type PersistedLoops = {
+export type PersistedLoops = {
   version: number
   loops: LoopPattern[]
 }
@@ -93,6 +94,7 @@ function normalizePattern(pattern: LoopPattern): LoopPattern {
     ...pattern,
     root: normalizeRoot(tonality.root),
     scale: tonality.scale,
+    instrument: normalizeInstrument(pattern.instrument),
     volume: Math.min(1, Math.max(0, pattern.volume)),
     reverb: Math.min(1, Math.max(0, pattern.reverb ?? LOOP_REVERB_DEFAULT)),
     delay: Math.min(1, Math.max(0, pattern.delay ?? LOOP_DELAY_DEFAULT)),
@@ -103,18 +105,26 @@ function normalizePattern(pattern: LoopPattern): LoopPattern {
   }
 }
 
-function parseStoredLoops(raw: string): LoopPattern[] {
+function normalizeStoredPattern(pattern: StoredLoopPattern): LoopPattern {
+  return normalizePattern({
+    ...pattern,
+    notes: migrateStoredNotes(pattern.notes, pattern.bpm),
+  })
+}
+
+export function serializeLoopPattern(pattern: LoopPattern): string {
+  return JSON.stringify(pattern, null, 2)
+}
+
+export function parseLoopPatternsJson(raw: string): LoopPattern[] {
   const parsed: unknown = JSON.parse(raw)
 
   if (Array.isArray(parsed)) {
-    return parsed
-      .filter(isStoredLoopPattern)
-      .map((pattern) =>
-        normalizePattern({
-          ...pattern,
-          notes: migrateStoredNotes(pattern.notes, pattern.bpm),
-        }),
-      )
+    return parsed.filter(isStoredLoopPattern).map(normalizeStoredPattern)
+  }
+
+  if (isStoredLoopPattern(parsed)) {
+    return [normalizeStoredPattern(parsed)]
   }
 
   if (!parsed || typeof parsed !== 'object') {
@@ -126,14 +136,17 @@ function parseStoredLoops(raw: string): LoopPattern[] {
     return []
   }
 
-  return stored.loops
-    .filter(isStoredLoopPattern)
-    .map((pattern) =>
-      normalizePattern({
-        ...pattern,
-        notes: migrateStoredNotes(pattern.notes, pattern.bpm),
-      }),
-    )
+  return stored.loops.filter(isStoredLoopPattern).map(normalizeStoredPattern)
+}
+
+export function buildLoopPatternsPayload(patterns: LoopPattern[]): PersistedLoops {
+  return {
+    version: STORAGE_VERSION,
+    loops: patterns.map((pattern) => ({
+      ...pattern,
+      notes: pattern.notes.map((note) => ({ ...note })),
+    })),
+  }
 }
 
 export function loadLoopPatterns(): LoopPattern[] {
@@ -143,23 +156,15 @@ export function loadLoopPatterns(): LoopPattern[] {
       return []
     }
 
-    return parseStoredLoops(raw)
+    return parseLoopPatternsJson(raw)
   } catch {
     return []
   }
 }
 
 export function saveLoopPatterns(patterns: LoopPattern[]): void {
-  const payload: PersistedLoops = {
-    version: STORAGE_VERSION,
-    loops: patterns.map((pattern) => ({
-      ...pattern,
-      notes: pattern.notes.map((note) => ({ ...note })),
-    })),
-  }
-
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(buildLoopPatternsPayload(patterns)))
   } catch {
     // Ignore quota / private-mode failures.
   }

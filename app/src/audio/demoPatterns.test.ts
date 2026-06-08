@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   duplicatePattern,
+  importPattern,
   nextAvailableIdAndLabel,
   nextDuplicateIdAndLabel,
 } from './demoPatterns'
@@ -60,5 +61,29 @@ describe('duplicatePattern', () => {
     expect(duplicate.label).toBe('source-2')
     expect(duplicate.notes).toEqual(source.notes)
     expect(duplicate.notes).not.toBe(source.notes)
+  })
+})
+
+describe('importPattern', () => {
+  it('keeps imported label when unused and assigns fresh id', () => {
+    const source = createTestPattern({
+      id: 'remote-id',
+      label: 'imported',
+      notes: [{ scaleStep: 1, startCol: 2, spanCols: 3 }],
+    })
+    const imported = importPattern(source, [])
+    expect(imported.id).toBe('imported')
+    expect(imported.label).toBe('imported')
+    expect(imported.notes).toEqual(source.notes)
+  })
+
+  it('renumbers label when it collides with an existing reel', () => {
+    const existing = createTestLoopEntry(
+      createTestPattern({ id: 'bass', label: 'bass' }),
+    )
+    const source = createTestPattern({ id: 'shared-copy', label: 'bass' })
+    const imported = importPattern(source, [existing])
+    expect(imported.id).toBe('bass2')
+    expect(imported.label).toBe('bass2')
   })
 })

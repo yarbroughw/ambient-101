@@ -1,43 +1,37 @@
 import * as Tone from 'tone'
-import { getGlobalEffectInput } from './globalEffects'
+import { getMasterInput } from './globalEffects'
+import {
+  createInstrumentPolySynth,
+  instrumentFilterFrequency,
+  instrumentPreviewGain,
+  type InstrumentPolySynth,
+} from './instruments/createInstrumentPolySynth'
+import { normalizeInstrument, type InstrumentId } from './instruments/types'
 
 type PreviewVoice = {
-  synth: Tone.PolySynth
+  synth: InstrumentPolySynth
 }
 
-const voices: Partial<Record<'pad' | 'pluck', PreviewVoice>> = {}
+const voices: Partial<Record<InstrumentId, PreviewVoice>> = {}
 
-function ensurePreviewVoice(instrument: 'pad' | 'pluck'): PreviewVoice {
+function ensurePreviewVoice(instrument: InstrumentId): PreviewVoice {
   const existing = voices[instrument]
   if (existing) {
     return existing
   }
 
-  const synth = new Tone.PolySynth(Tone.Synth)
-  if (instrument === 'pluck') {
-    synth.set({
-      oscillator: { type: 'square' },
-      envelope: { attack: 0.01, decay: 0.8, sustain: 0.25, release: 1.5 },
-      volume: -10,
-    })
-  } else {
-    synth.set({
-      oscillator: { type: 'sawtooth' },
-      envelope: { attack: 0.08, decay: 0.4, sustain: 0.5, release: 0.6 },
-      volume: -8,
-    })
-  }
+  const synth = createInstrumentPolySynth(instrument)
 
   const filter = new Tone.Filter({
-    frequency: instrument === 'pluck' ? 1200 : 2000,
+    frequency: instrumentFilterFrequency(instrument),
     type: 'lowpass',
     rolloff: -12,
   })
-  const gain = new Tone.Gain(instrument === 'pluck' ? 0.5 : 0.55)
+  const gain = new Tone.Gain(instrumentPreviewGain(instrument))
 
   synth.connect(filter)
   filter.connect(gain)
-  gain.connect(getGlobalEffectInput())
+  gain.connect(getMasterInput())
 
   const voice = { synth }
   voices[instrument] = voice
@@ -54,7 +48,7 @@ export function previewGridNote(
     return
   }
 
-  const voiceKey = instrument === 'pluck' ? 'pluck' : 'pad'
-  const { synth } = ensurePreviewVoice(voiceKey)
+  const instrumentId = normalizeInstrument(instrument)
+  const { synth } = ensurePreviewVoice(instrumentId)
   synth.triggerAttackRelease(pitch, durationSec, Tone.now(), velocity)
 }

@@ -5,31 +5,35 @@ import {
   LOOP_REVERB_DEFAULT,
   type LoopEffectsBus,
 } from './loopEffects'
-import { createSynthNoteSink, type LoopVoice } from './createPadSynth'
-
-const OUTPUT_GAIN = 0.5
+import { INSTRUMENT_RECIPES } from './instruments/recipes'
+import {
+  createInstrumentPolySynth,
+  instrumentOutputGain,
+  type InstrumentPolySynth,
+} from './instruments/createInstrumentPolySynth'
+import { normalizeInstrument, type InstrumentId } from './instruments/types'
+import type { NoteSink } from './types'
 
 type SynthChain = {
-  synth: Tone.PolySynth
+  synth: InstrumentPolySynth
   filter: Tone.Filter
   gain: Tone.Gain
   meter: Tone.Meter
 }
 
-function buildSynthChain(destination: Tone.InputNode): SynthChain {
-  const synth = new Tone.PolySynth(Tone.Synth)
-  synth.set({
-    oscillator: { type: 'square' },
-    envelope: { attack: 0.01, decay: 0.8, sustain: 0.25, release: 1.5 },
-    volume: -10,
-  })
+function buildSynthChain(
+  instrument: InstrumentId,
+  destination: Tone.InputNode,
+): SynthChain {
+  const recipe = INSTRUMENT_RECIPES[instrument]
+  const synth = createInstrumentPolySynth(instrument)
 
   const filter = new Tone.Filter({
-    frequency: 1200,
+    frequency: recipe.filterFrequency,
     type: 'lowpass',
     rolloff: -12,
   })
-  const gain = new Tone.Gain(OUTPUT_GAIN)
+  const gain = new Tone.Gain(instrumentOutputGain(instrument))
   const meter = new Tone.Meter({ normalRange: true, smoothing: 0.45 })
 
   synth.connect(filter)
@@ -40,17 +44,38 @@ function buildSynthChain(destination: Tone.InputNode): SynthChain {
   return { synth, filter, gain, meter }
 }
 
+export type LoopVoice = {
+  sink: NoteSink
+  silence: () => void
+  prepare: () => void
+  getLevel: () => number
+  setVolume: (amount: number) => void
+  getVolume: () => number
+  setReverb: (amount: number) => void
+  setDelay: (amount: number) => void
+}
+
 function readMeterLevel(meter: Tone.Meter): number {
   const value = meter.getValue()
   return typeof value === 'number' ? value : 0
 }
 
-export function createPluckLoopVoice(
+export function createSynthNoteSink(synth: InstrumentPolySynth): NoteSink {
+  return {
+    triggerAttackRelease(note, duration, time, velocity = 1) {
+      synth.triggerAttackRelease(note, duration, time, velocity)
+    },
+  }
+}
+
+export function createLoopVoiceForInstrument(
+  instrument: string,
   reverb = LOOP_REVERB_DEFAULT,
   delay = LOOP_DELAY_DEFAULT,
 ): LoopVoice {
+  const instrumentId = normalizeInstrument(instrument)
   let effects: LoopEffectsBus | null = createLoopEffectsBus(reverb, delay)
-  let chain: SynthChain | null = buildSynthChain(effects.input)
+  let chain: SynthChain | null = buildSynthChain(instrumentId, effects.input)
   let sink = createSynthNoteSink(chain.synth)
   let volume = 1
   let reverbAmount = reverb
@@ -63,7 +88,7 @@ export function createPluckLoopVoice(
 
     const t = Tone.now()
     chain.gain.gain.cancelScheduledValues(t)
-    chain.gain.gain.rampTo(OUTPUT_GAIN * volume, 0.02)
+    chain.gain.gain.rampTo(instrumentOutputGain(instrumentId) * volume, 0.02)
   }
 
   function disposeChain() {
@@ -94,7 +119,7 @@ export function createPluckLoopVoice(
     disposeChain()
     disposeEffects()
     effects = createLoopEffectsBus(reverbAmount, delayAmount)
-    chain = buildSynthChain(effects.input)
+    chain = buildSynthChain(instrumentId, effects.input)
     sink = createSynthNoteSink(chain.synth)
     applyVolume()
   }
@@ -135,4 +160,18 @@ export function createPluckLoopVoice(
       effects?.setDelay(delayAmount)
     },
   }
+}
+
+export function createLoopVoice(
+  reverb = LOOP_REVERB_DEFAULT,
+  delay = LOOP_DELAY_DEFAULT,
+): LoopVoice {
+  return createLoopVoiceForInstrument('pad', reverb, delay)
+}
+
+export function createPluckLoopVoice(
+  reverb = LOOP_REVERB_DEFAULT,
+  delay = LOOP_DELAY_DEFAULT,
+): LoopVoice {
+  return createLoopVoiceForInstrument('pluck', reverb, delay)
 }

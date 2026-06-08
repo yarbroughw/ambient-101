@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { loadLoopPatterns, saveLoopPatterns } from './loopStorage'
+import {
+  loadLoopPatterns,
+  parseLoopPatternsJson,
+  saveLoopPatterns,
+  serializeLoopPattern,
+} from './loopStorage'
 import { createTestPattern } from '../test/fixtures'
 
 const STORAGE_KEY = 'ambient-101:loops'
@@ -88,6 +93,35 @@ describe('loadLoopPatterns', () => {
     expect(pattern?.volume).toBe(1)
     expect(pattern?.reverb).toBe(0)
     expect(pattern?.delay).toBe(1)
+  })
+})
+
+describe('parseLoopPatternsJson', () => {
+  it('loads a single reel object', () => {
+    const pattern = createTestPattern({
+      id: 'solo',
+      label: 'solo',
+      notes: [{ scaleStep: 2, startCol: 4, spanCols: 2 }],
+    })
+
+    const [loaded] = parseLoopPatternsJson(JSON.stringify(pattern))
+    expect(loaded).toEqual({
+      ...pattern,
+      notes: [{ scaleStep: 2, startCol: 4, spanCols: 2, velocity: 1 }],
+    })
+  })
+})
+
+describe('serializeLoopPattern', () => {
+  it('round-trips through parseLoopPatternsJson', () => {
+    const pattern = createTestPattern({
+      id: 'shared',
+      label: 'shared',
+      notes: [{ scaleStep: -1, startCol: 1, spanCols: 3, velocity: 0.5 }],
+    })
+
+    const [loaded] = parseLoopPatternsJson(serializeLoopPattern(pattern))
+    expect(loaded).toEqual(pattern)
   })
 })
 

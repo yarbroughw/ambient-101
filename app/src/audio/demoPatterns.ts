@@ -1,10 +1,11 @@
 import { compilePatternToSink } from './compilePattern'
 import { LOOP_DELAY_DEFAULT, LOOP_REVERB_DEFAULT } from './loopEffects'
-import { createLoopVoice } from './createPadSynth'
-import { createPluckLoopVoice } from './createPluckSynth'
+import { createLoopVoiceForInstrument } from './loopVoice'
+import { normalizeInstrument, type InstrumentId } from './instruments/types'
 import { createSchedulableNoteSink } from './schedulableNoteSink'
 import { createGridNote, patternFitsGrid } from '../lib/gridLayout'
 import type { LoopPattern } from './patternTypes'
+import type { NoteSink } from './types'
 import { TapeLoop } from './tapeLoop'
 
 const ROOT = 'C'
@@ -20,7 +21,7 @@ const bassPattern: LoopPattern = {
   root: ROOT,
   scale: SCALE,
   octaveShift: -2,
-  instrument: 'pad',
+  instrument: 'bass',
   volume: 1,
   reverb: LOOP_REVERB_DEFAULT,
   delay: LOOP_DELAY_DEFAULT,
@@ -58,7 +59,7 @@ const melody2Template: Omit<LoopPattern, 'id' | 'label'> = {
   root: ROOT,
   scale: SCALE,
   octaveShift: 0,
-  instrument: 'pluck',
+  instrument: 'keys',
   volume: 1,
   reverb: LOOP_REVERB_DEFAULT,
   delay: LOOP_DELAY_DEFAULT,
@@ -127,38 +128,55 @@ export type DemoLoop = {
   setDelay: (amount: number) => void
 }
 
-function createVoiceForInstrument(
-  instrument: string,
-  reverb: number,
-  delay: number,
-) {
-  if (instrument === 'pluck') {
-    return createPluckLoopVoice(reverb, delay)
-  }
-  return createLoopVoice(reverb, delay)
-}
-
 function bindPattern(pattern: LoopPattern): DemoLoop {
   const loop = new TapeLoop(pattern.label, pattern.loopDuration)
-  const voice = createVoiceForInstrument(
-    pattern.instrument,
+  let activeInstrument: InstrumentId = normalizeInstrument(pattern.instrument)
+  let voice = createLoopVoiceForInstrument(
+    activeInstrument,
     pattern.reverb,
     pattern.delay,
   )
   voice.setVolume(pattern.volume ?? 1)
-  const sink = createSchedulableNoteSink(
-    {
-      triggerAttackRelease(note, duration, time, velocity = 1) {
-        voice.sink.triggerAttackRelease(note, duration, time, velocity)
-      },
+
+  const innerSink: NoteSink = {
+    triggerAttackRelease(note, duration, time, velocity = 1) {
+      voice.sink.triggerAttackRelease(note, duration, time, velocity)
     },
-    (id) => loop.addScheduledNote(id),
+  }
+
+  const sink = createSchedulableNoteSink(innerSink, (id) =>
+    loop.addScheduledNote(id),
   )
 
-  function rebindPattern(next: LoopPattern) {
+  function bindVoiceHooks() {
+    loop.bindAudioHooks({
+      silence: voice.silence,
+      prepare: voice.prepare,
+      getLevel: voice.getLevel,
+    })
+  }
+
+  function replaceVoice(next: LoopPattern) {
+    activeInstrument = normalizeInstrument(next.instrument)
+    voice.silence()
+    voice = createLoopVoiceForInstrument(
+      activeInstrument,
+      next.reverb,
+      next.delay,
+    )
     voice.setVolume(next.volume ?? 1)
-    voice.setReverb(next.reverb)
-    voice.setDelay(next.delay)
+    bindVoiceHooks()
+  }
+
+  function rebindPattern(next: LoopPattern) {
+    const nextInstrument = normalizeInstrument(next.instrument)
+    if (nextInstrument !== activeInstrument) {
+      replaceVoice(next)
+    } else {
+      voice.setVolume(next.volume ?? 1)
+      voice.setReverb(next.reverb)
+      voice.setDelay(next.delay)
+    }
     loop.record(compilePatternToSink(next, sink))
   }
 
@@ -175,11 +193,7 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
   }
 
   rebindPattern(pattern)
-  loop.bindAudioHooks({
-    silence: voice.silence,
-    prepare: voice.prepare,
-    getLevel: voice.getLevel,
-  })
+  bindVoiceHooks()
 
   return { pattern, loop, rebindPattern, setVolume, setReverb, setDelay }
 }
@@ -274,6 +288,19 @@ export function duplicatePattern(
   loops: Pick<DemoLoop, 'pattern'>[],
 ): LoopPattern {
   const { id, label } = nextDuplicateIdAndLabel(source.label, loops)
+  return {
+    ...source,
+    id,
+    label,
+    notes: source.notes.map((note) => ({ ...note })),
+  }
+}
+
+export function importPattern(
+  source: LoopPattern,
+  loops: Pick<DemoLoop, 'pattern'>[],
+): LoopPattern {
+  const { id, label } = nextAvailableIdAndLabel(source.label, loops)
   return {
     ...source,
     id,
