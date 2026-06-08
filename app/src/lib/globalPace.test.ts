@@ -6,11 +6,11 @@ import {
   composedLoopDurationFromDisplay,
   formatDisplayBpm,
   formatDisplayLoopDuration,
+  snapLoopDuration,
   formatPaceScale,
   stepPaceScale,
 } from './globalPace'
 import { createTestPattern } from '../test/fixtures'
-import { createPresetPattern } from '../audio/demoPatterns'
 
 describe('applyPlaybackTiming', () => {
   it('scales cooldown only by default', () => {
@@ -43,6 +43,14 @@ describe('applyPlaybackTiming', () => {
     })
 
     expect(effective.loopDuration).toBeCloseTo(7 / 1.2)
+  })
+})
+
+describe('snapLoopDuration', () => {
+  it('snaps to 0.1 second steps', () => {
+    expect(snapLoopDuration(6.04)).toBe(6)
+    expect(snapLoopDuration(6.05)).toBe(6.1)
+    expect(snapLoopDuration(10.96)).toBe(11)
   })
 })
 
@@ -125,9 +133,9 @@ describe('stepPaceScale', () => {
 describe('canStepPaceScale', () => {
   it('allows speeding up demo loops in cooldown-only mode', () => {
     const patterns = [
-      createPresetPattern('bass', 'bass', 'bass'),
-      createPresetPattern('melody1', 'melody1', 'melody1'),
-      createPresetPattern('melody2', 'melody2', 'melody2'),
+      createTestPattern({ id: 'bass', label: 'bass', loopDuration: 7, bpm: 72 }),
+      createTestPattern({ id: 'melody1', label: 'melody1', loopDuration: 11, bpm: 96 }),
+      createTestPattern({ id: 'melody2', label: 'melody2', loopDuration: 10, bpm: 88 }),
     ]
 
     expect(canStepPaceScale(patterns, 1, 'up', false)).toBe(true)

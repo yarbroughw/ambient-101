@@ -15,6 +15,7 @@ export const PACE_MAX = PACE_MAX_HUNDREDTHS / 100
 export const DEFAULT_PACE_SCALE = DEFAULT_PACE_HUNDREDTHS / 100
 export const PACE_STEP = PACE_STEP_HUNDREDTHS / 100
 export const LOOP_DURATION_MAX = 60
+export const LOOP_DURATION_STEP = 0.1
 
 export type PaceOptions = {
   paceScale: number
@@ -52,9 +53,13 @@ export function formatPaceScale(scale: number): string {
   return `${value.toFixed(1).replace(/\.0$/, '')}×`
 }
 
+export function snapLoopDuration(seconds: number): number {
+  const tenths = Math.round(seconds * 10)
+  return tenths / 10
+}
+
 export function formatDisplayLoopDuration(seconds: number): string {
-  const rounded = Math.round(seconds * 10) / 10
-  return rounded.toFixed(1)
+  return snapLoopDuration(seconds).toFixed(1)
 }
 
 export function formatDisplayBpm(bpm: number): number {
@@ -65,8 +70,7 @@ export function composedLoopDurationFromDisplay(
   displaySeconds: number,
   paceScale: number,
 ): number {
-  const displayTenth = Math.round(displaySeconds * 10) / 10
-  return displayTenth * clampPaceScale(paceScale)
+  return snapLoopDuration(displaySeconds) * clampPaceScale(paceScale)
 }
 
 export function composedBpmFromDisplay(

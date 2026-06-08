@@ -2,6 +2,7 @@ import { INSTRUMENT_IDS } from '../audio/instruments/types'
 import {
   formatDisplayBpm,
   formatDisplayLoopDuration,
+  LOOP_DURATION_STEP,
 } from '../lib/globalPace'
 import {
   clampOctaveShift,
@@ -84,7 +85,7 @@ export function EditorSubheader({
           value={loopDuration}
           min={loopDurationMin}
           max={loopDurationMax}
-          step={0.5}
+          step={LOOP_DURATION_STEP}
           size={REEL_DIAL_SIZE}
           disabled={disabled}
           formatReadout={(value) => formatDisplayLoopDuration(value)}

@@ -23,7 +23,9 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function snap(value: number, step: number, min: number, max: number): number {
-  const snapped = Math.round(value / step) * step
+  const precision = Math.max(0, -Math.floor(Math.log10(step)))
+  const scale = 10 ** precision
+  const snapped = (Math.round((value * scale) / (step * scale)) * (step * scale)) / scale
   return clamp(snapped, min, max)
 }
 

@@ -9,6 +9,7 @@ import {
   composedLoopDurationFromDisplay,
   clampPaceScale,
   LOOP_DURATION_MAX,
+  snapLoopDuration,
   type PaceOptions,
 } from '../lib/globalPace'
 import { EditorSubheader } from './EditorSubheader'
@@ -73,7 +74,7 @@ export function LoopEditor({
     }
 
     const composed = composedLoopDurationFromDisplay(displayNext, paceScale)
-    const clamped = Math.max(loopDurationMin, composed)
+    const clamped = snapLoopDuration(Math.max(loopDurationMin, composed))
     onLoopDurationChange(clamped)
 
     const nextBpmMin = minBpmForLoopDuration(clamped)
