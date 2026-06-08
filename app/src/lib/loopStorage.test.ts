@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   loadLoopPatterns,
   parseLoopPatternsJson,
+  parseLoopPresetBody,
   saveLoopPatterns,
   serializeLoopPattern,
 } from './loopStorage'
@@ -108,6 +109,41 @@ describe('parseLoopPatternsJson', () => {
     expect(loaded).toEqual({
       ...pattern,
       notes: [{ scaleStep: 2, startCol: 4, spanCols: 2, velocity: 1 }],
+    })
+  })
+})
+
+describe('parseLoopPresetBody', () => {
+  it('parses preset JSON using the filename id and optional label', () => {
+    const pattern = parseLoopPresetBody(
+      {
+        label: 'warm pad',
+        loopDuration: 9,
+        bpm: 72,
+        root: 'C',
+        scale: 'minor',
+        octaveShift: 0,
+        instrument: 'pad',
+        volume: 1,
+        notes: [{ scaleStep: 1, startCol: 2, spanCols: 3 }],
+      },
+      'warm-pad',
+      'warm-pad',
+    )
+
+    expect(pattern).toEqual({
+      id: 'warm-pad',
+      label: 'warm pad',
+      loopDuration: 9,
+      bpm: 72,
+      root: 'C',
+      scale: 'minor',
+      octaveShift: 0,
+      instrument: 'pad',
+      volume: 1,
+      reverb: 0.75,
+      delay: 0.3,
+      notes: [{ scaleStep: 1, startCol: 2, spanCols: 3, velocity: 1 }],
     })
   })
 })

@@ -1,11 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { LOOP_PRESETS, type LoopPresetId } from '../audio/demoPatterns'
+import { LOOP_PRESETS } from '../audio/loopPresets'
 import { ImportReelModal, type ImportReelResult } from './ImportReelModal'
 import './AddLoopControls.css'
 
 type AddLoopControlsProps = {
   onAddBlank: () => void
-  onAddPreset: (presetId: LoopPresetId) => void
+  onAddPreset: (presetId: string) => void
   onImport: (raw: string) => ImportReelResult
 }
 
@@ -87,7 +87,9 @@ export function AddLoopControls({
                   {preset.label}
                 </button>
               ))}
-              <div className="add-loop-presets__divider" role="separator" />
+              {LOOP_PRESETS.length > 0 ? (
+                <div className="add-loop-presets__divider" role="separator" />
+              ) : null}
               <button
                 type="button"
                 className="add-loop-presets__item"

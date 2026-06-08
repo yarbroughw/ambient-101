@@ -24,16 +24,17 @@ import {
 } from './lib/ensembleStorage'
 import {
   createBlankPattern,
-  createPresetPattern,
   createTapeLoop,
   createTapeLoopsFromPatterns,
   duplicatePattern,
   importPattern,
-  LOOP_PRESETS,
   nextAvailableIdAndLabel,
   type DemoLoop,
-  type LoopPresetId,
 } from './audio/demoPatterns'
+import {
+  createPatternFromPreset,
+  LOOP_PRESETS,
+} from './audio/loopPresets'
 import type { ImportReelResult } from './components/ImportReelModal'
 import { parseLoopPatternsJson } from './lib/loopStorage'
 import './components/AddLoopControls.css'
@@ -291,13 +292,13 @@ export default function App() {
     })
   }
 
-  function handleAddPresetLoop(presetId: LoopPresetId) {
+  function handleAddPresetLoop(presetId: string) {
     setLoops((prev) => {
       const existing = prev ?? []
       const preset = LOOP_PRESETS.find((entry) => entry.id === presetId)
       const baseLabel = preset?.label ?? presetId
       const { id, label } = nextAvailableIdAndLabel(baseLabel, existing)
-      const entry = createTapeLoop(createPresetPattern(presetId, id, label))
+      const entry = createTapeLoop(createPatternFromPreset(presetId, id, label))
       syncLoopPlayback(entry, entry.pattern, paceOptions())
       return [...existing, entry]
     })

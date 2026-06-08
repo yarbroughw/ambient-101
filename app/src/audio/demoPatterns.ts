@@ -3,78 +3,17 @@ import { LOOP_DELAY_DEFAULT, LOOP_REVERB_DEFAULT } from './loopEffects'
 import { createLoopVoiceForInstrument } from './loopVoice'
 import { normalizeInstrument, type InstrumentId } from './instruments/types'
 import { createSchedulableNoteSink } from './schedulableNoteSink'
-import { createGridNote, patternFitsGrid } from '../lib/gridLayout'
 import type { LoopPattern } from './patternTypes'
 import type { NoteSink } from './types'
 import { TapeLoop } from './tapeLoop'
 
 const ROOT = 'C'
 const SCALE = 'minor'
-
-const BASS_BPM = 72
-
-const bassPattern: LoopPattern = {
-  id: 'bass',
-  label: 'bass',
-  loopDuration: 7,
-  bpm: BASS_BPM,
-  root: ROOT,
-  scale: SCALE,
-  octaveShift: -2,
-  instrument: 'bass',
-  volume: 1,
-  reverb: LOOP_REVERB_DEFAULT,
-  delay: LOOP_DELAY_DEFAULT,
-  notes: [
-    createGridNote(-5, 0, 12, 0.45),
-    createGridNote(-3, 17, 10, 0.35),
-  ],
-}
-
-const MELODY1_BPM = 96
-
-const melody1Template: Omit<LoopPattern, 'id' | 'label'> = {
-  loopDuration: 11,
-  bpm: MELODY1_BPM,
-  root: ROOT,
-  scale: SCALE,
-  octaveShift: 0,
-  instrument: 'pluck',
-  volume: 1,
-  reverb: LOOP_REVERB_DEFAULT,
-  delay: LOOP_DELAY_DEFAULT,
-  notes: [
-    createGridNote(1, 0, 2, 0.5),
-    createGridNote(3, 12, 3, 1),
-    createGridNote(4, 20, 3, 0.45),
-    createGridNote(6, 27, 4, 0.4),
-  ],
-}
-
-const MELODY2_BPM = 88
-
-const melody2Template: Omit<LoopPattern, 'id' | 'label'> = {
-  loopDuration: 10,
-  bpm: MELODY2_BPM,
-  root: ROOT,
-  scale: SCALE,
-  octaveShift: 0,
-  instrument: 'keys',
-  volume: 1,
-  reverb: LOOP_REVERB_DEFAULT,
-  delay: LOOP_DELAY_DEFAULT,
-  notes: [
-    createGridNote(6, 0, 2, 0.55),
-    createGridNote(4, 9, 2, 0.65),
-    createGridNote(3, 18, 2, 0.5),
-    createGridNote(1, 26, 2, 0.45),
-    createGridNote(0, 30, 2, 0.4),
-  ],
-}
+const DEFAULT_BLANK_BPM = 88
 
 const blankTemplate: Omit<LoopPattern, 'id' | 'label'> = {
   loopDuration: 10,
-  bpm: MELODY2_BPM,
+  bpm: DEFAULT_BLANK_BPM,
   root: ROOT,
   scale: SCALE,
   octaveShift: 0,
@@ -85,28 +24,7 @@ const blankTemplate: Omit<LoopPattern, 'id' | 'label'> = {
   notes: [],
 }
 
-export type LoopPresetId = 'bass' | 'melody1' | 'melody2'
-
-export const LOOP_PRESETS: { id: LoopPresetId; label: string }[] = [
-  { id: 'bass', label: 'bass' },
-  { id: 'melody1', label: 'melody1' },
-  { id: 'melody2', label: 'melody2' },
-]
-
-const PRESET_TEMPLATES: Record<LoopPresetId, Omit<LoopPattern, 'id' | 'label'>> = {
-  bass: bassPattern,
-  melody1: melody1Template,
-  melody2: melody2Template,
-}
-
-for (const { id, label } of LOOP_PRESETS) {
-  const pattern = instantiateTemplate(PRESET_TEMPLATES[id], id, label)
-  if (!patternFitsGrid(pattern)) {
-    throw new Error(`Preset pattern "${id}" exceeds grid bounds`)
-  }
-}
-
-function instantiateTemplate(
+export function instantiatePatternFromTemplate(
   template: Omit<LoopPattern, 'id' | 'label'>,
   id: string,
   label: string,
@@ -199,15 +117,7 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
 }
 
 export function createBlankPattern(id: string, label: string): LoopPattern {
-  return instantiateTemplate(blankTemplate, id, label)
-}
-
-export function createPresetPattern(
-  presetId: LoopPresetId,
-  id: string,
-  label: string,
-): LoopPattern {
-  return instantiateTemplate(PRESET_TEMPLATES[presetId], id, label)
+  return instantiatePatternFromTemplate(blankTemplate, id, label)
 }
 
 export function createTapeLoop(pattern: LoopPattern): DemoLoop {

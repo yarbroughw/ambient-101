@@ -1,10 +1,7 @@
 import { DEFAULT_PACE_SCALE } from '../lib/globalPace'
 import type { LoopPattern } from './patternTypes'
-import {
-  createPresetPattern,
-  nextAvailableIdAndLabel,
-  type LoopPresetId,
-} from './demoPatterns'
+import { createPatternFromPreset, getLoopPreset } from './loopPresets'
+import { nextAvailableIdAndLabel } from './demoPatterns'
 
 export type EnsembleTemplateId = 'workshop-starter'
 
@@ -14,33 +11,33 @@ export type EnsembleTemplate = {
   description: string
   suggestedName: string
   paceScale?: number
+  presetIds?: string[]
 }
 
 export const ENSEMBLE_TEMPLATES: EnsembleTemplate[] = [
   {
     id: 'workshop-starter',
     label: 'workshop starter',
-    description: 'bass plus two melody reels',
+    description: 'blank ensemble',
     suggestedName: 'workshop starter',
+    presetIds: [],
   },
 ]
 
-const WORKSHOP_REELS: Array<{ presetId: LoopPresetId; suggestedLabel: string }> =
-  [
-    { presetId: 'bass', suggestedLabel: 'bass' },
-    { presetId: 'melody1', suggestedLabel: 'melody1' },
-    { presetId: 'melody2', suggestedLabel: 'melody2' },
-  ]
-
-function instantiateWorkshopStarter(): LoopPattern[] {
+function instantiateFromPresetIds(presetIds: string[]): LoopPattern[] {
   const loops: LoopPattern[] = []
 
-  for (const reel of WORKSHOP_REELS) {
+  for (const presetId of presetIds) {
+    const preset = getLoopPreset(presetId)
+    if (!preset) {
+      throw new Error(`Ensemble template references unknown preset "${presetId}"`)
+    }
+
     const { id, label } = nextAvailableIdAndLabel(
-      reel.suggestedLabel,
+      preset.label,
       loops.map((pattern) => ({ pattern })),
     )
-    loops.push(createPresetPattern(reel.presetId, id, label))
+    loops.push(createPatternFromPreset(presetId, id, label))
   }
 
   return loops
@@ -56,8 +53,7 @@ export function instantiateEnsembleTemplate(templateId: EnsembleTemplateId): {
     throw new Error(`Unknown ensemble template "${templateId}"`)
   }
 
-  const loops =
-    templateId === 'workshop-starter' ? instantiateWorkshopStarter() : []
+  const loops = instantiateFromPresetIds(template.presetIds ?? [])
 
   return {
     loops,

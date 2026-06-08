@@ -116,6 +116,27 @@ export function serializeLoopPattern(pattern: LoopPattern): string {
   return JSON.stringify(pattern, null, 2)
 }
 
+export function parseLoopPresetBody(
+  data: unknown,
+  presetId: string,
+  labelFallback: string,
+): LoopPattern | null {
+  if (!data || typeof data !== 'object') {
+    return null
+  }
+
+  const raw = data as Record<string, unknown>
+  const label =
+    typeof raw.label === 'string' && raw.label.length > 0 ? raw.label : labelFallback
+  const candidate = { ...raw, id: presetId, label }
+
+  if (!isStoredLoopPattern(candidate)) {
+    return null
+  }
+
+  return normalizeStoredPattern(candidate)
+}
+
 export function parseLoopPatternsJson(raw: string): LoopPattern[] {
   const parsed: unknown = JSON.parse(raw)
 
