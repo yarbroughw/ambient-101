@@ -1,18 +1,27 @@
+import { memo } from 'react'
 import { Note } from 'tonal'
 import type { LoopPattern } from '../audio/patternTypes'
 import {
-  GRID_COLUMN_COUNT,
   gridPlayheadRatio,
   melodyWindowDuration,
+  noteKey,
 } from '../lib/gridLayout'
 import { resolvePatternNotes } from '../lib/scaleSteps'
+import { usePlayheadNoteFlashes } from '../hooks/usePlayheadNoteFlashes'
 
 const VERTICAL_PITCH_PADDING = 0.2
 
 type MiniMelodyViewProps = {
-  pattern: Pick<LoopPattern, 'notes' | 'root' | 'scale' | 'octaveShift' | 'bpm'>
+  pattern: Pick<
+    LoopPattern,
+    'notes' | 'root' | 'scale' | 'octaveShift' | 'bpm' | 'loopCols'
+  >
   loopTimeSec: number
   showPlayhead: boolean
+  flashNotes?: boolean
+  periodSec?: number
+  /** See usePlayheadNoteFlashes: previous-playhead stand-in for the first flashing frame. */
+  flashSeedSec?: number | null
 }
 
 function pitchRange(pitches: string[]): { min: number; max: number } {
@@ -45,16 +54,32 @@ function laneTop(
   return `${position * 100}%`
 }
 
-export function MiniMelodyView({
+// Memoized so the repeated copies in the ensemble timeline (which receive
+// frame-stable props) skip per-animation-frame re-renders.
+export const MiniMelodyView = memo(function MiniMelodyView({
   pattern,
   loopTimeSec,
   showPlayhead,
+  flashNotes = false,
+  periodSec = 0,
+  flashSeedSec = null,
 }: MiniMelodyViewProps) {
-  const melodyWindow = melodyWindowDuration(pattern.bpm)
-  const resolved = resolvePatternNotes(pattern)
+  const loopCols = pattern.loopCols
+  const melodyWindow = melodyWindowDuration(pattern.bpm, loopCols)
+  const resolved = resolvePatternNotes(pattern).filter(
+    (note) => note.startCol < loopCols,
+  )
   const pitches = resolved.map((note) => note.pitch)
   const { min, max } = pitchRange(pitches)
   const playheadRatio = gridPlayheadRatio(loopTimeSec, melodyWindow)
+  const noteFlashes = usePlayheadNoteFlashes(
+    loopTimeSec,
+    resolved,
+    pattern.bpm,
+    periodSec,
+    flashNotes && periodSec > 0,
+    flashSeedSec,
+  )
 
   return (
     <div
@@ -64,13 +89,15 @@ export function MiniMelodyView({
     >
       <div className="mini-melody__track">
         {resolved.map((note, index) => {
-          const left = (note.startCol / GRID_COLUMN_COUNT) * 100
-          const width = (note.spanCols / GRID_COLUMN_COUNT) * 100
+          const left = (note.startCol / loopCols) * 100
+          const width = (note.spanCols / loopCols) * 100
+          const key = noteKey(note)
+          const flashCount = noteFlashes[key] ?? 0
 
           return (
             <span
-              key={`${note.scaleStep}-${note.startCol}-${index}`}
-              className="mini-melody__note"
+              key={`${key}-${index}-${flashCount}`}
+              className={`mini-melody__note${flashCount > 0 ? ' mini-melody__note--flash' : ''}`}
               style={{
                 left: `${left}%`,
                 width: `${Math.max(width, 0.5)}%`,
@@ -88,4 +115,4 @@ export function MiniMelodyView({
       </div>
     </div>
   )
-}
+})

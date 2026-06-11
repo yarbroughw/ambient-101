@@ -20,6 +20,7 @@ import {
   type GridPointerMetrics,
 } from '../lib/gridLayout'
 import { GRID_SCALE_STEP_MAX, GRID_SCALE_STEP_MIN, gridScaleRows, stepToPitch } from '../lib/scaleSteps'
+import { usePlayheadNoteFlashes } from '../hooks/usePlayheadNoteFlashes'
 import './MelodyGrid.css'
 
 const GRID_HEADER_HEIGHT = 14
@@ -29,8 +30,11 @@ type MelodyGridProps = {
   loopTimeSec: number
   showPlayhead: boolean
   bpm: number
+  loopCols: number
+  periodSec: number
   disabled?: boolean
   onNotesChange: (notes: PatternNote[]) => void
+  onLoopColsChange: (loopCols: number) => void
 }
 
 type PaintDrag = {
@@ -67,9 +71,18 @@ type MoveDrag = {
   currentCol: number
   currentRowIndex: number
   didMove: boolean
+  lastPreviewedRowIndex: number
 }
 
-type DragState = PaintDrag | ResizeEndDrag | ResizeStartDrag | MoveDrag
+type BraceDrag = {
+  kind: 'brace'
+  // Relative drag: applying a delta to the grab-time loopCols means zero
+  // movement is zero change (absolute pointer→column mapping jumped on grab).
+  startX: number
+  startCols: number
+}
+
+type DragState = PaintDrag | ResizeEndDrag | ResizeStartDrag | MoveDrag | BraceDrag
 
 type GridCellTarget = {
   scaleStep: number
@@ -113,12 +126,23 @@ export function MelodyGrid({
   loopTimeSec,
   showPlayhead,
   bpm,
+  loopCols,
+  periodSec,
   disabled = false,
   onNotesChange,
+  onLoopColsChange,
 }: MelodyGridProps) {
   const { notes, root, scale, octaveShift, instrument } = pattern
   const tonality = useMemo(() => ({ root, scale }), [root, scale])
-  const layout = useMemo(() => gridLayout(bpm), [bpm])
+  const layout = useMemo(() => gridLayout(bpm, loopCols), [bpm, loopCols])
+  const activeCols = layout.loopCols
+  const noteFlashes = usePlayheadNoteFlashes(
+    loopTimeSec,
+    notes,
+    bpm,
+    periodSec,
+    showPlayhead && periodSec > 0,
+  )
   const rows = useMemo(
     () => gridScaleRows(tonality, octaveShift),
     [tonality, octaveShift],
@@ -132,11 +156,15 @@ export function MelodyGrid({
   const rowsRef = useRef(rows)
   const stepSecRef = useRef(layout.stepSec)
   const onNotesChangeRef = useRef(onNotesChange)
+  const onLoopColsChangeRef = useRef(onLoopColsChange)
+  const activeColsRef = useRef(activeCols)
   const patternRef = useRef({ tonality, octaveShift, instrument })
   notesRef.current = notes
   rowsRef.current = rows
   stepSecRef.current = layout.stepSec
   onNotesChangeRef.current = onNotesChange
+  onLoopColsChangeRef.current = onLoopColsChange
+  activeColsRef.current = activeCols
   patternRef.current = { tonality, octaveShift, instrument }
 
   function previewStep(scaleStep: number, durationSec: number) {
@@ -252,6 +280,25 @@ export function MelodyGrid({
         return
       }
 
+      if (active.kind === 'brace') {
+        const metrics = pointerMetrics()
+        if (!metrics) {
+          return
+        }
+        const deltaCols = Math.round(
+          (event.clientX - active.startX) / (metrics.cellSize + metrics.gap),
+        )
+        const nextCols = Math.min(
+          GRID_COLUMN_COUNT,
+          Math.max(1, active.startCols + deltaCols),
+        )
+        if (nextCols !== activeColsRef.current) {
+          activeColsRef.current = nextCols
+          onLoopColsChangeRef.current(nextCols)
+        }
+        return
+      }
+
       if (active.kind === 'paint') {
         const cell = cellAtPoint(event.clientX, event.clientY)
         if (!cell || cell.scaleStep !== active.scaleStep) {
@@ -280,7 +327,17 @@ export function MelodyGrid({
           currentCol: col,
           currentRowIndex: rowIndex,
           didMove,
+          lastPreviewedRowIndex: active.lastPreviewedRowIndex,
         }
+
+        if (rowIndex !== active.lastPreviewedRowIndex) {
+          const row = rowsRef.current[rowIndex]
+          if (row) {
+            previewStep(row.scaleStep, stepSecRef.current * active.note.spanCols)
+          }
+          next.lastPreviewedRowIndex = rowIndex
+        }
+
         dragRef.current = next
         setDrag(next)
         return
@@ -321,6 +378,11 @@ export function MelodyGrid({
 
       const stepSec = stepSecRef.current
       const currentNotes = notesRef.current
+
+      if (active.kind === 'brace') {
+        endDrag()
+        return
+      }
 
       if (active.kind === 'paint') {
         const nextNotes = placeNoteSpan(
@@ -476,9 +538,30 @@ export function MelodyGrid({
       currentCol: col,
       currentRowIndex: rowIndex,
       didMove: false,
+      lastPreviewedRowIndex: rowIndex,
     }
     dragRef.current = move
     setDrag(move)
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  function handleBracePointerDown(
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
+    if (disabled) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    const brace: BraceDrag = {
+      kind: 'brace',
+      startX: event.clientX,
+      startCols: activeColsRef.current,
+    }
+    dragRef.current = brace
+    setDrag(brace)
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
@@ -534,7 +617,11 @@ export function MelodyGrid({
           {Array.from({ length: layout.columnCount }, (_, col) => (
             <div
               key={`col-${col}`}
-              className="melody-grid__col-header"
+              className={
+                col >= activeCols
+                  ? 'melody-grid__col-header melody-grid__col-header--inactive'
+                  : 'melody-grid__col-header'
+              }
               role="columnheader"
               aria-label={`Step ${col + 1}`}
             >
@@ -576,7 +663,11 @@ export function MelodyGrid({
                     <button
                       key={`${row.scaleStep}-${col}`}
                       type="button"
-                      className="melody-grid__cell"
+                      className={
+                        col >= activeCols
+                          ? 'melody-grid__cell melody-grid__cell--inactive'
+                          : 'melody-grid__cell'
+                      }
                       role="gridcell"
                       data-grid-cell
                       data-scale-step={row.scaleStep}
@@ -619,13 +710,18 @@ export function MelodyGrid({
                 </div>
 
                 {rowDisplays.map((display) => {
-                  const barClass = display.isActive
-                    ? 'melody-grid__bar melody-grid__bar--active'
-                    : 'melody-grid__bar'
+                  const flashCount = noteFlashes[noteKey(display.note)] ?? 0
+                  const barClass = [
+                    'melody-grid__bar',
+                    display.isActive ? 'melody-grid__bar--active' : '',
+                    flashCount > 0 ? 'melody-grid__bar--flash' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
 
                   return (
                     <div
-                      key={noteKey(display.note)}
+                      key={`${noteKey(display.note)}-${flashCount}`}
                       className={barClass}
                       style={{
                         gridRow,
@@ -682,10 +778,44 @@ export function MelodyGrid({
           <div className="melody-grid__playhead-layer" aria-hidden>
             <span
               className="melody-grid__playhead"
-              style={{ left: `${playheadRatio * 100}%` }}
+              style={{
+                left: `${(playheadRatio * activeCols) / layout.columnCount * 100}%`,
+              }}
             />
           </div>
         ) : null}
+
+        <div
+          className="melody-grid__brace"
+          style={{
+            left: `calc(var(--melody-grid-step-width) + ${activeCols} * (var(--melody-grid-cell-size) + 1px))`,
+          }}
+        >
+          <div
+            className="melody-grid__brace-handle"
+            role="slider"
+            aria-label="Loop length in steps"
+            aria-valuemin={1}
+            aria-valuemax={layout.columnCount}
+            aria-valuenow={activeCols}
+            aria-valuetext={`${activeCols} steps`}
+            title="loop end — drag to shorten the melody"
+            tabIndex={disabled ? -1 : 0}
+            onPointerDown={handleBracePointerDown}
+            onKeyDown={(event) => {
+              if (disabled) {
+                return
+              }
+              if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+                event.preventDefault()
+                onLoopColsChange(Math.max(1, activeCols - 1))
+              } else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+                event.preventDefault()
+                onLoopColsChange(Math.min(layout.columnCount, activeCols + 1))
+              }
+            }}
+          />
+        </div>
       </div>
     </div>
   )

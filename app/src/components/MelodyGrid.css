@@ -50,6 +50,63 @@
   box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
 }
 
+.melody-grid__brace {
+  position: absolute;
+  top: 14px;
+  bottom: 0;
+  width: 0;
+  border-left: 1px dashed color-mix(in srgb, var(--color-active) 70%, #fff);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* A grip tab (not a note-sized square): wider than a cell, rounded top,
+   vertical grip lines, and a chevron pointing at the dashed loop-end rule. */
+.melody-grid__brace-handle {
+  position: absolute;
+  top: -14px;
+  left: -8px;
+  width: 16px;
+  height: 14px;
+  border-radius: 3px 3px 0 0;
+  background: var(--color-active);
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0 4px,
+    rgba(255, 255, 255, 0.55) 4px 5px
+  );
+  background-size: 10px 6px;
+  background-position: 3px 4px;
+  background-repeat: no-repeat;
+  cursor: ew-resize;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.melody-grid__brace-handle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  width: 6px;
+  height: 6px;
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--color-active);
+}
+
+.melody-grid__brace-handle:hover {
+  background-color: color-mix(in srgb, var(--color-active) 80%, #fff);
+}
+
+.melody-grid__brace-handle:hover::after {
+  background: color-mix(in srgb, var(--color-active) 80%, #fff);
+}
+
+.melody-grid__brace-handle:focus-visible {
+  outline: 1px solid #fff;
+  outline-offset: 1px;
+}
+
 .melody-grid__corner {
   height: 14px;
   user-select: none;
@@ -76,6 +133,10 @@
   font-size: 7px;
   color: var(--color-labels);
   user-select: none;
+}
+
+.melody-grid__col-header--inactive {
+  opacity: 0.3;
 }
 
 .melody-grid__row {
@@ -148,6 +209,11 @@
   background: rgba(255, 255, 255, 0.22);
 }
 
+.melody-grid__cell--inactive {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(150, 150, 150, 0.15);
+}
+
 .melody-grid__bar {
   position: relative;
   z-index: 2;
@@ -165,6 +231,27 @@
 
 .melody-grid__bar:hover {
   opacity: 1;
+}
+
+@keyframes melody-grid-bar-flash {
+  0% {
+    filter: brightness(1);
+    opacity: 0.9;
+  }
+
+  20% {
+    filter: brightness(1.35);
+    opacity: 1;
+  }
+
+  100% {
+    filter: brightness(1);
+    opacity: 0.9;
+  }
+}
+
+.melody-grid__bar--flash {
+  animation: melody-grid-bar-flash 0.42s ease-out;
 }
 
 .melody-grid__bar-body {
