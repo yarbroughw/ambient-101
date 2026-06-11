@@ -76,7 +76,12 @@ function useTapeLanePhase(loop: TapeLoop, running: boolean): LanePhase {
       raf = requestAnimationFrame(frame)
     }
     raf = requestAnimationFrame(frame)
-    return () => cancelAnimationFrame(raf)
+    return () => {
+      cancelAnimationFrame(raf)
+      // Reset so stale lap/phase don't flash or fire a spurious downbeat
+      // animation on the next play.
+      setState(IDLE_PHASE)
+    }
   }, [loop, running])
   return running ? state : IDLE_PHASE
 }
