@@ -85,7 +85,7 @@ type TapeLoopRowProps = {
   onScaleChange: (scale: string) => void
   onOctaveShiftChange: (octaveShift: number) => void
   onBpmChange: (bpm: number) => void
-  onLoopDurationChange: (loopDurationMs: number) => void
+  onLoopTimingChange: (loopDurationMs: number, bpm: number) => void
   onLabelChange: (label: string) => void
   onVolumeChange: (volume: number) => void
   onReverbChange: (reverb: number) => void
@@ -112,7 +112,7 @@ export function TapeLoopRow({
   onScaleChange,
   onOctaveShiftChange,
   onBpmChange,
-  onLoopDurationChange,
+  onLoopTimingChange,
   onLabelChange,
   onVolumeChange,
   onReverbChange,
@@ -341,7 +341,7 @@ export function TapeLoopRow({
             onScaleChange={onScaleChange}
             onOctaveShiftChange={onOctaveShiftChange}
             onBpmChange={onBpmChange}
-            onLoopDurationChange={onLoopDurationChange}
+            onLoopTimingChange={onLoopTimingChange}
             onReverbChange={onReverbChange}
             onDelayChange={onDelayChange}
             onInstrumentChange={onInstrumentChange}

@@ -47,7 +47,7 @@ type LoopEditorProps = {
   onScaleChange: (scale: string) => void
   onOctaveShiftChange: (octaveShift: number) => void
   onBpmChange: (bpm: number) => void
-  onLoopDurationChange: (loopDurationMs: number) => void
+  onLoopTimingChange: (loopDurationMs: number, bpm: number) => void
   onReverbChange: (reverb: number) => void
   onDelayChange: (delay: number) => void
   onInstrumentChange: (instrument: string) => void
@@ -67,7 +67,7 @@ export function LoopEditor({
   onScaleChange,
   onOctaveShiftChange,
   onBpmChange,
-  onLoopDurationChange,
+  onLoopTimingChange,
   onReverbChange,
   onDelayChange,
   onInstrumentChange,
@@ -127,8 +127,7 @@ export function LoopEditor({
       nextStoredSec,
       loopCols,
     )
-    onLoopDurationChange(storedMs)
-    onBpmChange(nextBpm)
+    onLoopTimingChange(storedMs, nextBpm)
   }
 
   return (

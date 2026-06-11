@@ -69,7 +69,9 @@ import './App.css'
 
 // Shared downbeat scheduled slightly ahead so per-loop setup cost can't
 // stagger the reels' actual starts.
-const START_ALL_LEAD_SEC = 0.05
+// Must exceed one Tone.js clock interval (50ms) plus typical React render time
+// so the first Tone.js callback always fires before the scheduled loop start.
+const START_ALL_LEAD_SEC = 0.15
 
 export default function App() {
   const [audioReady, setAudioReady] = useState(false)
@@ -118,23 +120,13 @@ export default function App() {
   function handlePaceScaleChange(nextScale: number) {
     const options = { paceScale: nextScale, paceAffectsMelody }
     setPaceScale(nextScale)
-    setLoops((prev) => {
-      if (prev) {
-        resyncAllLoops(prev, options)
-      }
-      return prev
-    })
+    resyncAllLoops(loopsRef.current, options)
   }
 
   function handlePaceAffectsMelodyChange(value: boolean) {
     setPaceAffectsMelody(value)
     savePaceAffectsMelody(value)
-    setLoops((prev) => {
-      if (prev) {
-        resyncAllLoops(prev, { paceScale, paceAffectsMelody: value })
-      }
-      return prev
-    })
+    resyncAllLoops(loopsRef.current, { paceScale, paceAffectsMelody: value })
   }
 
   function handleOpenEnsemble(ensembleId: string) {
@@ -355,19 +347,21 @@ export default function App() {
   }
 
   function handleDuplicateLoop(id: string) {
+    const current = loopsRef.current
+    if (!current) {
+      return
+    }
+    const index = current.findIndex((entry) => entry.pattern.id === id)
+    if (index === -1) {
+      return
+    }
+    const duplicate = duplicatePattern(current[index].pattern, current)
+    const entry = createTapeLoop(duplicate)
+    syncLoopPlayback(entry, entry.pattern, paceOptions())
     setLoops((prev) => {
       if (!prev) {
         return prev
       }
-
-      const index = prev.findIndex((entry) => entry.pattern.id === id)
-      if (index === -1) {
-        return prev
-      }
-
-      const duplicate = duplicatePattern(prev[index].pattern, prev)
-      const entry = createTapeLoop(duplicate)
-      syncLoopPlayback(entry, entry.pattern, paceOptions())
       const next = [...prev]
       next.splice(index + 1, 0, entry)
       return next
@@ -375,50 +369,36 @@ export default function App() {
   }
 
   function handleDeleteLoop(id: string) {
-    setLoops((prev) => {
-      if (!prev) {
-        return prev
-      }
-
-      const target = prev.find((entry) => entry.pattern.id === id)
-      if (!target) {
-        return prev
-      }
-
+    const target = loopsRef.current?.find((entry) => entry.pattern.id === id)
+    if (target) {
       target.loop.stop()
       target.loop.dispose()
-      return prev.filter((entry) => entry.pattern.id !== id)
-    })
-
+    }
+    setLoops((prev) => prev?.filter((entry) => entry.pattern.id !== id) ?? prev)
     setRunningById((prev) => {
       const next = { ...prev }
       delete next[id]
       return next
     })
-
     setExpandedId((prev) => (prev === id ? null : prev))
   }
 
   function handleAddBlankLoop() {
-    setLoops((prev) => {
-      const existing = prev ?? []
-      const { id, label } = nextAvailableIdAndLabel('loop', existing)
-      const entry = createTapeLoop(createBlankPattern(id, label))
-      syncLoopPlayback(entry, entry.pattern, paceOptions())
-      return [...existing, entry]
-    })
+    const existing = loopsRef.current ?? []
+    const { id, label } = nextAvailableIdAndLabel('loop', existing)
+    const entry = createTapeLoop(createBlankPattern(id, label))
+    syncLoopPlayback(entry, entry.pattern, paceOptions())
+    setLoops((prev) => [...(prev ?? []), entry])
   }
 
   function handleAddPresetLoop(presetId: string) {
-    setLoops((prev) => {
-      const existing = prev ?? []
-      const preset = LOOP_PRESETS.find((entry) => entry.id === presetId)
-      const baseLabel = preset?.label ?? presetId
-      const { id, label } = nextAvailableIdAndLabel(baseLabel, existing)
-      const entry = createTapeLoop(createPatternFromPreset(presetId, id, label))
-      syncLoopPlayback(entry, entry.pattern, paceOptions())
-      return [...existing, entry]
-    })
+    const existing = loopsRef.current ?? []
+    const preset = LOOP_PRESETS.find((entry) => entry.id === presetId)
+    const baseLabel = preset?.label ?? presetId
+    const { id, label } = nextAvailableIdAndLabel(baseLabel, existing)
+    const entry = createTapeLoop(createPatternFromPreset(presetId, id, label))
+    syncLoopPlayback(entry, entry.pattern, paceOptions())
+    setLoops((prev) => [...(prev ?? []), entry])
   }
 
   function handleImportLoops(raw: string): ImportReelResult {
@@ -433,36 +413,32 @@ export default function App() {
       return { ok: false, message: 'no valid reels found' }
     }
 
-    setLoops((prev) => {
-      const next = [...(prev ?? [])]
-      for (const pattern of patterns) {
-        const imported = importPattern(pattern, next)
-        const entry = createTapeLoop(imported)
-        syncLoopPlayback(entry, entry.pattern, paceOptions())
-        next.push(entry)
-      }
-      return next
-    })
+    const existing = loopsRef.current ?? []
+    const newEntries: DemoLoop[] = []
+    const combined = [...existing]
+    const pace = paceOptions()
+    for (const pattern of patterns) {
+      const imported = importPattern(pattern, combined)
+      const entry = createTapeLoop(imported)
+      syncLoopPlayback(entry, imported, pace)
+      combined.push(entry)
+      newEntries.push(entry)
+    }
+    setLoops((prev) => [...(prev ?? []), ...newEntries])
 
     return { ok: true, count: patterns.length }
   }
 
   function updatePattern(id: string, patch: Partial<LoopPattern>) {
-    setLoops((prev) => {
-      if (!prev) {
-        return prev
-      }
-
-      return prev.map((entry) => {
-        if (entry.pattern.id !== id) {
-          return entry
-        }
-
-        const nextPattern = { ...entry.pattern, ...patch }
-        syncLoopPlayback(entry, nextPattern, paceOptions())
-        return { ...entry, pattern: nextPattern }
-      })
-    })
+    const entry = loopsRef.current?.find((e) => e.pattern.id === id)
+    if (!entry) {
+      return
+    }
+    const nextPattern = { ...entry.pattern, ...patch }
+    syncLoopPlayback(entry, nextPattern, paceOptions())
+    setLoops((prev) =>
+      prev?.map((e) => (e.pattern.id === id ? { ...e, pattern: nextPattern } : e)) ?? prev,
+    )
   }
 
   function handleNotesChange(id: string, notes: PatternNote[]) {
@@ -507,22 +483,16 @@ export default function App() {
     )
   }
 
-  function handleLoopDurationChange(id: string, loopDurationMs: number) {
-    setLoops((prev) => {
-      if (!prev) {
-        return prev
-      }
-
-      return prev.map((entry) => {
-        if (entry.pattern.id !== id) {
-          return entry
-        }
-
-        const nextPattern = { ...entry.pattern, loopDurationMs }
-        syncLoopPlayback(entry, nextPattern, paceOptions())
-        return { ...entry, pattern: nextPattern }
-      })
-    })
+  function handleLoopTimingChange(id: string, loopDurationMs: number, bpm: number) {
+    const entry = loopsRef.current?.find((e) => e.pattern.id === id)
+    if (!entry) {
+      return
+    }
+    const nextPattern = { ...entry.pattern, loopDurationMs, bpm }
+    syncLoopPlayback(entry, nextPattern, paceOptions())
+    setLoops((prev) =>
+      prev?.map((e) => (e.pattern.id === id ? { ...e, pattern: nextPattern } : e)) ?? prev,
+    )
   }
 
   function handleBpmChange(id: string, bpm: number) {
@@ -530,34 +500,27 @@ export default function App() {
   }
 
   function handleLoopColsChange(id: string, loopCols: number) {
-    setLoops((prev) => {
-      if (!prev) {
-        return prev
-      }
-
-      return prev.map((entry) => {
-        if (entry.pattern.id !== id) {
-          return entry
-        }
-
-        const clampedCols = clampLoopCols(loopCols)
-        if (clampedCols === entry.pattern.loopCols) {
-          return entry
-        }
-
-        // Scale the tape period with the window so the current fill (and a
-        // seamless loop especially) is preserved as the loop is shortened.
-        const ratio = clampedCols / entry.pattern.loopCols
-        const nextDurationMs = Math.round(entry.pattern.loopDurationMs * ratio)
-        const nextPattern = {
-          ...entry.pattern,
-          loopCols: clampedCols,
-          loopDurationMs: nextDurationMs,
-        }
-        syncLoopPlayback(entry, nextPattern, paceOptions())
-        return { ...entry, pattern: nextPattern }
-      })
-    })
+    const entry = loopsRef.current?.find((e) => e.pattern.id === id)
+    if (!entry) {
+      return
+    }
+    const clampedCols = clampLoopCols(loopCols)
+    if (clampedCols === entry.pattern.loopCols) {
+      return
+    }
+    // Scale the tape period with the window so the current fill (and a
+    // seamless loop especially) is preserved as the loop is shortened.
+    const ratio = clampedCols / entry.pattern.loopCols
+    const nextDurationMs = Math.round(entry.pattern.loopDurationMs * ratio)
+    const nextPattern = {
+      ...entry.pattern,
+      loopCols: clampedCols,
+      loopDurationMs: nextDurationMs,
+    }
+    syncLoopPlayback(entry, nextPattern, paceOptions())
+    setLoops((prev) =>
+      prev?.map((e) => (e.pattern.id === id ? { ...e, pattern: nextPattern } : e)) ?? prev,
+    )
   }
 
   function handleInstrumentChange(id: string, instrument: string) {
@@ -567,32 +530,32 @@ export default function App() {
   function handleGlobalRootChange(root: string) {
     const normalized = normalizeRoot(root)
     setLastGlobalRoot(normalized)
-    setLoops((prev) => {
-      if (!prev) {
-        return prev
-      }
-
-      return prev.map((entry) => {
-        const nextPattern = { ...entry.pattern, root: normalized }
-        syncLoopPlayback(entry, nextPattern, paceOptions())
-        return { ...entry, pattern: nextPattern }
-      })
+    const current = loopsRef.current
+    if (!current) {
+      return
+    }
+    const pace = paceOptions()
+    const nextLoops = current.map((entry) => {
+      const nextPattern = { ...entry.pattern, root: normalized }
+      syncLoopPlayback(entry, nextPattern, pace)
+      return { ...entry, pattern: nextPattern }
     })
+    setLoops(nextLoops)
   }
 
   function handleGlobalScaleChange(scale: string) {
     setLastGlobalScale(scale)
-    setLoops((prev) => {
-      if (!prev) {
-        return prev
-      }
-
-      return prev.map((entry) => {
-        const nextPattern = { ...entry.pattern, scale }
-        syncLoopPlayback(entry, nextPattern, paceOptions())
-        return { ...entry, pattern: nextPattern }
-      })
+    const current = loopsRef.current
+    if (!current) {
+      return
+    }
+    const pace = paceOptions()
+    const nextLoops = current.map((entry) => {
+      const nextPattern = { ...entry.pattern, scale }
+      syncLoopPlayback(entry, nextPattern, pace)
+      return { ...entry, pattern: nextPattern }
     })
+    setLoops(nextLoops)
   }
 
   const reelRoots = loops?.map(({ pattern }) => pattern.root) ?? []
@@ -727,8 +690,8 @@ export default function App() {
               handleOctaveShiftChange(pattern.id, shift)
             }
             onBpmChange={(bpm) => handleBpmChange(pattern.id, bpm)}
-            onLoopDurationChange={(loopDurationMs) =>
-              handleLoopDurationChange(pattern.id, loopDurationMs)
+            onLoopTimingChange={(loopDurationMs, bpm) =>
+              handleLoopTimingChange(pattern.id, loopDurationMs, bpm)
             }
             onLabelChange={(label) => handleLabelChange(pattern.id, label)}
             onVolumeChange={(volume) =>
