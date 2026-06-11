@@ -1,0 +1,20 @@
+.ensemble-sync-label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.2;
+  text-transform: lowercase;
+  color: var(--color-labels);
+  font-variant-numeric: tabular-nums;
+}
+
+.ensemble-sync-label__toggle {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}

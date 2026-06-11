@@ -1,0 +1,42 @@
+/* Sits beside the fixed back chevron, top-left: "‹ workshop starter". */
+.ensemble-title,
+.ensemble-title__input {
+  position: fixed;
+  top: 14px;
+  left: 44px;
+  z-index: 100;
+  max-width: 240px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 16px;
+  text-transform: lowercase;
+}
+
+.ensemble-title {
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  color: var(--color-labels);
+  cursor: text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.ensemble-title:hover {
+  color: var(--color-btn-text);
+}
+
+.ensemble-title:focus-visible {
+  outline: 1px solid var(--color-active);
+  outline-offset: 1px;
+}
+
+.ensemble-title__input {
+  width: 200px;
+  padding: 1px 4px;
+  border: 1px solid var(--color-outline);
+  background: var(--color-loop-bg);
+  color: var(--color-btn-text);
+}

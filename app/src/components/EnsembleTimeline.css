@@ -1,0 +1,194 @@
+.ensemble-timeline {
+  position: relative;
+  padding: 0 0 24px;
+}
+
+.ensemble-timeline__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  /* Match the stack's row rhythm so rows stay put when toggling views. */
+  gap: 8px;
+}
+
+/* Same card (height, border, background, position) as a collapsed reel row,
+   so toggling morphs each reel's interior in place. Clips the scrolling tape. */
+.ensemble-timeline__lane {
+  position: relative;
+  /* Match the Reels row exactly: its summary is --loop-row-height tall and the
+     article's border sits on top. content-box makes this lane's border add on
+     top the same way (border-box would instead eat into the height). */
+  box-sizing: content-box;
+  height: var(--loop-row-height);
+  background: var(--color-loop-bg);
+  border: 1px solid var(--color-outline);
+  overflow: hidden;
+}
+
+/* Full-border pulse on the downbeat, matching the Reels row flash. */
+@keyframes ensemble-timeline-lane-flash {
+  0%,
+  10% {
+    border-color: #fff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+  }
+  58% {
+    border-color: rgb(236, 233, 255);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
+  }
+  100% {
+    border-color: var(--color-outline);
+    box-shadow: none;
+  }
+}
+
+.ensemble-timeline__lane--lap {
+  animation: ensemble-timeline-lane-flash 1.35s linear forwards;
+}
+
+/* The scrolling tape: tiled copies of the loop translated under the playhead. */
+.ensemble-timeline__strip {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+.ensemble-timeline__tile {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+/* The loop boundary (downbeat). Its drift past the playhead is the phasing. */
+.ensemble-timeline__seam {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--color-active);
+  opacity: 0.55;
+}
+
+/* The melody window within each loop; the gap after it is the silent tail. */
+.ensemble-timeline__tile-melody {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.ensemble-timeline__tile-melody .mini-melody,
+.ensemble-timeline__tile-melody .mini-melody__track {
+  height: 100%;
+}
+
+.ensemble-timeline__tile-melody .mini-melody__track {
+  border: none;
+}
+
+/* Soft edges so tape fades in/out rather than popping at the lane borders. */
+.ensemble-timeline__lane::before,
+.ensemble-timeline__lane::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.ensemble-timeline__lane::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--color-loop-bg), transparent);
+}
+
+.ensemble-timeline__lane::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--color-loop-bg), transparent);
+}
+
+/* Loop length, pinned to the lane's top-left (does not scroll). */
+.ensemble-timeline__period {
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  z-index: 3;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--color-loop-bg) 80%, transparent);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-labels);
+  pointer-events: none;
+}
+
+/* Shared fixed "now" head spanning all lanes. */
+.ensemble-timeline__playhead {
+  position: absolute;
+  top: 0;
+  bottom: 24px;
+  width: 2px;
+  margin-left: -1px;
+  z-index: 5;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+}
+
+/* A bloom at the playhead when this lane's loop boundary crosses it — the
+   downbeat. Lanes flash at different rates, reinforcing the phasing. */
+@keyframes ensemble-timeline-downbeat {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    opacity: 1;
+  }
+  15% {
+    box-shadow: 0 0 12px 3px rgba(255, 255, 255, 0.95);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    opacity: 0;
+  }
+}
+
+.ensemble-timeline__downbeat {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  z-index: 6;
+  background: #fff;
+  pointer-events: none;
+  animation: ensemble-timeline-downbeat 0.6s ease-out forwards;
+}
+
+.ensemble-timeline__lane.is-clickable {
+  cursor: pointer;
+}
+
+.ensemble-timeline__lane.is-clickable:hover,
+.ensemble-timeline__lane.is-clickable:focus-visible {
+  border-color: var(--color-btn-text);
+}
+
+/* Hint for reels with no notes, whose tape would otherwise be a blank band. */
+.ensemble-timeline__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: lowercase;
+  color: var(--color-labels);
+  pointer-events: none;
+}
