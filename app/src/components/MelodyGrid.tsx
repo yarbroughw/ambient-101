@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { previewGridNote } from '../audio/previewGridNote'
 import type { LoopPattern, PatternNote } from '../audio/patternTypes'
 import {
@@ -9,7 +9,6 @@ import {
   gridLayout,
   gridPlayheadRatio,
   moveNote,
-  noteCoversCell,
   noteEndColumn,
   noteKey,
   placeNoteSpan,
@@ -121,6 +120,317 @@ function cellAtPoint(clientX: number, clientY: number): GridCellTarget | null {
   return cellFromTarget(element)
 }
 
+// ---- inner component — only re-renders when data changes, not on every animation frame ----
+
+type MelodyGridBodyProps = {
+  notes: PatternNote[]
+  rows: ReturnType<typeof gridScaleRows>
+  layout: ReturnType<typeof gridLayout>
+  activeCols: number
+  disabled: boolean
+  noteFlashes: Record<string, number>
+  drag: DragState | null
+  hoveredScaleStep: number | null
+  gridRef: React.RefObject<HTMLDivElement | null>
+  setHoveredScaleStep: React.Dispatch<React.SetStateAction<number | null>>
+  onCellPointerDown: (scaleStep: number, col: number, event: React.PointerEvent<HTMLButtonElement>) => void
+  onCellKeyDown: (scaleStep: number, col: number, event: React.KeyboardEvent<HTMLButtonElement>) => void
+  onResizeEndPointerDown: (note: PatternNote, event: React.PointerEvent<HTMLDivElement>) => void
+  onResizeStartPointerDown: (note: PatternNote, event: React.PointerEvent<HTMLDivElement>) => void
+  onMovePointerDown: (note: PatternNote, event: React.PointerEvent<HTMLButtonElement>) => void
+  onBracePointerDown: (event: React.PointerEvent<HTMLDivElement>) => void
+  onLoopColsChange: (cols: number) => void
+}
+
+const MelodyGridBody = memo(function MelodyGridBody({
+  notes,
+  rows,
+  layout,
+  activeCols,
+  disabled,
+  noteFlashes,
+  drag,
+  hoveredScaleStep,
+  gridRef,
+  setHoveredScaleStep,
+  onCellPointerDown,
+  onCellKeyDown,
+  onResizeEndPointerDown,
+  onResizeStartPointerDown,
+  onMovePointerDown,
+  onBracePointerDown,
+  onLoopColsChange,
+}: MelodyGridBodyProps) {
+  // O(1) lookup per cell instead of O(notes) — recomputed only when notes change
+  const occupied = useMemo(() => {
+    const set = new Set<string>()
+    for (const note of notes) {
+      for (let col = note.startCol; col < note.startCol + note.spanCols; col++) {
+        set.add(`${note.scaleStep}:${col}`)
+      }
+    }
+    return set
+  }, [notes])
+
+  function displayStateForNote(note: PatternNote): NoteDisplay {
+    if (drag?.kind === 'resize-end' && noteKey(drag.note) === noteKey(note)) {
+      return {
+        note,
+        startCol: note.startCol,
+        span: drag.currentEndCol - note.startCol + 1,
+        scaleStep: note.scaleStep,
+        isActive: true,
+      }
+    }
+
+    if (drag?.kind === 'resize-start' && noteKey(drag.note) === noteKey(note)) {
+      return {
+        note,
+        startCol: drag.currentStartCol,
+        span: drag.originEndCol - drag.currentStartCol + 1,
+        scaleStep: note.scaleStep,
+        isActive: true,
+      }
+    }
+
+    if (drag?.kind === 'move' && noteKey(drag.note) === noteKey(note)) {
+      const deltaCol = drag.currentCol - drag.anchorCol
+      const deltaStep = drag.anchorRowIndex - drag.currentRowIndex
+      return {
+        note,
+        startCol: Math.min(
+          GRID_COLUMN_COUNT - note.spanCols,
+          Math.max(0, drag.originStartCol + deltaCol),
+        ),
+        span: note.spanCols,
+        scaleStep: Math.min(
+          GRID_SCALE_STEP_MAX,
+          Math.max(GRID_SCALE_STEP_MIN, drag.originScaleStep + deltaStep),
+        ),
+        isActive: true,
+      }
+    }
+
+    return {
+      note,
+      startCol: note.startCol,
+      span: note.spanCols,
+      scaleStep: note.scaleStep,
+      isActive: false,
+    }
+  }
+
+  const activeScaleStep =
+    drag?.kind === 'paint' ? drag.scaleStep : hoveredScaleStep
+
+  return (
+    <>
+      <div
+        ref={gridRef}
+        className="melody-grid"
+        role="grid"
+        aria-label="Melody step grid"
+        style={{
+          gridTemplateColumns: `var(--melody-grid-step-width) repeat(${layout.columnCount}, var(--melody-grid-cell-size)) var(--melody-grid-pitch-width)`,
+        }}
+      >
+        <div className="melody-grid__corner melody-grid__corner--step" role="presentation" />
+        {Array.from({ length: layout.columnCount }, (_, col) => (
+          <div
+            key={`col-${col}`}
+            className={
+              col >= activeCols
+                ? 'melody-grid__col-header melody-grid__col-header--inactive'
+                : 'melody-grid__col-header'
+            }
+            role="columnheader"
+            aria-label={`Step ${col + 1}`}
+          >
+            {col % 16 === 0 ? col / 16 + 1 : col % 4 === 0 ? '·' : ''}
+          </div>
+        ))}
+        <div className="melody-grid__corner melody-grid__corner--pitch" role="presentation" />
+
+        {rows.map((row, rowIndex) => {
+          const gridRow = rowIndex + 2
+          const rowDisplays = notes
+            .map((note) => displayStateForNote(note))
+            .filter((display) => display.scaleStep === row.scaleStep)
+          const ghost =
+            drag?.kind === 'paint' && drag.scaleStep === row.scaleStep ? drag : null
+          const rowHighlighted = activeScaleStep === row.scaleStep
+          const labelClass = rowHighlighted
+            ? 'melody-grid__axis-label melody-grid__axis-label--active'
+            : 'melody-grid__axis-label'
+          const rootClass =
+            row.scaleStep === 0 ? ' melody-grid__axis-label--root' : ''
+
+          return (
+            <div key={row.scaleStep} className="melody-grid__row" role="row">
+              <div
+                className={`${labelClass} melody-grid__axis-label--step${rootClass}`}
+                role="rowheader"
+                style={{ gridRow, gridColumn: 1 }}
+              >
+                <span className="melody-grid__row-step">{row.stepLabel}</span>
+              </div>
+
+              {Array.from({ length: layout.columnCount }, (_, col) => {
+                const startTime = cellStartTime(col, layout.stepSec)
+                const covered = occupied.has(`${row.scaleStep}:${col}`)
+
+                return (
+                  <button
+                    key={`${row.scaleStep}-${col}`}
+                    type="button"
+                    className={
+                      col >= activeCols
+                        ? 'melody-grid__cell melody-grid__cell--inactive'
+                        : 'melody-grid__cell'
+                    }
+                    role="gridcell"
+                    data-grid-cell
+                    data-scale-step={row.scaleStep}
+                    data-col={col}
+                    style={{ gridRow, gridColumn: col + 2 }}
+                    aria-selected={covered}
+                    aria-label={`${row.stepLabel} ${row.pitchName} at ${startTime.toFixed(2)} seconds`}
+                    disabled={disabled}
+                    onPointerDown={(event) =>
+                      onCellPointerDown(row.scaleStep, col, event)
+                    }
+                    onKeyDown={(event) =>
+                      onCellKeyDown(row.scaleStep, col, event)
+                    }
+                    onMouseEnter={() => setHoveredScaleStep(row.scaleStep)}
+                    onMouseLeave={() =>
+                      setHoveredScaleStep((current) =>
+                        current === row.scaleStep ? null : current,
+                      )
+                    }
+                    onFocus={() => setHoveredScaleStep(row.scaleStep)}
+                    onBlur={() =>
+                      setHoveredScaleStep((current) =>
+                        current === row.scaleStep ? null : current,
+                      )
+                    }
+                  />
+                )
+              })}
+
+              <div
+                className={`${labelClass} melody-grid__axis-label--pitch${rootClass}`}
+                role="rowheader"
+                style={{
+                  gridRow,
+                  gridColumn: layout.columnCount + 2,
+                }}
+              >
+                <span className="melody-grid__row-pitch">{row.pitchName}</span>
+              </div>
+
+              {rowDisplays.map((display) => {
+                const flashCount = noteFlashes[noteKey(display.note)] ?? 0
+                const barClass = [
+                  'melody-grid__bar',
+                  display.isActive ? 'melody-grid__bar--active' : '',
+                  flashCount > 0 ? 'melody-grid__bar--flash' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')
+
+                return (
+                  <div
+                    key={`${noteKey(display.note)}-${flashCount}`}
+                    className={barClass}
+                    style={{
+                      gridRow,
+                      gridColumn: `${display.startCol + 2} / span ${display.span}`,
+                    }}
+                  >
+                    <div
+                      className="melody-grid__bar-handle melody-grid__bar-handle--start"
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label={`Extend note start at step ${row.stepLabel}`}
+                      onPointerDown={(event) =>
+                        onResizeStartPointerDown(display.note, event)
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="melody-grid__bar-body"
+                      aria-label={`Move or remove note at step ${row.stepLabel}`}
+                      disabled={disabled}
+                      onPointerDown={(event) =>
+                        onMovePointerDown(display.note, event)
+                      }
+                    />
+                    <div
+                      className="melody-grid__bar-handle melody-grid__bar-handle--end"
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label={`Extend note end at step ${row.stepLabel}`}
+                      onPointerDown={(event) =>
+                        onResizeEndPointerDown(display.note, event)
+                      }
+                    />
+                  </div>
+                )
+              })}
+
+              {ghost ? (
+                <div
+                  className="melody-grid__bar melody-grid__bar--ghost"
+                  aria-hidden
+                  style={{
+                    gridRow,
+                    gridColumn: `${Math.min(ghost.anchorCol, ghost.currentCol) + 2} / span ${Math.abs(ghost.currentCol - ghost.anchorCol) + 1}`,
+                  }}
+                />
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
+
+      <div
+        className="melody-grid__brace"
+        style={{
+          left: `calc(var(--melody-grid-step-width) + ${activeCols} * (var(--melody-grid-cell-size) + 1px))`,
+        }}
+      >
+        <div
+          className="melody-grid__brace-handle"
+          role="slider"
+          aria-label="Loop length in steps"
+          aria-valuemin={1}
+          aria-valuemax={layout.columnCount}
+          aria-valuenow={activeCols}
+          aria-valuetext={`${activeCols} steps`}
+          title="loop end — drag to shorten the melody"
+          tabIndex={disabled ? -1 : 0}
+          onPointerDown={onBracePointerDown}
+          onKeyDown={(event) => {
+            if (disabled) {
+              return
+            }
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+              event.preventDefault()
+              onLoopColsChange(Math.max(1, activeCols - 1))
+            } else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+              event.preventDefault()
+              onLoopColsChange(Math.min(layout.columnCount, activeCols + 1))
+            }
+          }}
+        />
+      </div>
+    </>
+  )
+})
+
+// ---- outer component — re-renders 60fps but MelodyGridBody is memo'd ----
+
 export function MelodyGrid({
   pattern,
   loopTimeSec,
@@ -148,36 +458,45 @@ export function MelodyGrid({
     [tonality, octaveShift],
   )
   const playheadRatio = gridPlayheadRatio(loopTimeSec, layout.gridDuration)
+
   const [drag, setDrag] = useState<DragState | null>(null)
   const [hoveredScaleStep, setHoveredScaleStep] = useState<number | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
   const notesRef = useRef(notes)
   const rowsRef = useRef(rows)
+  const layoutRef = useRef(layout)
   const stepSecRef = useRef(layout.stepSec)
   const onNotesChangeRef = useRef(onNotesChange)
   const onLoopColsChangeRef = useRef(onLoopColsChange)
   const activeColsRef = useRef(activeCols)
   const patternRef = useRef({ tonality, octaveShift, instrument })
+  const disabledRef = useRef(disabled)
   notesRef.current = notes
   rowsRef.current = rows
+  layoutRef.current = layout
   stepSecRef.current = layout.stepSec
   onNotesChangeRef.current = onNotesChange
   onLoopColsChangeRef.current = onLoopColsChange
   activeColsRef.current = activeCols
   patternRef.current = { tonality, octaveShift, instrument }
+  disabledRef.current = disabled
 
-  function previewStep(scaleStep: number, durationSec: number) {
+  const stableOnLoopColsChange = useCallback((cols: number) => {
+    onLoopColsChangeRef.current(cols)
+  }, [])
+
+  const previewStep = useCallback((scaleStep: number, durationSec: number) => {
     const { tonality: t, octaveShift: o, instrument: i } = patternRef.current
     previewGridNote(stepToPitch(t, scaleStep, o), durationSec, i)
-  }
+  }, [])
 
-  function endDrag() {
+  const endDrag = useCallback(() => {
     dragRef.current = null
     setDrag(null)
-  }
+  }, [])
 
-  function pointerMetrics(): GridPointerMetrics | null {
+  const pointerMetrics = useCallback((): GridPointerMetrics | null => {
     const grid = gridRef.current
     if (!grid) {
       return null
@@ -190,84 +509,194 @@ export function MelodyGrid({
       Number.parseFloat(styles.getPropertyValue('--melody-grid-cell-size')) || 13
 
     return {
-      columnCount: layout.columnCount,
+      columnCount: layoutRef.current.columnCount,
       labelWidth,
       cellSize,
       gap: 1,
     }
-  }
+  }, [])
 
-  function columnAtPointer(clientX: number): number | null {
-    const grid = gridRef.current
-    const metrics = pointerMetrics()
-    if (!grid || !metrics) {
-      return null
-    }
-
-    return columnAtClientX(clientX, grid.getBoundingClientRect(), metrics)
-  }
-
-  function rowAtPointer(clientY: number): number | null {
-    const grid = gridRef.current
-    const metrics = pointerMetrics()
-    if (!grid || !metrics) {
-      return null
-    }
-
-    return rowAtClientY(clientY, grid.getBoundingClientRect(), {
-      ...metrics,
-      headerHeight: GRID_HEADER_HEIGHT,
-      rowCount: rowsRef.current.length,
-    })
-  }
-
-  function displayStateForNote(note: PatternNote, active: DragState | null): NoteDisplay {
-    if (active?.kind === 'resize-end' && noteKey(active.note) === noteKey(note)) {
-      return {
-        note,
-        startCol: note.startCol,
-        span: active.currentEndCol - note.startCol + 1,
-        scaleStep: note.scaleStep,
-        isActive: true,
+  const columnAtPointer = useCallback(
+    (clientX: number): number | null => {
+      const grid = gridRef.current
+      const metrics = pointerMetrics()
+      if (!grid || !metrics) {
+        return null
       }
-    }
 
-    if (active?.kind === 'resize-start' && noteKey(active.note) === noteKey(note)) {
-      return {
-        note,
-        startCol: active.currentStartCol,
-        span: active.originEndCol - active.currentStartCol + 1,
-        scaleStep: note.scaleStep,
-        isActive: true,
+      return columnAtClientX(clientX, grid.getBoundingClientRect(), metrics)
+    },
+    [pointerMetrics],
+  )
+
+  const rowAtPointer = useCallback(
+    (clientY: number): number | null => {
+      const grid = gridRef.current
+      const metrics = pointerMetrics()
+      if (!grid || !metrics) {
+        return null
       }
-    }
 
-    if (active?.kind === 'move' && noteKey(active.note) === noteKey(note)) {
-      const deltaCol = active.currentCol - active.anchorCol
-      const deltaStep = active.anchorRowIndex - active.currentRowIndex
-      return {
-        note,
-        startCol: Math.min(
-          GRID_COLUMN_COUNT - note.spanCols,
-          Math.max(0, active.originStartCol + deltaCol),
-        ),
-        span: note.spanCols,
-        scaleStep: Math.min(
-          GRID_SCALE_STEP_MAX,
-          Math.max(GRID_SCALE_STEP_MIN, active.originScaleStep + deltaStep),
-        ),
-        isActive: true,
+      return rowAtClientY(clientY, grid.getBoundingClientRect(), {
+        ...metrics,
+        headerHeight: GRID_HEADER_HEIGHT,
+        rowCount: rowsRef.current.length,
+      })
+    },
+    [pointerMetrics],
+  )
+
+  const handleCellPointerDown = useCallback(
+    (
+      scaleStep: number,
+      col: number,
+      event: React.PointerEvent<HTMLButtonElement>,
+    ) => {
+      if (disabledRef.current || findNoteAt(notesRef.current, scaleStep, col)) {
+        return
       }
-    }
 
-    return {
-      note,
-      startCol: note.startCol,
-      span: note.spanCols,
-      scaleStep: note.scaleStep,
-      isActive: false,
-    }
-  }
+      event.preventDefault()
+      const paint: PaintDrag = {
+        kind: 'paint',
+        scaleStep,
+        anchorCol: col,
+        currentCol: col,
+      }
+      dragRef.current = paint
+      setDrag(paint)
+      event.currentTarget.setPointerCapture(event.pointerId)
+    },
+    [],
+  )
+
+  const handleResizeEndPointerDown = useCallback(
+    (note: PatternNote, event: React.PointerEvent<HTMLDivElement>) => {
+      if (disabledRef.current) {
+        return
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      const anchorCol = columnAtPointer(event.clientX) ?? noteEndColumn(note)
+      const resize: ResizeEndDrag = {
+        kind: 'resize-end',
+        note,
+        originEndCol: noteEndColumn(note),
+        anchorCol,
+        currentEndCol: noteEndColumn(note),
+      }
+      dragRef.current = resize
+      setDrag(resize)
+      event.currentTarget.setPointerCapture(event.pointerId)
+    },
+    [columnAtPointer],
+  )
+
+  const handleResizeStartPointerDown = useCallback(
+    (note: PatternNote, event: React.PointerEvent<HTMLDivElement>) => {
+      if (disabledRef.current) {
+        return
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      const anchorCol = columnAtPointer(event.clientX) ?? note.startCol
+      const resize: ResizeStartDrag = {
+        kind: 'resize-start',
+        note,
+        originStartCol: note.startCol,
+        originEndCol: noteEndColumn(note),
+        anchorCol,
+        currentStartCol: note.startCol,
+      }
+      dragRef.current = resize
+      setDrag(resize)
+      event.currentTarget.setPointerCapture(event.pointerId)
+    },
+    [columnAtPointer],
+  )
+
+  const handleMovePointerDown = useCallback(
+    (note: PatternNote, event: React.PointerEvent<HTMLButtonElement>) => {
+      if (disabledRef.current) {
+        return
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      const col = columnAtPointer(event.clientX)
+      const rowIndex = rowAtPointer(event.clientY)
+      if (col === null || rowIndex === null) {
+        return
+      }
+
+      const move: MoveDrag = {
+        kind: 'move',
+        note,
+        originStartCol: note.startCol,
+        originScaleStep: note.scaleStep,
+        anchorCol: col,
+        anchorRowIndex: rowIndex,
+        currentCol: col,
+        currentRowIndex: rowIndex,
+        didMove: false,
+        lastPreviewedRowIndex: rowIndex,
+      }
+      dragRef.current = move
+      setDrag(move)
+      event.currentTarget.setPointerCapture(event.pointerId)
+    },
+    [columnAtPointer, rowAtPointer],
+  )
+
+  const handleBracePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (disabledRef.current) {
+        return
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      const brace: BraceDrag = {
+        kind: 'brace',
+        startX: event.clientX,
+        startCols: activeColsRef.current,
+      }
+      dragRef.current = brace
+      setDrag(brace)
+      event.currentTarget.setPointerCapture(event.pointerId)
+    },
+    [],
+  )
+
+  const handleCellKeyDown = useCallback(
+    (
+      scaleStep: number,
+      col: number,
+      event: React.KeyboardEvent<HTMLButtonElement>,
+    ) => {
+      if (disabledRef.current || (event.key !== ' ' && event.key !== 'Enter')) {
+        return
+      }
+
+      event.preventDefault()
+      const existing = findNoteAt(notesRef.current, scaleStep, col)
+      if (existing) {
+        onNotesChangeRef.current(removeNote(notesRef.current, existing))
+        return
+      }
+
+      const nextNotes = placeNoteSpan(notesRef.current, scaleStep, col, col)
+      onNotesChangeRef.current(nextNotes)
+      previewStep(scaleStep, stepSecRef.current)
+    },
+    [previewStep],
+  )
 
   useEffect(() => {
     if (!drag) {
@@ -439,341 +868,35 @@ export function MelodyGrid({
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerUp)
     }
-  }, [drag])
+  }, [drag, columnAtPointer, rowAtPointer, pointerMetrics, previewStep, endDrag])
 
-  function handleCellPointerDown(
-    scaleStep: number,
-    col: number,
-    event: React.PointerEvent<HTMLButtonElement>,
-  ) {
-    if (disabled || findNoteAt(notes, scaleStep, col)) {
-      return
-    }
-
-    event.preventDefault()
-    const paint: PaintDrag = {
-      kind: 'paint',
-      scaleStep,
-      anchorCol: col,
-      currentCol: col,
-    }
-    dragRef.current = paint
-    setDrag(paint)
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  function handleResizeEndPointerDown(
-    note: PatternNote,
-    event: React.PointerEvent<HTMLDivElement>,
-  ) {
-    if (disabled) {
-      return
-    }
-
-    event.preventDefault()
-    event.stopPropagation()
-
-    const anchorCol = columnAtPointer(event.clientX) ?? noteEndColumn(note)
-    const resize: ResizeEndDrag = {
-      kind: 'resize-end',
-      note,
-      originEndCol: noteEndColumn(note),
-      anchorCol,
-      currentEndCol: noteEndColumn(note),
-    }
-    dragRef.current = resize
-    setDrag(resize)
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  function handleResizeStartPointerDown(
-    note: PatternNote,
-    event: React.PointerEvent<HTMLDivElement>,
-  ) {
-    if (disabled) {
-      return
-    }
-
-    event.preventDefault()
-    event.stopPropagation()
-
-    const anchorCol = columnAtPointer(event.clientX) ?? note.startCol
-    const resize: ResizeStartDrag = {
-      kind: 'resize-start',
-      note,
-      originStartCol: note.startCol,
-      originEndCol: noteEndColumn(note),
-      anchorCol,
-      currentStartCol: note.startCol,
-    }
-    dragRef.current = resize
-    setDrag(resize)
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  function handleMovePointerDown(
-    note: PatternNote,
-    event: React.PointerEvent<HTMLButtonElement>,
-  ) {
-    if (disabled) {
-      return
-    }
-
-    event.preventDefault()
-    event.stopPropagation()
-
-    const col = columnAtPointer(event.clientX)
-    const rowIndex = rowAtPointer(event.clientY)
-    if (col === null || rowIndex === null) {
-      return
-    }
-
-    const move: MoveDrag = {
-      kind: 'move',
-      note,
-      originStartCol: note.startCol,
-      originScaleStep: note.scaleStep,
-      anchorCol: col,
-      anchorRowIndex: rowIndex,
-      currentCol: col,
-      currentRowIndex: rowIndex,
-      didMove: false,
-      lastPreviewedRowIndex: rowIndex,
-    }
-    dragRef.current = move
-    setDrag(move)
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  function handleBracePointerDown(
-    event: React.PointerEvent<HTMLDivElement>,
-  ) {
-    if (disabled) {
-      return
-    }
-
-    event.preventDefault()
-    event.stopPropagation()
-
-    const brace: BraceDrag = {
-      kind: 'brace',
-      startX: event.clientX,
-      startCols: activeColsRef.current,
-    }
-    dragRef.current = brace
-    setDrag(brace)
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  function handleCellKeyDown(
-    scaleStep: number,
-    col: number,
-    event: React.KeyboardEvent<HTMLButtonElement>,
-  ) {
-    if (disabled || (event.key !== ' ' && event.key !== 'Enter')) {
-      return
-    }
-
-    event.preventDefault()
-    const existing = findNoteAt(notes, scaleStep, col)
-    if (existing) {
-      onNotesChange(removeNote(notes, existing))
-      return
-    }
-
-    const nextNotes = placeNoteSpan(notes, scaleStep, col, col)
-    onNotesChange(nextNotes)
-    previewStep(scaleStep, layout.stepSec)
-  }
-
-  function ghostPaintForRow(scaleStep: number): PaintDrag | null {
-    if (drag?.kind !== 'paint' || drag.scaleStep !== scaleStep) {
-      return null
-    }
-    return drag
-  }
-
-  const activeScaleStep =
-    drag?.kind === 'paint' ? drag.scaleStep : hoveredScaleStep
+  const frameStyle = useMemo(
+    () => ({ ['--melody-grid-column-count' as string]: layout.columnCount }),
+    [layout.columnCount],
+  )
 
   return (
     <div className="melody-grid__scroll">
-      <div
-        className="melody-grid__frame"
-        style={{
-          ['--melody-grid-column-count' as string]: layout.columnCount,
-        }}
-      >
-        <div
-          ref={gridRef}
-          className="melody-grid"
-          role="grid"
-          aria-label="Melody step grid"
-          style={{
-            gridTemplateColumns: `var(--melody-grid-step-width) repeat(${layout.columnCount}, var(--melody-grid-cell-size)) var(--melody-grid-pitch-width)`,
-          }}
-        >
-          <div className="melody-grid__corner melody-grid__corner--step" role="presentation" />
-          {Array.from({ length: layout.columnCount }, (_, col) => (
-            <div
-              key={`col-${col}`}
-              className={
-                col >= activeCols
-                  ? 'melody-grid__col-header melody-grid__col-header--inactive'
-                  : 'melody-grid__col-header'
-              }
-              role="columnheader"
-              aria-label={`Step ${col + 1}`}
-            >
-              {col % 16 === 0 ? col / 16 + 1 : col % 4 === 0 ? '·' : ''}
-            </div>
-          ))}
-          <div className="melody-grid__corner melody-grid__corner--pitch" role="presentation" />
-
-          {rows.map((row, rowIndex) => {
-            const gridRow = rowIndex + 2
-            const rowDisplays = notes
-              .map((note) => displayStateForNote(note, drag))
-              .filter((display) => display.scaleStep === row.scaleStep)
-            const ghost = ghostPaintForRow(row.scaleStep)
-            const rowHighlighted = activeScaleStep === row.scaleStep
-            const labelClass = rowHighlighted
-              ? 'melody-grid__axis-label melody-grid__axis-label--active'
-              : 'melody-grid__axis-label'
-            const rootClass =
-              row.scaleStep === 0 ? ' melody-grid__axis-label--root' : ''
-
-            return (
-              <div key={row.scaleStep} className="melody-grid__row" role="row">
-                <div
-                  className={`${labelClass} melody-grid__axis-label--step${rootClass}`}
-                  role="rowheader"
-                  style={{ gridRow, gridColumn: 1 }}
-                >
-                  <span className="melody-grid__row-step">{row.stepLabel}</span>
-                </div>
-
-                {Array.from({ length: layout.columnCount }, (_, col) => {
-                  const startTime = cellStartTime(col, layout.stepSec)
-                  const covered = notes.some((note) =>
-                    noteCoversCell(note, row.scaleStep, col),
-                  )
-
-                  return (
-                    <button
-                      key={`${row.scaleStep}-${col}`}
-                      type="button"
-                      className={
-                        col >= activeCols
-                          ? 'melody-grid__cell melody-grid__cell--inactive'
-                          : 'melody-grid__cell'
-                      }
-                      role="gridcell"
-                      data-grid-cell
-                      data-scale-step={row.scaleStep}
-                      data-col={col}
-                      style={{ gridRow, gridColumn: col + 2 }}
-                      aria-selected={covered}
-                      aria-label={`${row.stepLabel} ${row.pitchName} at ${startTime.toFixed(2)} seconds`}
-                      disabled={disabled}
-                      onPointerDown={(event) =>
-                        handleCellPointerDown(row.scaleStep, col, event)
-                      }
-                      onKeyDown={(event) =>
-                        handleCellKeyDown(row.scaleStep, col, event)
-                      }
-                      onMouseEnter={() => setHoveredScaleStep(row.scaleStep)}
-                      onMouseLeave={() =>
-                        setHoveredScaleStep((current) =>
-                          current === row.scaleStep ? null : current,
-                        )
-                      }
-                      onFocus={() => setHoveredScaleStep(row.scaleStep)}
-                      onBlur={() =>
-                        setHoveredScaleStep((current) =>
-                          current === row.scaleStep ? null : current,
-                        )
-                      }
-                    />
-                  )
-                })}
-
-                <div
-                  className={`${labelClass} melody-grid__axis-label--pitch${rootClass}`}
-                  role="rowheader"
-                  style={{
-                    gridRow,
-                    gridColumn: layout.columnCount + 2,
-                  }}
-                >
-                  <span className="melody-grid__row-pitch">{row.pitchName}</span>
-                </div>
-
-                {rowDisplays.map((display) => {
-                  const flashCount = noteFlashes[noteKey(display.note)] ?? 0
-                  const barClass = [
-                    'melody-grid__bar',
-                    display.isActive ? 'melody-grid__bar--active' : '',
-                    flashCount > 0 ? 'melody-grid__bar--flash' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')
-
-                  return (
-                    <div
-                      key={`${noteKey(display.note)}-${flashCount}`}
-                      className={barClass}
-                      style={{
-                        gridRow,
-                        gridColumn: `${display.startCol + 2} / span ${display.span}`,
-                      }}
-                    >
-                      <div
-                        className="melody-grid__bar-handle melody-grid__bar-handle--start"
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label={`Extend note start at step ${row.stepLabel}`}
-                        onPointerDown={(event) =>
-                          handleResizeStartPointerDown(display.note, event)
-                        }
-                      />
-                      <button
-                        type="button"
-                        className="melody-grid__bar-body"
-                        aria-label={`Move or remove note at step ${row.stepLabel}`}
-                        disabled={disabled}
-                        onPointerDown={(event) =>
-                          handleMovePointerDown(display.note, event)
-                        }
-                      />
-                      <div
-                        className="melody-grid__bar-handle melody-grid__bar-handle--end"
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label={`Extend note end at step ${row.stepLabel}`}
-                        onPointerDown={(event) =>
-                          handleResizeEndPointerDown(display.note, event)
-                        }
-                      />
-                    </div>
-                  )
-                })}
-
-                {ghost ? (
-                  <div
-                    className="melody-grid__bar melody-grid__bar--ghost"
-                    aria-hidden
-                    style={{
-                      gridRow,
-                      gridColumn: `${Math.min(ghost.anchorCol, ghost.currentCol) + 2} / span ${Math.abs(ghost.currentCol - ghost.anchorCol) + 1}`,
-                    }}
-                  />
-                ) : null}
-              </div>
-            )
-          })}
-        </div>
-
+      <div className="melody-grid__frame" style={frameStyle}>
+        <MelodyGridBody
+          notes={notes}
+          rows={rows}
+          layout={layout}
+          activeCols={activeCols}
+          disabled={disabled}
+          noteFlashes={noteFlashes}
+          drag={drag}
+          hoveredScaleStep={hoveredScaleStep}
+          gridRef={gridRef}
+          setHoveredScaleStep={setHoveredScaleStep}
+          onCellPointerDown={handleCellPointerDown}
+          onCellKeyDown={handleCellKeyDown}
+          onResizeEndPointerDown={handleResizeEndPointerDown}
+          onResizeStartPointerDown={handleResizeStartPointerDown}
+          onMovePointerDown={handleMovePointerDown}
+          onBracePointerDown={handleBracePointerDown}
+          onLoopColsChange={stableOnLoopColsChange}
+        />
         {showPlayhead && playheadRatio !== null ? (
           <div className="melody-grid__playhead-layer" aria-hidden>
             <span
@@ -784,38 +907,6 @@ export function MelodyGrid({
             />
           </div>
         ) : null}
-
-        <div
-          className="melody-grid__brace"
-          style={{
-            left: `calc(var(--melody-grid-step-width) + ${activeCols} * (var(--melody-grid-cell-size) + 1px))`,
-          }}
-        >
-          <div
-            className="melody-grid__brace-handle"
-            role="slider"
-            aria-label="Loop length in steps"
-            aria-valuemin={1}
-            aria-valuemax={layout.columnCount}
-            aria-valuenow={activeCols}
-            aria-valuetext={`${activeCols} steps`}
-            title="loop end — drag to shorten the melody"
-            tabIndex={disabled ? -1 : 0}
-            onPointerDown={handleBracePointerDown}
-            onKeyDown={(event) => {
-              if (disabled) {
-                return
-              }
-              if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
-                event.preventDefault()
-                onLoopColsChange(Math.max(1, activeCols - 1))
-              } else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
-                event.preventDefault()
-                onLoopColsChange(Math.min(layout.columnCount, activeCols + 1))
-              }
-            }}
-          />
-        </div>
       </div>
     </div>
   )
