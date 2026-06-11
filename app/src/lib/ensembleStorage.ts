@@ -6,6 +6,7 @@ import {
 import {
   buildLoopPatternsPayload,
   parseLoopPatternsJson,
+  parseLoopPatternsValue,
 } from './loopStorage'
 
 const INDEX_KEY = 'ambient-101:ensemble-index'
@@ -109,12 +110,10 @@ function parseEnsemblePayload(raw: string): EnsembleData {
     }
 
     const stored = parsed as Partial<EnsemblePayload>
-    const loops = parseLoopPatternsJson(
-      JSON.stringify({
-        version: 2,
-        loops: Array.isArray(stored.loops) ? stored.loops : [],
-      }),
-    )
+    const loops = parseLoopPatternsValue({
+      version: 2,
+      loops: Array.isArray(stored.loops) ? stored.loops : [],
+    })
     const paceScale =
       typeof stored.paceScale === 'number' && Number.isFinite(stored.paceScale)
         ? clampPaceScale(stored.paceScale)
@@ -312,4 +311,91 @@ export function markEnsembleOpened(id: string): void {
   }
 
   writeIndex({ ...index, lastOpenedId: id })
+}
+
+export function getEnsembleEntry(id: string): EnsembleEntry | null {
+  migrateLegacyStorage()
+  return readIndex().entries.find((entry) => entry.id === id) ?? null
+}
+
+export function renameEnsemble(id: string, name: string): void {
+  const trimmed = name.trim()
+  if (!trimmed) {
+    return
+  }
+
+  migrateLegacyStorage()
+  const index = readIndex()
+  const entryIndex = index.entries.findIndex((entry) => entry.id === id)
+  if (entryIndex === -1) {
+    return
+  }
+
+  const nextEntries = [...index.entries]
+  nextEntries[entryIndex] = {
+    ...nextEntries[entryIndex],
+    name: trimmed,
+    updatedAt: Date.now(),
+  }
+  writeIndex({ ...index, entries: nextEntries })
+}
+
+const ENSEMBLE_EXPORT_VERSION = 1
+
+/** Shareable ensemble JSON: name + pace + the same loop shape as reel JSON. */
+export function serializeEnsemble(id: string): string | null {
+  const entry = getEnsembleEntry(id)
+  const data = loadEnsemble(id)
+  if (!entry || !data) {
+    return null
+  }
+
+  return JSON.stringify(
+    {
+      version: ENSEMBLE_EXPORT_VERSION,
+      name: entry.name,
+      paceScale: data.paceScale,
+      loops: buildLoopPatternsPayload(data.loops).loops,
+    },
+    null,
+    2,
+  )
+}
+
+export function parseEnsembleJson(raw: string): {
+  name: string | null
+  loops: LoopPattern[]
+  paceScale: number
+} | null {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return null
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return null
+  }
+
+  const stored = parsed as Partial<EnsemblePayload> & { name?: unknown }
+  if (!Array.isArray(stored.loops)) {
+    return null
+  }
+
+  const loops = parseLoopPatternsValue({ version: 2, loops: stored.loops })
+  if (loops.length !== stored.loops.length) {
+    return null
+  }
+
+  const name =
+    typeof stored.name === 'string' && stored.name.trim()
+      ? stored.name.trim()
+      : null
+  const paceScale =
+    typeof stored.paceScale === 'number' && Number.isFinite(stored.paceScale)
+      ? clampPaceScale(stored.paceScale)
+      : DEFAULT_PACE_SCALE
+
+  return { name, loops, paceScale }
 }
