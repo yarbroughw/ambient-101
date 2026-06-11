@@ -5,23 +5,44 @@ import { GlobalPaceControl } from './components/GlobalPaceControl'
 import { GlobalTonalityToolbar } from './components/GlobalTonalityToolbar'
 import { MasterSpectrum } from './components/MasterSpectrum'
 import { SettingsButton } from './components/SettingsButton'
+import { ViewToggle } from './components/ViewToggleButton'
+import './components/ViewToggleButton.css'
 import { BackButton } from './components/BackButton'
 import { StartupScreen } from './components/StartupScreen'
 import { TapeLoopRow } from './components/TapeLoopRow'
+import { EnsembleTimeline } from './components/EnsembleTimeline'
 import type { LoopPattern, PatternNote } from './audio/patternTypes'
+import {
+  audioNowSec,
+  ensureAudioStarted,
+  installAudioSessionRecovery,
+} from './audio/audioSession'
 import {
   applyPlaybackTiming,
   DEFAULT_PACE_SCALE,
   syncLoopPlayback,
   type PaceOptions,
 } from './lib/globalPace'
-import { clampOctaveShift, normalizeRoot } from './lib/scaleSteps'
+import { clampLoopCols } from './lib/gridLayout'
+import {
+  clampOctaveShift,
+  DEFAULT_ROOT,
+  DEFAULT_SCALE_TYPE,
+  globalSelectValue,
+  MIXED_VALUE,
+  normalizeRoot,
+  representativeValue,
+} from './lib/scaleSteps'
 import { loadPaceAffectsMelody, savePaceAffectsMelody } from './lib/paceSettings'
 import {
+  getEnsembleEntry,
   loadEnsemble,
   markEnsembleOpened,
+  renameEnsemble,
   saveEnsemble,
 } from './lib/ensembleStorage'
+import { EnsembleTitle } from './components/EnsembleTitle'
+import { EnsembleSyncLabel } from './components/EnsembleSyncLabel'
 import {
   createBlankPattern,
   createTapeLoop,
@@ -46,14 +67,31 @@ import './components/StartupScreen.css'
 import './components/TapeLoopRow.css'
 import './App.css'
 
+// Shared downbeat scheduled slightly ahead so per-loop setup cost can't
+// stagger the reels' actual starts.
+const START_ALL_LEAD_SEC = 0.05
+
 export default function App() {
   const [audioReady, setAudioReady] = useState(false)
   const [activeEnsembleId, setActiveEnsembleId] = useState<string | null>(null)
+  const [ensembleName, setEnsembleName] = useState('')
   const [loops, setLoops] = useState<DemoLoop[] | null>(null)
   const [runningById, setRunningById] = useState<Record<string, boolean>>({})
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'stack' | 'timeline'>('stack')
   const [paceScale, setPaceScale] = useState(DEFAULT_PACE_SCALE)
+  // Whether the underlying AudioContext is actually running. The browser can
+  // suspend it behind our back (long idle, device sleep); when that happens
+  // while loops are "playing" we surface a resume affordance instead of a
+  // frozen playhead.
+  const [audioContextRunning, setAudioContextRunning] = useState(true)
   const [paceAffectsMelody, setPaceAffectsMelody] = useState(loadPaceAffectsMelody)
+  // Last value the global tonality controls represented, shown (with a trailing
+  // asterisk) when reels disagree so the dropdowns never blank out to just "*".
+  const [lastGlobalRoot, setLastGlobalRoot] = useState(DEFAULT_ROOT as string)
+  const [lastGlobalScale, setLastGlobalScale] = useState(
+    DEFAULT_SCALE_TYPE as string,
+  )
   const loopsRef = useRef(loops)
   const runningByIdRef = useRef(runningById)
   const audioReadyRef = useRef(audioReady)
@@ -109,10 +147,31 @@ export default function App() {
       paceScale: nextPaceScale,
       paceAffectsMelody,
     })
+    setLastGlobalRoot(
+      representativeValue(
+        patterns.map((pattern) => pattern.root),
+        DEFAULT_ROOT,
+      ),
+    )
+    setLastGlobalScale(
+      representativeValue(
+        patterns.map((pattern) => pattern.scale),
+        DEFAULT_SCALE_TYPE,
+      ),
+    )
     setLoops(entries)
     setActiveEnsembleId(ensembleId)
+    setEnsembleName(getEnsembleEntry(ensembleId)?.name ?? '')
     markEnsembleOpened(ensembleId)
     setAudioReady(true)
+  }
+
+  function handleEnsembleRename(name: string) {
+    if (!activeEnsembleId) {
+      return
+    }
+    renameEnsemble(activeEnsembleId, name)
+    setEnsembleName(getEnsembleEntry(activeEnsembleId)?.name ?? name)
   }
 
   function handleBackToStartup() {
@@ -131,7 +190,9 @@ export default function App() {
     setLoops(null)
     setRunningById({})
     setExpandedId(null)
+    setViewMode('stack')
     setActiveEnsembleId(null)
+    setEnsembleName('')
     setPaceScale(DEFAULT_PACE_SCALE)
     setAudioReady(false)
   }
@@ -151,6 +212,11 @@ export default function App() {
     return () => {
       loopsRef.current?.forEach(({ loop }) => loop.dispose())
     }
+  }, [])
+
+  useEffect(() => {
+    const recovery = installAudioSessionRecovery(setAudioContextRunning)
+    return () => recovery.dispose()
   }, [])
 
   useEffect(() => {
@@ -193,30 +259,81 @@ export default function App() {
         return
       }
 
-      const nextRunning: Record<string, boolean> = {}
-      for (const { pattern, loop } of currentLoops) {
-        loop.start()
-        nextRunning[pattern.id] = true
-      }
-      setRunningById(nextRunning)
+      void ensureAudioStarted().then(() => {
+        const startAtSec = audioNowSec() + START_ALL_LEAD_SEC
+        const nextRunning: Record<string, boolean> = {}
+        for (const { pattern, loop } of currentLoops) {
+          loop.start(startAtSec)
+          nextRunning[pattern.id] = true
+        }
+        setRunningById(nextRunning)
+      })
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
+  useEffect(() => {
+    function isTypingTarget(target: EventTarget | null): boolean {
+      if (!(target instanceof HTMLElement)) {
+        return false
+      }
+      return (
+        target.closest('input, textarea, select, [contenteditable="true"]') != null
+      )
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      // Lowercase "t" only — Shift+T yields "T" and is ignored, as are combos.
+      if (event.key !== 't' || event.repeat) {
+        return
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return
+      }
+      if (!audioReadyRef.current || isTypingTarget(event.target)) {
+        return
+      }
+      if (!loopsRef.current?.length) {
+        return
+      }
+
+      event.preventDefault()
+      setViewMode((mode) => (mode === 'stack' ? 'timeline' : 'stack'))
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  function handleSelectLane(id: string) {
+    setViewMode('stack')
+    // Double rAF: wait for the stack view to commit and paint before scrolling.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document
+          .getElementById(`reel-${id}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+    })
+  }
+
   function setRunning(id: string, running: boolean) {
     setRunningById((prev) => ({ ...prev, [id]: running }))
   }
 
-  function startAll() {
+  async function startAll() {
     if (!loops) {
       return
     }
 
+    await ensureAudioStarted()
+
+    const startAtSec = audioNowSec() + START_ALL_LEAD_SEC
     const nextRunning: Record<string, boolean> = { ...runningById }
     for (const { pattern, loop } of loops) {
-      loop.start()
+      loop.start(startAtSec)
       nextRunning[pattern.id] = true
     }
     setRunningById(nextRunning)
@@ -368,26 +485,29 @@ export default function App() {
     updatePattern(id, { label })
   }
 
-  function handleVolumeChange(id: string, volume: number) {
-    const clamped = Math.min(1, Math.max(0, volume))
-    setLoops((prev) => {
-      if (!prev) {
-        return prev
-      }
-
-      return prev.map((entry) => {
-        if (entry.pattern.id !== id) {
-          return entry
-        }
-
-        entry.setVolume(clamped)
-        return { ...entry, pattern: { ...entry.pattern, volume: clamped } }
-      })
-    })
+  function handleAudioEffectChange(
+    id: string,
+    effect: 'volume' | 'reverb' | 'delay',
+    value: number,
+  ) {
+    const clamped = Math.min(1, Math.max(0, value))
+    const entry = loopsRef.current?.find((e) => e.pattern.id === id)
+    if (!entry) {
+      return
+    }
+    if (effect === 'volume') entry.setVolume(clamped)
+    else if (effect === 'reverb') entry.setReverb(clamped)
+    else entry.setDelay(clamped)
+    setLoops((prev) =>
+      prev?.map((e) =>
+        e.pattern.id === id
+          ? { ...e, pattern: { ...e.pattern, [effect]: clamped } }
+          : e,
+      ) ?? prev,
+    )
   }
 
-  function handleReverbChange(id: string, reverb: number) {
-    const clamped = Math.min(1, Math.max(0, reverb))
+  function handleLoopDurationChange(id: string, loopDurationMs: number) {
     setLoops((prev) => {
       if (!prev) {
         return prev
@@ -398,42 +518,7 @@ export default function App() {
           return entry
         }
 
-        entry.setReverb(clamped)
-        return { ...entry, pattern: { ...entry.pattern, reverb: clamped } }
-      })
-    })
-  }
-
-  function handleDelayChange(id: string, delay: number) {
-    const clamped = Math.min(1, Math.max(0, delay))
-    setLoops((prev) => {
-      if (!prev) {
-        return prev
-      }
-
-      return prev.map((entry) => {
-        if (entry.pattern.id !== id) {
-          return entry
-        }
-
-        entry.setDelay(clamped)
-        return { ...entry, pattern: { ...entry.pattern, delay: clamped } }
-      })
-    })
-  }
-
-  function handleLoopDurationChange(id: string, duration: number) {
-    setLoops((prev) => {
-      if (!prev) {
-        return prev
-      }
-
-      return prev.map((entry) => {
-        if (entry.pattern.id !== id) {
-          return entry
-        }
-
-        const nextPattern = { ...entry.pattern, loopDuration: duration }
+        const nextPattern = { ...entry.pattern, loopDurationMs }
         syncLoopPlayback(entry, nextPattern, paceOptions())
         return { ...entry, pattern: nextPattern }
       })
@@ -444,12 +529,44 @@ export default function App() {
     updatePattern(id, { bpm })
   }
 
+  function handleLoopColsChange(id: string, loopCols: number) {
+    setLoops((prev) => {
+      if (!prev) {
+        return prev
+      }
+
+      return prev.map((entry) => {
+        if (entry.pattern.id !== id) {
+          return entry
+        }
+
+        const clampedCols = clampLoopCols(loopCols)
+        if (clampedCols === entry.pattern.loopCols) {
+          return entry
+        }
+
+        // Scale the tape period with the window so the current fill (and a
+        // seamless loop especially) is preserved as the loop is shortened.
+        const ratio = clampedCols / entry.pattern.loopCols
+        const nextDurationMs = Math.round(entry.pattern.loopDurationMs * ratio)
+        const nextPattern = {
+          ...entry.pattern,
+          loopCols: clampedCols,
+          loopDurationMs: nextDurationMs,
+        }
+        syncLoopPlayback(entry, nextPattern, paceOptions())
+        return { ...entry, pattern: nextPattern }
+      })
+    })
+  }
+
   function handleInstrumentChange(id: string, instrument: string) {
     updatePattern(id, { instrument })
   }
 
   function handleGlobalRootChange(root: string) {
     const normalized = normalizeRoot(root)
+    setLastGlobalRoot(normalized)
     setLoops((prev) => {
       if (!prev) {
         return prev
@@ -464,6 +581,7 @@ export default function App() {
   }
 
   function handleGlobalScaleChange(scale: string) {
+    setLastGlobalScale(scale)
     setLoops((prev) => {
       if (!prev) {
         return prev
@@ -482,9 +600,23 @@ export default function App() {
   const composedPatterns = loops?.map(({ pattern }) => pattern) ?? []
   const pace = paceOptions()
 
+  const rootConsensus = globalSelectValue(reelRoots, lastGlobalRoot)
+  const scaleConsensus = globalSelectValue(reelScaleTypes, lastGlobalScale)
+  const rootMixed = rootConsensus === MIXED_VALUE
+  const scaleMixed = scaleConsensus === MIXED_VALUE
+  const globalRootValue = rootMixed ? lastGlobalRoot : rootConsensus
+  const globalScaleValue = scaleMixed ? lastGlobalScale : scaleConsensus
+
+  const hasLoops = (loops?.length ?? 0) > 0
+  const showTimeline = viewMode === 'timeline' && hasLoops
+
   if (!audioReady) {
     return (
       <div className="app app--startup">
+        <SettingsButton
+          paceAffectsMelody={paceAffectsMelody}
+          onPaceAffectsMelodyChange={handlePaceAffectsMelodyChange}
+        />
         <StartupScreen onOpen={handleOpenEnsemble} />
       </div>
     )
@@ -493,6 +625,7 @@ export default function App() {
   return (
     <div className="app">
       <BackButton onClick={handleBackToStartup} />
+      <EnsembleTitle name={ensembleName} onRename={handleEnsembleRename} />
       <SettingsButton
         paceAffectsMelody={paceAffectsMelody}
         onPaceAffectsMelodyChange={handlePaceAffectsMelodyChange}
@@ -526,8 +659,11 @@ export default function App() {
           />
         </div>
         <GlobalTonalityToolbar
-          reelRoots={reelRoots}
-          reelScaleTypes={reelScaleTypes}
+          disabled={!loops?.length}
+          rootValue={globalRootValue}
+          rootMixed={rootMixed}
+          scaleValue={globalScaleValue}
+          scaleMixed={scaleMixed}
           onGlobalRootChange={handleGlobalRootChange}
           onGlobalScaleChange={handleGlobalScaleChange}
         />
@@ -537,6 +673,36 @@ export default function App() {
         <GlobalEffectsToolbar />
       </div>
 
+      {!audioContextRunning && runningCount > 0 ? (
+        <button
+          type="button"
+          className="audio-paused-banner"
+          onClick={() => void ensureAudioStarted()}
+        >
+          audio paused by the browser — click to resume
+        </button>
+      ) : null}
+
+      <div className="view-toggle-row">
+        <EnsembleSyncLabel
+          loops={loops ?? []}
+          pace={pace}
+          runningById={runningById}
+        />
+        <ViewToggle
+          mode={showTimeline ? 'timeline' : 'stack'}
+          disabled={!hasLoops}
+          onModeChange={setViewMode}
+        />
+      </div>
+
+      {showTimeline ? (
+        <EnsembleTimeline
+          loops={loops ?? []}
+          runningById={runningById}
+          onSelectLane={handleSelectLane}
+        />
+      ) : (
       <section className="loop-stack" aria-label="Tape loops">
         {loops?.map(({ pattern, loop }) => {
           const playbackTiming = applyPlaybackTiming(pattern, pace)
@@ -545,7 +711,7 @@ export default function App() {
             key={pattern.id}
             pattern={pattern}
             paceOptions={pace}
-            playbackLoopDuration={playbackTiming.loopDuration}
+            playbackLoopDuration={playbackTiming.loopDurationSec}
             playbackBpm={playbackTiming.bpm}
             loop={loop}
             running={runningById[pattern.id] ?? false}
@@ -561,20 +727,23 @@ export default function App() {
               handleOctaveShiftChange(pattern.id, shift)
             }
             onBpmChange={(bpm) => handleBpmChange(pattern.id, bpm)}
-            onLoopDurationChange={(duration) =>
-              handleLoopDurationChange(pattern.id, duration)
+            onLoopDurationChange={(loopDurationMs) =>
+              handleLoopDurationChange(pattern.id, loopDurationMs)
             }
             onLabelChange={(label) => handleLabelChange(pattern.id, label)}
             onVolumeChange={(volume) =>
-              handleVolumeChange(pattern.id, volume)
+              handleAudioEffectChange(pattern.id, 'volume', volume)
             }
             onReverbChange={(reverb) =>
-              handleReverbChange(pattern.id, reverb)
+              handleAudioEffectChange(pattern.id, 'reverb', reverb)
             }
-            onDelayChange={(delay) => handleDelayChange(pattern.id, delay)}
+            onDelayChange={(delay) =>
+              handleAudioEffectChange(pattern.id, 'delay', delay)
+            }
             onInstrumentChange={(instrument) =>
               handleInstrumentChange(pattern.id, instrument)
             }
+            onLoopColsChange={(cols) => handleLoopColsChange(pattern.id, cols)}
             onDuplicate={() => handleDuplicateLoop(pattern.id)}
             onDelete={() => handleDeleteLoop(pattern.id)}
           />
@@ -587,6 +756,7 @@ export default function App() {
           onImport={handleImportLoops}
         />
       </section>
+      )}
     </div>
   )
 }

@@ -1,0 +1,42 @@
+/* Segmented reels | timeline switch, sitting directly above the reel area
+   it transforms (not in the app corner). */
+.view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--color-outline);
+}
+
+.view-toggle__option {
+  padding: 3px 10px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  text-transform: lowercase;
+  color: var(--color-labels);
+  cursor: pointer;
+}
+
+.view-toggle__option + .view-toggle__option {
+  border-left: 1px solid var(--color-outline);
+}
+
+.view-toggle__option:hover:not(:disabled):not(.is-active) {
+  color: var(--color-btn-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.view-toggle__option.is-active {
+  background: var(--color-outline);
+  color: var(--color-loop-bg);
+}
+
+.view-toggle__option:focus-visible {
+  outline: 1px solid var(--color-active);
+  outline-offset: -1px;
+}
+
+.view-toggle__option:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}

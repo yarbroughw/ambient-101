@@ -7,9 +7,15 @@
   --mini-melody-max-width: 225px;
   --content-meta-min-width: 92px;
   --loop-label-width: 48px;
-  --reel-lane-controls-width: 81px;
-  --reel-lane-level-width: 18px;
+  --loop-transport-btn-size: 21px;
+  --loop-transport-btn-gap: 2px;
+  --reel-lane-controls-width: 40px;
   --reel-lane-actions-width: 52px;
+  --reel-circle-melody-gap: 8px;
+  --tape-loop-reel-left: calc(
+    50% - var(--mini-melody-max-width) / 2 - var(--loop-circle-size) -
+      var(--reel-circle-melody-gap)
+  );
 }
 
 .reel-lane {
@@ -23,12 +29,6 @@
   flex: 0 0 var(--reel-lane-controls-width);
   width: var(--reel-lane-controls-width);
   min-width: var(--reel-lane-controls-width);
-}
-
-.reel-lane__level {
-  flex: 0 0 var(--reel-lane-level-width);
-  width: var(--reel-lane-level-width);
-  min-width: var(--reel-lane-level-width);
 }
 
 .reel-lane__reel {

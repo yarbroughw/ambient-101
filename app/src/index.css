@@ -39,7 +39,6 @@ body {
 button {
   font-family: var(--font-mono);
   color: var(--color-btn-text);
-  border-radius: 3px;
 }
 
 button:disabled {
