@@ -71,3 +71,47 @@
 .settings-modal__checkbox input {
   margin-top: 1px;
 }
+
+.settings-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-modal__field-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.settings-modal__field-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.35;
+  text-transform: lowercase;
+  color: var(--color-btn-text);
+}
+
+.settings-modal__field-value {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--color-labels);
+  white-space: nowrap;
+}
+
+.settings-modal__range {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--color-btn-text);
+  cursor: pointer;
+}
+
+.settings-modal__hint {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.4;
+  color: var(--color-labels);
+}

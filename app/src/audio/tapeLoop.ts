@@ -1,4 +1,10 @@
 import * as Tone from 'tone'
+import { audioToTransportSec, transportNowSec } from './audioSession'
+import {
+  heardLoopProgress,
+  heardLoopTimeSec,
+  heardTimeSec,
+} from './outputLatency'
 import type { TapeLoopCallback } from './types'
 
 export class TapeLoop {
@@ -9,6 +15,7 @@ export class TapeLoop {
   private toneLoop: Tone.Loop | null = null
   private running = false
   private testing = false
+  private startAudioTime = 0
   private testStartAudioTime = 0
   private testDurationSec = 0
   private silenceAudio: (() => void) | null = null
@@ -44,7 +51,7 @@ export class TapeLoop {
       return this.testDurationSec
     }
 
-    return elapsed
+    return heardTimeSec(elapsed)
   }
 
   addScheduledNote(transportId: number): void {
@@ -79,7 +86,13 @@ export class TapeLoop {
     }
   }
 
-  start(): void {
+  /**
+   * Starts playback. Pass a shared atTimeSec when starting several loops
+   * together — anchoring each loop at its own Tone.now() staggers them by
+   * the (variable) per-loop setup cost, which genuinely shifts where their
+   * downbeats align.
+   */
+  start(atTimeSec?: number): void {
     if (this.running || !this.recording) {
       return
     }
@@ -89,8 +102,13 @@ export class TapeLoop {
     this.clearScheduledNotes()
     this.disposeToneLoop()
 
+    const startAt = atTimeSec ?? Tone.now()
     this.toneLoop = new Tone.Loop(this.recording, this.durationSeconds)
-    this.toneLoop.start(Tone.now())
+    // Tone.Loop runs on the transport timeline; startAt is an audio-clock
+    // time, so convert — passing it raw starts the loop late by the
+    // transport's lag behind the audio clock.
+    this.toneLoop.start(audioToTransportSec(startAt))
+    this.startAudioTime = startAt
     this.running = true
   }
 
@@ -98,8 +116,8 @@ export class TapeLoop {
     this.clearScheduledNotes()
 
     if (this.toneLoop) {
-      this.toneLoop.stop(Tone.now())
-      this.toneLoop.cancel(Tone.now())
+      this.toneLoop.stop(transportNowSec())
+      this.toneLoop.cancel(transportNowSec())
     }
 
     this.running = false
@@ -124,16 +142,33 @@ export class TapeLoop {
     this.recording(Tone.now())
   }
 
+  /**
+   * Audio-clock time this loop's current lap grid is anchored to (its
+   * scheduled start, kept consistent across mid-playback rebuilds), or null
+   * when stopped.
+   */
+  getStartTimeSec(): number | null {
+    return this.running ? this.startAudioTime : null
+  }
+
   getProgress(): number {
     if (!this.running || !this.toneLoop) {
       return 0
     }
-    return this.toneLoop.progress
+    return heardLoopProgress(
+      this.toneLoop.progress,
+      this.durationSeconds,
+      Tone.now() - this.startAudioTime,
+    )
   }
 
   getLoopTimeSec(): number {
     if (this.running) {
-      return this.getProgress() * this.durationSeconds
+      return heardLoopTimeSec(
+        this.toneLoop!.progress * this.durationSeconds,
+        this.durationSeconds,
+        Tone.now() - this.startAudioTime,
+      )
     }
     if (this.testing) {
       return this.getTestTimeSec()
@@ -144,8 +179,8 @@ export class TapeLoop {
   dispose(): void {
     this.clearScheduledNotes()
     if (this.toneLoop) {
-      this.toneLoop.stop(Tone.now())
-      this.toneLoop.cancel(Tone.now())
+      this.toneLoop.stop(transportNowSec())
+      this.toneLoop.cancel(transportNowSec())
     }
     this.running = false
     this.disposeToneLoop()
@@ -180,8 +215,8 @@ export class TapeLoop {
     this.clearScheduledNotes()
 
     if (this.toneLoop) {
-      this.toneLoop.stop(Tone.now())
-      this.toneLoop.cancel(Tone.now())
+      this.toneLoop.stop(transportNowSec())
+      this.toneLoop.cancel(transportNowSec())
     }
     this.disposeToneLoop()
 
@@ -189,7 +224,9 @@ export class TapeLoop {
 
     if (wasRunning) {
       const offsetSec = savedProgress * this.durationSeconds
-      this.toneLoop.start(Tone.now() - offsetSec)
+      const startAt = Tone.now() - offsetSec
+      this.toneLoop.start(audioToTransportSec(startAt))
+      this.startAudioTime = startAt
       this.running = true
       return
     }

@@ -1,4 +1,8 @@
 import { useState } from 'react'
+import {
+  loadVisualLatencyOffsetMs,
+  saveVisualLatencyOffsetMs,
+} from '../lib/visualLatencySettings'
 import { SettingsModal } from './SettingsModal'
 import './SettingsButton.css'
 
@@ -25,6 +29,14 @@ export function SettingsButton({
   onPaceAffectsMelodyChange,
 }: SettingsButtonProps) {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [visualLatencyOffsetMs, setVisualLatencyOffsetMs] = useState(
+    loadVisualLatencyOffsetMs,
+  )
+
+  function handleVisualLatencyOffsetMsChange(nextMs: number) {
+    setVisualLatencyOffsetMs(nextMs)
+    saveVisualLatencyOffsetMs(nextMs)
+  }
 
   return (
     <>
@@ -43,6 +55,8 @@ export function SettingsButton({
         open={settingsOpen}
         paceAffectsMelody={paceAffectsMelody}
         onPaceAffectsMelodyChange={onPaceAffectsMelodyChange}
+        visualLatencyOffsetMs={visualLatencyOffsetMs}
+        onVisualLatencyOffsetMsChange={handleVisualLatencyOffsetMsChange}
         onClose={() => setSettingsOpen(false)}
       />
     </>
