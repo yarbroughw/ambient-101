@@ -1,32 +1,30 @@
-import {
-  DEFAULT_ROOT,
-  DEFAULT_SCALE_TYPE,
-  globalSelectValue,
-  MIXED_VALUE,
-  ROOT_PITCH_CLASSES,
-} from '../lib/scaleSteps'
+import { MIXED_VALUE, ROOT_PITCH_CLASSES } from '../lib/scaleSteps'
 import { ScaleTypeSelect } from './ScaleTypeSelect'
 
 type GlobalTonalityToolbarProps = {
   disabled?: boolean
-  reelRoots: string[]
-  reelScaleTypes: string[]
+  rootValue: string
+  rootMixed: boolean
+  scaleValue: string
+  scaleMixed: boolean
   onGlobalRootChange: (root: string) => void
   onGlobalScaleChange: (scaleType: string) => void
 }
 
+const MIXED_TITLE = 'Reels differ — pick a value to apply it to all reels'
+
 export function GlobalTonalityToolbar({
   disabled = false,
-  reelRoots,
-  reelScaleTypes,
+  rootValue,
+  rootMixed,
+  scaleValue,
+  scaleMixed,
   onGlobalRootChange,
   onGlobalScaleChange,
 }: GlobalTonalityToolbarProps) {
-  const rootValue = globalSelectValue(reelRoots, DEFAULT_ROOT)
-  const scaleValue = globalSelectValue(reelScaleTypes, DEFAULT_SCALE_TYPE)
-  const rootMixed = rootValue === MIXED_VALUE
-  const scaleMixed = scaleValue === MIXED_VALUE
-  const noReels = reelRoots.length === 0
+  // When reels disagree the native value stays MIXED so selecting any option
+  // (including the displayed one) fires a change and unifies every reel.
+  const rootNativeValue = rootMixed ? MIXED_VALUE : rootValue
 
   function handleRootChange(next: string) {
     if (next === MIXED_VALUE) {
@@ -48,12 +46,15 @@ export function GlobalTonalityToolbar({
         <span className="toolbar__tonality-label">root</span>
         <select
           className="toolbar__tonality-select toolbar__tonality-select--root"
-          value={rootValue}
-          disabled={disabled || noReels}
+          value={rootNativeValue}
+          disabled={disabled}
           aria-label="Global root"
+          title={rootMixed ? MIXED_TITLE : undefined}
           onChange={(event) => handleRootChange(event.target.value)}
         >
-          {rootMixed ? <option value={MIXED_VALUE}>*</option> : null}
+          {rootMixed ? (
+            <option value={MIXED_VALUE}>{`${rootValue} *`}</option>
+          ) : null}
           {ROOT_PITCH_CLASSES.map((option) => (
             <option key={option} value={option}>
               {option}
@@ -67,9 +68,10 @@ export function GlobalTonalityToolbar({
           className="toolbar__tonality-select"
           variant="toolbar"
           value={scaleValue}
-          disabled={disabled || noReels}
+          disabled={disabled}
           ariaLabel="Global scale"
           mixed={scaleMixed}
+          title={scaleMixed ? MIXED_TITLE : undefined}
           onChange={handleScaleChange}
         />
       </label>

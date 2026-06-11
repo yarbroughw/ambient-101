@@ -18,9 +18,9 @@
   height: var(--loop-row-height);
   min-width: 88px;
   padding: 0 10px;
-  border: 1px dashed var(--color-outline);
-  background: transparent;
-  color: var(--color-outline);
+  border: 1px solid var(--color-outline);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-btn-text);
   font-family: var(--font-mono);
   font-size: 10px;
   text-transform: lowercase;

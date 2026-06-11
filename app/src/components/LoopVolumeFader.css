@@ -1,9 +1,6 @@
 .loop-volume {
   position: relative;
-  box-sizing: content-box;
   width: 6px;
-  padding-left: 4px;
-  margin-left: -4px;
   height: var(--loop-circle-size);
   flex-shrink: 0;
   cursor: ns-resize;

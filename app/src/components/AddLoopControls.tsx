@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
+import { useDismissable } from '../hooks/useDismissable'
 import { LOOP_PRESETS } from '../audio/loopPresets'
 import { ImportReelModal, type ImportReelResult } from './ImportReelModal'
 import './AddLoopControls.css'
@@ -19,30 +20,7 @@ export function AddLoopControls({
   const menuId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!open) {
-      return
-    }
-
-    function onPointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setOpen(false)
-      }
-    }
-
-    window.addEventListener('pointerdown', onPointerDown)
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      window.removeEventListener('pointerdown', onPointerDown)
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
+  useDismissable(open, () => setOpen(false), rootRef)
 
   return (
     <>

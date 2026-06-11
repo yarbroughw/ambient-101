@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { LoopPattern, PatternNote } from '../audio/patternTypes'
-import { melodyWindowDuration, minLoopDurationForBpm } from '../lib/gridLayout'
+import { melodyWindowDuration } from '../lib/gridLayout'
 import {
   formatDisplayBpm,
   formatDisplayLoopDuration,
@@ -8,6 +8,7 @@ import {
 } from '../lib/globalPace'
 import { tonalityLabel } from '../lib/scaleSteps'
 import type { TapeLoop } from '../audio/tapeLoop'
+import { ensureAudioStarted } from '../audio/audioSession'
 import { useLoopLevel } from '../hooks/useLoopLevel'
 import { useLoopProgress } from '../hooks/useLoopProgress'
 import { ConfirmModal } from './ConfirmModal'
@@ -40,29 +41,10 @@ function PencilIcon() {
   )
 }
 
-function TrashIcon() {
+function SpeakerIcon({ className }: { className?: string }) {
   return (
     <svg
-      className="tape-loop-row__action-icon"
-      viewBox="0 0 16 16"
-      aria-hidden
-    >
-      <path
-        d="M3.5 4.5h9M6 4.5V3.8a.8.8 0 0 1 .8-.8h2.4a.8.8 0 0 1 .8.8V4.5M6.2 7.2v3.6M8 7.2v3.6M9.8 7.2v3.6M4.8 4.5l.6 7.2a.8.8 0 0 0 .8.7h3.6a.8.8 0 0 0 .8-.7l.6-7.2"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function SpeakerIcon() {
-  return (
-    <svg
-      className="tape-loop-row__btn-icon"
+      className={className ?? 'tape-loop-row__btn-icon'}
       viewBox="0 0 16 16"
       aria-hidden
     >
@@ -103,12 +85,13 @@ type TapeLoopRowProps = {
   onScaleChange: (scale: string) => void
   onOctaveShiftChange: (octaveShift: number) => void
   onBpmChange: (bpm: number) => void
-  onLoopDurationChange: (sec: number) => void
+  onLoopDurationChange: (loopDurationMs: number) => void
   onLabelChange: (label: string) => void
   onVolumeChange: (volume: number) => void
   onReverbChange: (reverb: number) => void
   onDelayChange: (delay: number) => void
   onInstrumentChange: (instrument: string) => void
+  onLoopColsChange: (loopCols: number) => void
   onDuplicate: () => void
   onDelete: () => void
   disabled?: boolean
@@ -135,6 +118,7 @@ export function TapeLoopRow({
   onReverbChange,
   onDelayChange,
   onInstrumentChange,
+  onLoopColsChange,
   onDuplicate,
   onDelete,
   disabled = false,
@@ -144,119 +128,158 @@ export function TapeLoopRow({
   const { angleDeg, lapFlashKey, loopTimeSec, melodyPlaybackActive, testing } =
     useLoopProgress(loop, running, testNonce)
   const { level, peak } = useLoopLevel(loop, melodyPlaybackActive)
-  const melodyWindowSec = melodyWindowDuration(playbackBpm)
+  const melodyWindowSec = melodyWindowDuration(playbackBpm, pattern.loopCols)
+  const fillRatio =
+    playbackLoopDuration > 0
+      ? Math.min(1, melodyWindowSec / playbackLoopDuration)
+      : 1
+  // The melody only sounds over the first `fillRatio` of each rotation; the
+  // remainder is the silent cooldown tail.
+  const melodySounding = running && loopTimeSec < melodyWindowSec
 
-  function handleLoopDurationChange(next: number) {
-    const floor = Math.max(2, minLoopDurationForBpm(pattern.bpm))
-    if (!Number.isFinite(next) || next < floor) {
+  // Flash the row border / reel dot on each lap — but skip the flash on
+  // (re)mount (e.g. toggling to the timeline view and back). `lapFlashKey`
+  // resets to 0 on mount and only increments on real laps.
+  const articleRef = useRef<HTMLElement>(null)
+  const showLap = running && lapFlashKey > 0
+  useEffect(() => {
+    if (!running || lapFlashKey === 0) {
       return
     }
-    onLoopDurationChange(next)
-  }
+    const el = articleRef.current
+    if (!el) {
+      return
+    }
+    // Restart the CSS animation by removing, forcing reflow, then re-adding.
+    el.classList.remove('tape-loop-row--lap')
+    void el.offsetWidth
+    el.classList.add('tape-loop-row--lap')
+  }, [lapFlashKey, running])
 
   return (
     <article
-      key={running ? lapFlashKey : undefined}
-      className={`tape-loop-row${running ? ' tape-loop-row--lap' : ''}${expanded ? ' is-expanded' : ''}${running ? ' is-running' : ''}`}
+      ref={articleRef}
+      id={`reel-${pattern.id}`}
+      className={`tape-loop-row${expanded ? ' is-expanded' : ''}${running ? ' is-running' : ''}`}
       aria-label={pattern.label}
     >
-      <div className="tape-loop-row__header-menu">
-        <LoopMenu
-          label={pattern.label}
-          pattern={pattern}
-          disabled={disabled}
-          onDuplicate={onDuplicate}
-        />
-      </div>
-
       <div className="tape-loop-row__summary reel-lane">
         <div className="reel-lane__controls tape-loop-row__controls">
-          <button
-            type="button"
-            className="tape-loop-btn tape-loop-btn--play"
-            disabled={disabled || running}
-            aria-label={`Play ${pattern.label}`}
-            onClick={() => {
-              loop.start()
-              onRunningChange(true)
-            }}
-          >
-            ▶
-          </button>
-          <button
-            type="button"
-            className="tape-loop-btn tape-loop-btn--stop"
-            disabled={disabled || !running}
-            aria-label={`Stop ${pattern.label}`}
-            onClick={() => {
-              loop.stop()
-              onRunningChange(false)
-            }}
-          >
-            ◼
-          </button>
-          <button
-            type="button"
-            className={`tape-loop-btn tape-loop-btn--test${testing ? ' is-testing' : ''}`}
-            disabled={disabled || running}
-            aria-label={`Test ${pattern.label}`}
-            onClick={() => {
-              loop.test(melodyWindowSec)
-              setTestNonce((n) => n + 1)
-            }}
-          >
-            <SpeakerIcon />
-          </button>
-        </div>
-
-        <div className="reel-lane__level tape-loop-row__level-group">
-          <LoopVolumeFader
-            value={pattern.volume}
-            disabled={disabled}
-            onChange={onVolumeChange}
-          />
-          <LoopLevelMeter level={level} peak={peak} active={melodyPlaybackActive} />
-        </div>
-
-        <div className="reel-lane__reel tape-loop-row__reel" aria-hidden>
-          <div className="tape-loop-row__ring" />
-          <div className="tape-loop-row__tick" />
-          {running ? (
-            <div
-              className="tape-loop-row__dot"
-              style={{ transform: `rotate(${angleDeg}deg)` }}
+          <div className="tape-loop-row__transport">
+            <button
+              type="button"
+              className="tape-loop-btn tape-loop-btn--play"
+              disabled={disabled || running}
+              aria-label={`Play ${pattern.label}`}
+              onClick={() => {
+                void ensureAudioStarted().then(() => {
+                  loop.start()
+                  onRunningChange(true)
+                })
+              }}
             >
-              <span
-                key={lapFlashKey}
-                className="tape-loop-row__dot-head tape-loop-row__dot-head--lap"
-              />
-            </div>
-          ) : null}
-          <span
-            className="tape-loop-row__duration-readonly"
-            title="cooldown"
-          >
-            {formatDisplayLoopDuration(playbackLoopDuration)}s
-          </span>
+              ▶
+            </button>
+            <button
+              type="button"
+              className="tape-loop-btn tape-loop-btn--stop"
+              disabled={disabled || !running}
+              aria-label={`Stop ${pattern.label}`}
+              onClick={() => {
+                loop.stop()
+                onRunningChange(false)
+              }}
+            >
+              ◼
+            </button>
+          </div>
+          <div className="tape-loop-row__level-group">
+            <LoopVolumeFader
+              value={pattern.volume}
+              disabled={disabled}
+              onChange={onVolumeChange}
+            />
+            <LoopLevelMeter level={level} peak={peak} active={melodyPlaybackActive} />
+          </div>
         </div>
 
-        <div className="reel-lane__label">
-        <LoopLabel
-          label={pattern.label}
-          disabled={disabled}
-          onLabelChange={onLabelChange}
-        />
+        <div className="tape-loop-row__center">
+          <div className="reel-lane__label">
+            <LoopLabel
+              label={pattern.label}
+              disabled={disabled}
+              onLabelChange={onLabelChange}
+            />
+          </div>
+
+          <div className="reel-lane__reel tape-loop-row__reel" aria-hidden>
+            <div className="tape-loop-row__ring" />
+            <svg
+              className="tape-loop-row__arc"
+              viewBox="0 0 44 44"
+              aria-hidden
+            >
+              <circle
+                className="tape-loop-row__arc-fill"
+                cx="22"
+                cy="22"
+                r="21"
+                fill="none"
+                strokeWidth="2"
+                pathLength={1}
+                strokeDasharray={`${fillRatio} ${Math.max(0, 1 - fillRatio)}`}
+                transform="rotate(-90 22 22)"
+              />
+            </svg>
+            <div className="tape-loop-row__tick" />
+            {running ? (
+              <div
+                className="tape-loop-row__dot"
+                style={{ transform: `rotate(${angleDeg}deg)` }}
+              >
+                <span
+                  key={lapFlashKey}
+                  className={`tape-loop-row__dot-head${showLap ? ' tape-loop-row__dot-head--lap' : ''}${melodySounding ? ' is-sounding' : ''}`}
+                />
+              </div>
+            ) : null}
+            <span
+              className="tape-loop-row__duration-readonly"
+              title="tape length"
+            >
+              {formatDisplayLoopDuration(playbackLoopDuration)}s
+            </span>
+          </div>
+
+          <div className="tape-loop-row__melody-wrap">
+            <MiniMelodyView
+              pattern={{ ...pattern, bpm: playbackBpm }}
+              loopTimeSec={loopTimeSec}
+              showPlayhead={melodyPlaybackActive}
+              flashNotes={melodyPlaybackActive}
+              periodSec={playbackLoopDuration}
+            />
+            <button
+              type="button"
+              className={`mini-melody__test-btn${testing ? ' is-testing' : ''}`}
+              disabled={disabled || running}
+              aria-label={`Test ${pattern.label}`}
+              onClick={() => {
+                void ensureAudioStarted().then(() => {
+                  loop.test(melodyWindowSec)
+                  setTestNonce((n) => n + 1)
+                })
+              }}
+            >
+              <SpeakerIcon className="mini-melody__test-icon" />
+            </button>
+          </div>
         </div>
 
         <div className="reel-lane__tape tape-loop-row__tape-content">
-          <MiniMelodyView
-            pattern={{ ...pattern, bpm: playbackBpm }}
-            loopTimeSec={loopTimeSec}
-            showPlayhead={melodyPlaybackActive}
-          />
           <div className="reel-lane__meta tape-loop-row__content-meta">
-            <span title={`BPM: ${formatDisplayBpm(playbackBpm)}`}>
-              BPM: {formatDisplayBpm(playbackBpm)}
+            <span title={`melody window · BPM ${formatDisplayBpm(playbackBpm)}`}>
+              melody: {melodyWindowSec.toFixed(1)}s
             </span>
             <span title={`instrument: ${pattern.instrument}`}>
               instrument: {pattern.instrument}
@@ -281,15 +304,13 @@ export function TapeLoopRow({
           >
             <PencilIcon />
           </button>
-          <button
-            type="button"
-            className="tape-loop-row__action tape-loop-row__action--delete"
+          <LoopMenu
+            label={pattern.label}
+            pattern={pattern}
             disabled={disabled}
-            aria-label={`Delete ${pattern.label}`}
-            onClick={() => setDeleteConfirmOpen(true)}
-          >
-            <TrashIcon />
-          </button>
+            onDuplicate={onDuplicate}
+            onDelete={() => setDeleteConfirmOpen(true)}
+          />
         </div>
       </div>
 
@@ -320,10 +341,11 @@ export function TapeLoopRow({
             onScaleChange={onScaleChange}
             onOctaveShiftChange={onOctaveShiftChange}
             onBpmChange={onBpmChange}
-            onLoopDurationChange={handleLoopDurationChange}
+            onLoopDurationChange={onLoopDurationChange}
             onReverbChange={onReverbChange}
             onDelayChange={onDelayChange}
             onInstrumentChange={onInstrumentChange}
+            onLoopColsChange={onLoopColsChange}
           />
         </div>
       ) : null}

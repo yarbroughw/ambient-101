@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { MIXED_VALUE } from '../lib/scaleSteps'
 import { ScaleTypeSelect } from './ScaleTypeSelect'
 
 describe('ScaleTypeSelect', () => {
@@ -16,16 +15,18 @@ describe('ScaleTypeSelect', () => {
     expect(screen.getByText('mixolyd.')).toBeInTheDocument()
   })
 
-  it('shows asterisk readout for mixed values', () => {
+  it('keeps the remembered value visible with an asterisk when mixed', () => {
     const { container } = render(
       <ScaleTypeSelect
-        value={MIXED_VALUE}
+        value="dorian"
         onChange={vi.fn()}
         ariaLabel="Scale type"
         mixed
       />,
     )
-    expect(container.querySelector('.scale-type-select__readout')).toHaveTextContent('*')
+    expect(
+      container.querySelector('.scale-type-select__readout'),
+    ).toHaveTextContent('dorian *')
   })
 
   it('calls onChange when a new option is selected', async () => {

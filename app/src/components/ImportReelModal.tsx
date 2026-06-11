@@ -9,9 +9,19 @@ type ImportReelModalProps = {
   open: boolean
   onImport: (raw: string) => ImportReelResult
   onClose: () => void
+  title?: string
+  description?: string
+  textareaLabel?: string
 }
 
-export function ImportReelModal({ open, onImport, onClose }: ImportReelModalProps) {
+export function ImportReelModal({
+  open,
+  onImport,
+  onClose,
+  title = 'import reel',
+  description = 'Paste JSON for one reel, or a list of reels from copy JSON.',
+  textareaLabel = 'reel JSON',
+}: ImportReelModalProps) {
   const titleId = useId()
   const descriptionId = useId()
   const textareaId = useId()
@@ -64,13 +74,13 @@ export function ImportReelModal({ open, onImport, onClose }: ImportReelModalProp
         onClick={(event) => event.stopPropagation()}
       >
         <h2 id={titleId} className="import-reel-modal__title">
-          import reel
+          {title}
         </h2>
         <p id={descriptionId} className="import-reel-modal__description">
-          Paste JSON for one reel, or a list of reels from copy JSON.
+          {description}
         </p>
         <label className="import-reel-modal__label" htmlFor={textareaId}>
-          reel JSON
+          {textareaLabel}
         </label>
         <textarea
           ref={textareaRef}

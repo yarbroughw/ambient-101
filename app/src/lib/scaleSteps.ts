@@ -195,6 +195,27 @@ export function globalSelectValue(values: string[], fallback: string): string {
   return values.every((value) => value === first) ? first : MIXED_VALUE
 }
 
+// Most common value, breaking ties toward the earliest occurrence. Used to seed
+// the global tonality display when an ensemble's reels already disagree.
+export function representativeValue(values: string[], fallback: string): string {
+  if (values.length === 0) {
+    return fallback
+  }
+
+  const counts = new Map<string, number>()
+  let best = values[0]
+  let bestCount = 0
+  for (const value of values) {
+    const count = (counts.get(value) ?? 0) + 1
+    counts.set(value, count)
+    if (count > bestCount) {
+      bestCount = count
+      best = value
+    }
+  }
+  return best
+}
+
 export function gridScaleStepsHighToLow(): number[] {
   const steps: number[] = []
   for (let step = GRID_SCALE_STEP_MAX; step >= GRID_SCALE_STEP_MIN; step -= 1) {

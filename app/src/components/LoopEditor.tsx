@@ -1,20 +1,38 @@
 import type { LoopPattern, PatternNote } from '../audio/patternTypes'
 import {
+  LOOP_COLS_MAX,
   MELODY_BPM_MAX,
+  bpmForFill,
+  melodyFill,
+  melodyWindowDuration,
   minBpmForLoopDuration,
-  minLoopDurationForBpm,
+  minFillForLoopDuration,
 } from '../lib/gridLayout'
 import {
-  composedBpmFromDisplay,
-  composedLoopDurationFromDisplay,
   clampPaceScale,
   LOOP_DURATION_MAX,
-  snapLoopDuration,
+  LOOP_DURATION_MAX_MS,
+  loopDurationMsFromDisplay,
+  paceToHundredths,
+  storedLoopDurationSec,
   type PaceOptions,
 } from '../lib/globalPace'
 import { EditorSubheader } from './EditorSubheader'
 import { MelodyGrid } from './MelodyGrid'
 import './LoopEditor.css'
+
+const MIN_LOOP_DURATION = 2
+
+function clampStoredBpm(
+  bpm: number,
+  loopDurationSec: number,
+  loopCols: number,
+): number {
+  return Math.min(
+    MELODY_BPM_MAX,
+    Math.max(minBpmForLoopDuration(loopDurationSec, loopCols), bpm),
+  )
+}
 
 type LoopEditorProps = {
   pattern: LoopPattern
@@ -29,15 +47,11 @@ type LoopEditorProps = {
   onScaleChange: (scale: string) => void
   onOctaveShiftChange: (octaveShift: number) => void
   onBpmChange: (bpm: number) => void
-  onLoopDurationChange: (sec: number) => void
+  onLoopDurationChange: (loopDurationMs: number) => void
   onReverbChange: (reverb: number) => void
   onDelayChange: (delay: number) => void
   onInstrumentChange: (instrument: string) => void
-}
-
-function clampBpm(bpm: number, loopDuration: number): number {
-  const min = minBpmForLoopDuration(loopDuration)
-  return Math.min(MELODY_BPM_MAX, Math.max(min, Math.round(bpm)))
+  onLoopColsChange: (loopCols: number) => void
 }
 
 export function LoopEditor({
@@ -57,52 +71,72 @@ export function LoopEditor({
   onReverbChange,
   onDelayChange,
   onInstrumentChange,
+  onLoopColsChange,
 }: LoopEditorProps) {
   const paceScale = clampPaceScale(paceOptions.paceScale)
-  const melodyWindowSec = minLoopDurationForBpm(pattern.bpm)
-  const loopDurationMin = Math.max(2, melodyWindowSec)
-  const bpmMin = minBpmForLoopDuration(pattern.loopDuration)
-  const displayLoopDurationMin = loopDurationMin / paceScale
+  const paceHundredths = paceToHundredths(paceScale)
+  const loopCols = pattern.loopCols
+  const storedSec = storedLoopDurationSec(pattern.loopDurationMs)
+  const fill = melodyFill(playbackLoopDuration, playbackBpm, loopCols)
+  const fillMin = minFillForLoopDuration(playbackLoopDuration, loopCols)
+  const melodySeconds = melodyWindowDuration(playbackBpm, loopCols)
+  const loopDurationFloor =
+    loopCols < LOOP_COLS_MAX
+      ? melodyWindowDuration(MELODY_BPM_MAX, loopCols)
+      : MIN_LOOP_DURATION
+  const displayLoopDurationMin = loopDurationFloor / paceScale
   const displayLoopDurationMax = LOOP_DURATION_MAX / paceScale
-  const displayBpmMin = paceOptions.paceAffectsMelody
-    ? Math.ceil(bpmMin * paceScale)
-    : bpmMin
 
+  // The fill dial controls how much of the tape period the melody window
+  // occupies. We translate a target (playback-space) fill into a stored bpm,
+  // leaving the period (cooldown) untouched. 100% == seamless.
+  function handleFillChange(targetFill: number) {
+    if (!Number.isFinite(targetFill)) {
+      return
+    }
+
+    const targetPlaybackBpm = bpmForFill(playbackLoopDuration, targetFill, loopCols)
+    const storedBpm = paceOptions.paceAffectsMelody
+      ? (targetPlaybackBpm * 100) / paceHundredths
+      : targetPlaybackBpm
+    onBpmChange(
+      clampStoredBpm(storedBpm, storedSec, loopCols),
+    )
+  }
+
+  // Changing the period preserves the fill fraction: a seamless reel stays
+  // seamless, a reel with a tail keeps the same proportion of silence. We do
+  // that by re-deriving bpm from the new period and the current fill.
   function handleLoopDurationChange(displayNext: number) {
     if (!Number.isFinite(displayNext)) {
       return
     }
 
-    const composed = composedLoopDurationFromDisplay(displayNext, paceScale)
-    const clamped = snapLoopDuration(Math.max(loopDurationMin, composed))
-    onLoopDurationChange(clamped)
+    let storedMs = loopDurationMsFromDisplay(displayNext, paceHundredths)
+    const minPlaybackSec = loopCols < LOOP_COLS_MAX ? 0 : MIN_LOOP_DURATION
+    const minMs =
+      minPlaybackSec > 0
+        ? loopDurationMsFromDisplay(minPlaybackSec, paceHundredths)
+        : 0
+    storedMs = Math.min(LOOP_DURATION_MAX_MS, Math.max(minMs, storedMs))
 
-    const nextBpmMin = minBpmForLoopDuration(clamped)
-    if (pattern.bpm < nextBpmMin) {
-      onBpmChange(nextBpmMin)
-    }
-  }
-
-  function handleBpmChange(displayNext: number) {
-    if (!Number.isFinite(displayNext)) {
-      return
-    }
-
-    const composed = composedBpmFromDisplay(displayNext, paceOptions)
-    const clamped = clampBpm(composed, pattern.loopDuration)
-    onBpmChange(clamped)
-
-    const nextMelodyWindow = minLoopDurationForBpm(clamped)
-    if (pattern.loopDuration < nextMelodyWindow) {
-      onLoopDurationChange(Math.max(2, nextMelodyWindow))
-    }
+    const nextStoredSec = storedMs / 1000
+    const currentFill = melodyFill(storedSec, pattern.bpm, loopCols)
+    const nextBpm = clampStoredBpm(
+      bpmForFill(nextStoredSec, currentFill, loopCols),
+      nextStoredSec,
+      loopCols,
+    )
+    onLoopDurationChange(storedMs)
+    onBpmChange(nextBpm)
   }
 
   return (
     <div className="loop-editor" aria-label={`${pattern.label} editor`}>
       <EditorSubheader
-        bpm={playbackBpm}
-        bpmMin={displayBpmMin}
+        fill={fill}
+        fillMin={fillMin}
+        melodySeconds={melodySeconds}
         root={pattern.root}
         scale={pattern.scale}
         octaveShift={pattern.octaveShift}
@@ -114,7 +148,7 @@ export function LoopEditor({
         onRootChange={onRootChange}
         onScaleChange={onScaleChange}
         onOctaveShiftChange={onOctaveShiftChange}
-        onBpmChange={handleBpmChange}
+        onFillChange={handleFillChange}
         onLoopDurationChange={handleLoopDurationChange}
         reverb={pattern.reverb}
         delay={pattern.delay}
@@ -128,8 +162,11 @@ export function LoopEditor({
         loopTimeSec={loopTimeSec}
         showPlayhead={showPlayhead}
         bpm={playbackBpm}
+        loopCols={loopCols}
+        periodSec={playbackLoopDuration}
         disabled={disabled}
         onNotesChange={onNotesChange}
+        onLoopColsChange={onLoopColsChange}
       />
     </div>
   )

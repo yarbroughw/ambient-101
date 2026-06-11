@@ -14,6 +14,7 @@ type ScaleTypeSelectProps = {
   className?: string
   variant?: 'loop-editor' | 'toolbar'
   mixed?: boolean
+  title?: string
 }
 
 export function ScaleTypeSelect({
@@ -24,20 +25,25 @@ export function ScaleTypeSelect({
   className = '',
   variant = 'loop-editor',
   mixed = false,
+  title,
 }: ScaleTypeSelectProps) {
-  const readout =
-    value === MIXED_VALUE ? '*' : scaleTypeAbbrevLabel(value)
+  // While mixed, keep the displayed (remembered) value visible with a trailing
+  // asterisk, but keep the native value as MIXED so any pick unifies the reels.
+  const abbrev = scaleTypeAbbrevLabel(value)
+  const readout = mixed ? `${abbrev} *` : abbrev
+  const nativeValue = mixed ? MIXED_VALUE : value
 
   return (
     <div className={`scale-type-select scale-type-select--${variant}`.trim()}>
       <select
         className={`scale-type-select__native ${className}`.trim()}
-        value={value}
+        value={nativeValue}
         disabled={disabled}
         aria-label={ariaLabel}
+        title={title}
         onChange={(event) => onChange(event.target.value)}
       >
-        {mixed ? <option value={MIXED_VALUE}>*</option> : null}
+        {mixed ? <option value={MIXED_VALUE}>{`${abbrev} *`}</option> : null}
         {WORKSHOP_SCALE_TYPES.map((option) => (
           <option key={option} value={option}>
             {scaleTypeLabel(option)}

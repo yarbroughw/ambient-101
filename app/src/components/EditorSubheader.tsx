@@ -1,7 +1,7 @@
 import { INSTRUMENT_IDS } from '../audio/instruments/types'
 import {
-  formatDisplayBpm,
   formatDisplayLoopDuration,
+  LOOP_DURATION_DRAG_STEP,
   LOOP_DURATION_STEP,
 } from '../lib/globalPace'
 import {
@@ -10,14 +10,16 @@ import {
   OCTAVE_SHIFT_MIN,
   ROOT_PITCH_CLASSES,
 } from '../lib/scaleSteps'
-import { MELODY_BPM_MAX } from '../lib/gridLayout'
 import { Dial } from './Dial'
 import { ScaleTypeSelect } from './ScaleTypeSelect'
 import './LoopEditor.css'
 
+const FILL_STEP = 0.01
+
 type EditorSubheaderProps = {
-  bpm: number
-  bpmMin: number
+  fill: number
+  fillMin: number
+  melodySeconds: number
   root: string
   scale: string
   octaveShift: number
@@ -31,7 +33,7 @@ type EditorSubheaderProps = {
   onRootChange: (root: string) => void
   onScaleChange: (scale: string) => void
   onOctaveShiftChange: (octaveShift: number) => void
-  onBpmChange: (bpm: number) => void
+  onFillChange: (fill: number) => void
   onLoopDurationChange: (sec: number) => void
   onReverbChange: (reverb: number) => void
   onDelayChange: (delay: number) => void
@@ -41,8 +43,9 @@ type EditorSubheaderProps = {
 const REEL_DIAL_SIZE = 44
 
 export function EditorSubheader({
-  bpm,
-  bpmMin,
+  fill,
+  fillMin,
+  melodySeconds,
   root,
   scale,
   octaveShift,
@@ -56,7 +59,7 @@ export function EditorSubheader({
   onRootChange,
   onScaleChange,
   onOctaveShiftChange,
-  onBpmChange,
+  onFillChange,
   onLoopDurationChange,
   onReverbChange,
   onDelayChange,
@@ -77,39 +80,64 @@ export function EditorSubheader({
     <div className="loop-editor__subheader reel-lane" aria-label="Editor controls">
       <div className="reel-lane__controls" aria-hidden />
 
-      <div className="reel-lane__level" aria-hidden />
+      <div className="loop-editor__center">
+        <div className="reel-lane__label">
+          <Dial
+            label="fill"
+            subLabel={`= ${melodySeconds.toFixed(1)}s`}
+            ariaLabel="Melody fill"
+            value={fill}
+            min={0}
+            max={1}
+            softMin={fillMin}
+            step={FILL_STEP}
+            size={REEL_DIAL_SIZE}
+            disabled={disabled || fillMin >= 1}
+            editableReadout
+            formatReadout={(value) => `${Math.round(value * 100)}%`}
+            parseReadoutInput={(text) => {
+              const parsed = Number.parseFloat(text.trim().replace(/%$/, ''))
+              if (!Number.isFinite(parsed)) {
+                return null
+              }
+              // "55" and "55%" mean 55 percent; "0.55" means the same fill.
+              return parsed > 1 ? parsed / 100 : parsed
+            }}
+            onChange={onFillChange}
+          />
+        </div>
 
-      <div className="reel-lane__reel">
-        <Dial
-          label="cooldown"
-          value={loopDuration}
-          min={loopDurationMin}
-          max={loopDurationMax}
-          step={LOOP_DURATION_STEP}
-          size={REEL_DIAL_SIZE}
-          disabled={disabled}
-          formatReadout={(value) => formatDisplayLoopDuration(value)}
-          onChange={onLoopDurationChange}
-        />
-      </div>
+        <div className="reel-lane__reel">
+          <Dial
+            label="tape"
+            ariaLabel="Tape length"
+            value={loopDuration}
+            min={loopDurationMin}
+            max={loopDurationMax}
+            step={LOOP_DURATION_DRAG_STEP}
+            readoutStep={LOOP_DURATION_STEP}
+            size={REEL_DIAL_SIZE}
+            disabled={disabled}
+            editableReadout
+            formatReadout={(value) => formatDisplayLoopDuration(value)}
+            parseReadoutInput={(text) => {
+              const parsed = Number.parseFloat(text.trim().replace(/s$/i, ''))
+              return Number.isFinite(parsed) ? parsed : null
+            }}
+            onChange={onLoopDurationChange}
+          />
+        </div>
 
-      <div className="reel-lane__label">
-        <Dial
-          label="bpm"
-          value={bpm}
-          min={bpmMin}
-          max={MELODY_BPM_MAX}
-          step={1}
-          size={REEL_DIAL_SIZE}
-          disabled={disabled}
-          formatReadout={(value) => `${formatDisplayBpm(value)}`}
-          onChange={onBpmChange}
-        />
+        <div className="loop-editor__melody-anchor" aria-hidden />
       </div>
 
       <div className="reel-lane__tape loop-editor__tape-slot">
         <div className="loop-editor__melody-controls">
-          <div className="loop-editor__tonality-column">
+          <div
+            className="loop-editor__key-column"
+            role="group"
+            aria-label="Key"
+          >
             <label className="loop-editor__inline-field">
               <span className="loop-editor__inline-label">root</span>
               <select
@@ -136,25 +164,6 @@ export function EditorSubheader({
                 ariaLabel="Scale"
                 onChange={onScaleChange}
               />
-            </label>
-          </div>
-
-          <div className="loop-editor__voice-column">
-            <label className="loop-editor__inline-field">
-              <span className="loop-editor__inline-label">inst</span>
-              <select
-                className="loop-editor__select loop-editor__select--editable"
-                value={instrument}
-                disabled={disabled}
-                aria-label="Instrument"
-                onChange={(event) => onInstrumentChange(event.target.value)}
-              >
-                {INSTRUMENT_IDS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
             </label>
 
             <div
@@ -187,7 +196,28 @@ export function EditorSubheader({
             </div>
           </div>
 
-          <div className="loop-editor__fx-column">
+          <div
+            className="loop-editor__tone-column"
+            role="group"
+            aria-label="Tone"
+          >
+            <label className="loop-editor__inline-field loop-editor__inst-field">
+              <span className="loop-editor__inline-label">inst</span>
+              <select
+                className="loop-editor__select loop-editor__select--editable"
+                value={instrument}
+                disabled={disabled}
+                aria-label="Instrument"
+                onChange={(event) => onInstrumentChange(event.target.value)}
+              >
+                {INSTRUMENT_IDS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <Dial
               label="reverb"
               value={reverb}

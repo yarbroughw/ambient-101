@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { useDismissable } from '../hooks/useDismissable'
 import type { LoopPattern } from '../audio/patternTypes'
 import { copyTextToClipboard } from '../lib/clipboard'
 import { serializeLoopPattern } from '../lib/loopStorage'
@@ -19,38 +20,22 @@ type LoopMenuProps = {
   pattern: LoopPattern
   disabled?: boolean
   onDuplicate: () => void
+  onDelete: () => void
 }
 
-export function LoopMenu({ label, pattern, disabled = false, onDuplicate }: LoopMenuProps) {
+export function LoopMenu({
+  label,
+  pattern,
+  disabled = false,
+  onDuplicate,
+  onDelete,
+}: LoopMenuProps) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const menuId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!open) {
-      return
-    }
-
-    function onPointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setOpen(false)
-      }
-    }
-
-    window.addEventListener('pointerdown', onPointerDown)
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      window.removeEventListener('pointerdown', onPointerDown)
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
+  useDismissable(open, () => setOpen(false), rootRef)
 
   useEffect(() => {
     if (!copied) {
@@ -116,6 +101,17 @@ export function LoopMenu({ label, pattern, disabled = false, onDuplicate }: Loop
             }}
           >
             {copied ? 'copied' : 'copy JSON'}
+          </button>
+          <button
+            type="button"
+            className="loop-menu__item loop-menu__item--danger"
+            role="menuitem"
+            onClick={() => {
+              onDelete()
+              close()
+            }}
+          >
+            delete
           </button>
         </div>
       ) : null}

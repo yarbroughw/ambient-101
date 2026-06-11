@@ -28,36 +28,43 @@
   animation: tape-loop-row-lap-flash 1.35s linear forwards;
 }
 
-.tape-loop-row__header-menu {
-  position: absolute;
-  top: 3px;
-  right: 4px;
-  z-index: 5;
-}
-
 .tape-loop-row__summary {
+  position: relative;
   padding: var(--loop-row-padding-y) 10px;
 }
 
 .tape-loop-row__controls {
   display: flex;
+  align-items: center;
+  justify-content: flex-start;
   flex-shrink: 0;
-  gap: 0;
+  gap: 5px;
+  height: var(--loop-circle-size);
   width: 100%;
 }
 
+.tape-loop-row__transport {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: var(--loop-transport-btn-gap);
+  height: 100%;
+  justify-content: center;
+}
+
 .tape-loop-btn {
-  width: 23px;
-  height: 23px;
+  width: var(--loop-transport-btn-size);
+  height: var(--loop-transport-btn-size);
   padding: 0;
-  margin: 0 2px;
+  margin: 0;
   border: none;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .tape-loop-btn--play {
@@ -67,39 +74,46 @@
 
 .tape-loop-btn--stop {
   background-color: var(--color-stop);
-  font-size: 14px;
+  font-size: 13px;
   padding-bottom: 2px;
 }
 
-.tape-loop-btn--test {
-  background-color: var(--color-test);
-}
-
-.tape-loop-btn--test .tape-loop-row__btn-icon {
-  transform: translateX(-1px);
-}
-
-@keyframes tape-loop-btn-test-icon-pulse {
-  0%,
-  100% {
-    transform: translateX(-1px) scale(1);
-    opacity: 0.82;
-  }
-
-  50% {
-    transform: translateX(-1px) scale(1.14);
-    opacity: 1;
-  }
-}
-
-.tape-loop-btn--test.is-testing .tape-loop-row__btn-icon {
-  animation: tape-loop-btn-test-icon-pulse 0.95s ease-in-out infinite;
-}
-
 .tape-loop-row__btn-icon {
-  width: 18px;
-  height: 18px;
+  width: 11px;
+  height: 11px;
   display: block;
+}
+
+.tape-loop-row__center {
+  position: absolute;
+  left: calc(10px + var(--reel-lane-controls-width) + 12px);
+  right: calc(50% - var(--mini-melody-max-width) / 2);
+  top: 50%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  height: var(--loop-circle-size);
+  min-width: 0;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.tape-loop-row__center > * {
+  pointer-events: auto;
+}
+
+.tape-loop-row__center .reel-lane__label {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tape-loop-row__center .tape-loop-row__reel {
+  flex-shrink: 0;
+  margin-right: var(--reel-circle-melody-gap);
 }
 
 .tape-loop-row__reel {
@@ -129,6 +143,22 @@
   z-index: 1;
 }
 
+/* Highlights the melody portion of the rotation: the rest of the ring is the
+   silent cooldown tail. A full ring == seamless (100% fill). */
+.tape-loop-row__arc {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.tape-loop-row__arc-fill {
+  stroke: var(--color-active);
+  stroke-linecap: butt;
+}
+
 .tape-loop-row__dot {
   position: absolute;
   inset: 0;
@@ -145,28 +175,36 @@
   height: 8px;
   margin: -4px 0 0 -4px;
   border-radius: 50%;
+  /* Dim by default = the melody is silent (cooldown tail). */
   background: var(--color-active);
+  opacity: 0.3;
   transform: translateY(calc(var(--loop-circle-size) / -2 + 1px));
+  transition: background 90ms linear, opacity 90ms linear;
 }
 
-@keyframes tape-loop-dot-lap-flash {
-  0%,
-  10% {
-    background: #fff;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.95);
+/* Bright while the melody is actually sounding (dot over the fill arc). */
+.tape-loop-row__dot-head.is-sounding {
+  background: #fff;
+  opacity: 1;
+}
+
+/* A momentary bloom marks the start of each lap. Kept on a separate channel
+   (box-shadow only) from the sounding colour so it still reads on seamless
+   reels, where the dot never dims. */
+@keyframes tape-loop-dot-lap-bloom {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
   }
-  58% {
-    background: rgb(236, 233, 255);
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.45);
+  18% {
+    box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.9);
   }
   100% {
-    background: var(--color-active);
-    box-shadow: none;
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
   }
 }
 
 .tape-loop-row__dot-head--lap {
-  animation: tape-loop-dot-lap-flash 1.35s linear forwards;
+  animation: tape-loop-dot-lap-bloom 0.6s ease-out forwards;
 }
 
 .tape-loop-row__duration,
@@ -218,11 +256,14 @@
   align-items: center;
   gap: 0;
   flex-shrink: 0;
-  width: 100%;
 }
 
 .reel-lane__label .tape-loop-row__label {
   width: 100%;
+}
+
+.tape-loop-row__center .reel-lane__label .tape-loop-row__label-button {
+  text-align: center;
 }
 
 .tape-loop-row__label {
@@ -279,18 +320,23 @@
 }
 
 .tape-loop-row__tape-content {
-  align-items: stretch;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
   min-width: 0;
   width: 100%;
 }
 
-.tape-loop-row__content-meta {
+.reel-lane__meta.tape-loop-row__content-meta {
+  flex: 0 0 auto;
+  margin-left: auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: flex-end;
   gap: 2px;
-  width: 100%;
-  min-width: 0;
+  width: auto;
+  min-width: var(--content-meta-min-width);
   font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 400;
@@ -314,12 +360,70 @@
   text-transform: none;
 }
 
-.mini-melody {
-  flex: 0 0 var(--mini-melody-max-width);
+.tape-loop-row__melody-wrap {
+  position: relative;
+  flex-shrink: 0;
   width: var(--mini-melody-max-width);
   min-width: var(--mini-melody-max-width);
   max-width: var(--mini-melody-max-width);
   height: var(--loop-circle-size);
+}
+
+.mini-melody {
+  width: 100%;
+  height: 100%;
+}
+
+.mini-melody__test-btn {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  z-index: 2;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-btn-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.58;
+}
+
+.mini-melody__test-btn:hover:not(:disabled) {
+  opacity: 0.82;
+}
+
+.mini-melody__test-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.mini-melody__test-icon {
+  width: 10px;
+  height: 10px;
+  display: block;
+}
+
+@keyframes mini-melody-test-icon-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.82;
+  }
+
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+.mini-melody__test-btn.is-testing {
+  opacity: 1;
+}
+
+.mini-melody__test-btn.is-testing .mini-melody__test-icon {
+  animation: mini-melody-test-icon-pulse 0.95s ease-in-out infinite;
 }
 
 .mini-melody__track {
@@ -338,6 +442,27 @@
   background: var(--color-active);
   opacity: 0.85;
   pointer-events: none;
+}
+
+@keyframes mini-melody-note-flash {
+  0% {
+    filter: brightness(1);
+    opacity: 0.85;
+  }
+
+  20% {
+    filter: brightness(1.75);
+    opacity: 1;
+  }
+
+  100% {
+    filter: brightness(1);
+    opacity: 0.85;
+  }
+}
+
+.mini-melody__note--flash {
+  animation: mini-melody-note-flash 0.42s ease-out;
 }
 
 .mini-melody__playhead {
@@ -396,23 +521,24 @@
   color: var(--color-loop-bg);
 }
 
-.tape-loop-row__action--delete {
-  color: var(--color-stop);
-  border-color: color-mix(in srgb, var(--color-stop) 55%, var(--color-outline));
-}
-
-.tape-loop-row__action--delete:hover:not(:disabled) {
-  color: #c44;
-  border-color: #c44;
-}
-
 .tape-loop-row__action:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
 .tape-loop-row__editor {
-  border-top: 1px solid var(--color-outline);
+  position: relative;
   padding: 0 10px 14px;
+}
+
+/* Faint, inset hairline keeps the editor visually part of the reel card
+   instead of reading as a separate block under a hard divider. */
+.tape-loop-row__editor::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10px;
+  right: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--color-outline) 40%, transparent);
 }
 
