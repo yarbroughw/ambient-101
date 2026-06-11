@@ -1,6 +1,6 @@
 {
     "label": "scale",
-    "loopDuration": 6,
+    "loopDurationMs": 6000,
     "bpm": 80,
     "root": "C",
     "scale": "minor",
