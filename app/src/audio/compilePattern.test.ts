@@ -47,4 +47,23 @@ describe('compilePatternToSink', () => {
       velocity: 0.5,
     })
   })
+
+  it('silences notes that start beyond the active loop window', () => {
+    const pattern = createTestPattern({
+      bpm: 120,
+      loopCols: 12,
+      notes: [
+        createTestNote({ scaleStep: 0, startCol: 0, spanCols: 1 }),
+        createTestNote({ scaleStep: 1, startCol: 11, spanCols: 1 }),
+        createTestNote({ scaleStep: 2, startCol: 12, spanCols: 1 }),
+        createTestNote({ scaleStep: 3, startCol: 20, spanCols: 1 }),
+      ],
+    })
+    const { sink, calls } = createRecordingSink()
+    compilePatternToSink(pattern, sink)(0)
+
+    // Only the notes inside the first 12 columns sound.
+    expect(calls).toHaveLength(2)
+    expect(calls.map((call) => call.time)).toEqual([0, 11 * 0.125])
+  })
 })

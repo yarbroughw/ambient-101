@@ -4,11 +4,18 @@ import type { LoopPattern } from './patternTypes'
 import type { NoteSink, TapeLoopCallback } from './types'
 
 export function compilePatternToSink(
-  pattern: Pick<LoopPattern, 'notes' | 'root' | 'scale' | 'octaveShift' | 'bpm'>,
+  pattern: Pick<
+    LoopPattern,
+    'notes' | 'root' | 'scale' | 'octaveShift' | 'bpm' | 'loopCols'
+  >,
   sink: NoteSink,
 ): TapeLoopCallback {
   return (time) => {
     for (const note of pattern.notes) {
+      // Notes starting beyond the active loop window are silent.
+      if (note.startCol >= pattern.loopCols) {
+        continue
+      }
       sink.triggerAttackRelease(
         stepToPitch(
           { root: pattern.root, scale: pattern.scale },

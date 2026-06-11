@@ -28,7 +28,7 @@ describe('loadLoopPatterns', () => {
     })
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ version: 2, loops: [pattern] }),
+      JSON.stringify({ version: 3, loops: [pattern] }),
     )
     expect(loadLoopPatterns()).toEqual([
       {
@@ -36,6 +36,30 @@ describe('loadLoopPatterns', () => {
         notes: [{ scaleStep: 0, startCol: 0, spanCols: 2, velocity: 0.8 }],
       },
     ])
+  })
+
+  it('migrates legacy loopDuration seconds to loopDurationMs', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        loops: [
+          {
+            id: 'legacy-duration',
+            label: 'legacy-duration',
+            loopDuration: 5,
+            bpm: 72,
+            scale: 'minor',
+            octaveShift: 0,
+            instrument: 'pad',
+            volume: 1,
+            notes: [],
+          },
+        ],
+      }),
+    )
+    const [pattern] = loadLoopPatterns()
+    expect(pattern?.loopDurationMs).toBe(5000)
   })
 
   it('loads legacy array format and migrates second-based notes', () => {
@@ -56,6 +80,7 @@ describe('loadLoopPatterns', () => {
       ]),
     )
     const [pattern] = loadLoopPatterns()
+    expect(pattern?.loopDurationMs).toBe(11000)
     expect(pattern?.notes[0]).toEqual({
       scaleStep: 0,
       startCol: 4,
@@ -68,7 +93,7 @@ describe('loadLoopPatterns', () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        version: 2,
+        version: 3,
         loops: [{ id: '', label: 'bad' }],
       }),
     )
@@ -79,7 +104,7 @@ describe('loadLoopPatterns', () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        version: 2,
+        version: 3,
         loops: [
           {
             ...createTestPattern(),
@@ -118,7 +143,7 @@ describe('parseLoopPresetBody', () => {
     const pattern = parseLoopPresetBody(
       {
         label: 'warm pad',
-        loopDuration: 9,
+        loopDurationMs: 9000,
         bpm: 72,
         root: 'C',
         scale: 'minor',
@@ -134,8 +159,9 @@ describe('parseLoopPresetBody', () => {
     expect(pattern).toEqual({
       id: 'warm-pad',
       label: 'warm pad',
-      loopDuration: 9,
+      loopDurationMs: 9000,
       bpm: 72,
+      loopCols: 32,
       root: 'C',
       scale: 'minor',
       octaveShift: 0,
@@ -145,6 +171,26 @@ describe('parseLoopPresetBody', () => {
       delay: 0.3,
       notes: [{ scaleStep: 1, startCol: 2, spanCols: 3, velocity: 1 }],
     })
+  })
+
+  it('migrates legacy preset loopDuration seconds', () => {
+    const pattern = parseLoopPresetBody(
+      {
+        label: 'warm pad',
+        loopDuration: 9,
+        bpm: 72,
+        root: 'C',
+        scale: 'minor',
+        octaveShift: 0,
+        instrument: 'pad',
+        volume: 1,
+        notes: [],
+      },
+      'warm-pad',
+      'warm-pad',
+    )
+
+    expect(pattern?.loopDurationMs).toBe(9000)
   })
 })
 

@@ -16,8 +16,9 @@ export function createTestPattern(
   return {
     id: 'test-loop',
     label: 'test-loop',
-    loopDuration: 11,
+    loopDurationMs: 11000,
     bpm: 96,
+    loopCols: 32,
     root: 'C',
     scale: 'minor',
     octaveShift: 0,

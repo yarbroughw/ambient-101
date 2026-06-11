@@ -1,5 +1,6 @@
 import type { LoopPattern } from '../audio/patternTypes'
 import {
+  LOOP_COLS_MAX,
   MELODY_BPM_MAX,
   minBpmForLoopDuration,
   minLoopDurationForBpm,
@@ -15,11 +16,20 @@ export const PACE_MAX = PACE_MAX_HUNDREDTHS / 100
 export const DEFAULT_PACE_SCALE = DEFAULT_PACE_HUNDREDTHS / 100
 export const PACE_STEP = PACE_STEP_HUNDREDTHS / 100
 export const LOOP_DURATION_MAX = 60
-export const LOOP_DURATION_STEP = 0.1
+export const LOOP_DURATION_MAX_MS = LOOP_DURATION_MAX * 1000
+/** Typed readout granularity in display (playback) seconds. */
+export const LOOP_DURATION_STEP = 0.01
+/** Drag/wheel granularity in display (playback) seconds. */
+export const LOOP_DURATION_DRAG_STEP = 0.1
 
 export type PaceOptions = {
   paceScale: number
   paceAffectsMelody: boolean
+}
+
+export type PlaybackTiming = {
+  loopDurationSec: number
+  bpm: number
 }
 
 export function paceFromHundredths(hundredths: number): number {
@@ -53,24 +63,58 @@ export function formatPaceScale(scale: number): string {
   return `${value.toFixed(1).replace(/\.0$/, '')}×`
 }
 
-export function snapLoopDuration(seconds: number): number {
-  const tenths = Math.round(seconds * 10)
-  return tenths / 10
+export function storedLoopDurationSec(loopDurationMs: number): number {
+  return loopDurationMs / 1000
+}
+
+/** Single-round-trip store: display seconds × pace → integer ms. */
+export function loopDurationMsFromDisplay(
+  displaySeconds: number,
+  paceHundredths: number,
+): number {
+  return Math.round(displaySeconds * paceHundredths * 10)
+}
+
+/** Playback seconds derived from stored ms and pace (never fed back into the model). */
+export function playbackLoopDurationSec(
+  loopDurationMs: number,
+  paceHundredths: number,
+): number {
+  return loopDurationMs / (paceHundredths * 10)
+}
+
+export function displayLoopDurationFromMs(
+  loopDurationMs: number,
+  paceHundredths: number,
+): number {
+  return playbackLoopDurationSec(loopDurationMs, paceHundredths)
+}
+
+function playbackLoopDurationMs(
+  loopDurationMs: number,
+  paceHundredths: number,
+): number {
+  return Math.round((loopDurationMs * 100) / paceHundredths)
+}
+
+/** Display-only snap for dial drag/wheel; never use on the store path. */
+export function snapDisplayLoopDuration(
+  seconds: number,
+  step: number = LOOP_DURATION_DRAG_STEP,
+): number {
+  const precision = Math.max(0, -Math.floor(Math.log10(step)))
+  const scale = 10 ** precision
+  const snapped =
+    (Math.round((seconds * scale) / (step * scale)) * (step * scale)) / scale
+  return Number(snapped.toFixed(precision))
 }
 
 export function formatDisplayLoopDuration(seconds: number): string {
-  return snapLoopDuration(seconds).toFixed(1)
+  return seconds.toFixed(2)
 }
 
 export function formatDisplayBpm(bpm: number): number {
   return Math.round(bpm)
-}
-
-export function composedLoopDurationFromDisplay(
-  displaySeconds: number,
-  paceScale: number,
-): number {
-  return snapLoopDuration(displaySeconds) * clampPaceScale(paceScale)
 }
 
 export function composedBpmFromDisplay(
@@ -81,71 +125,86 @@ export function composedBpmFromDisplay(
     return Math.round(displayBpm)
   }
 
-  return Math.round(Math.round(displayBpm) / clampPaceScale(options.paceScale))
+  const paceHundredths = paceToHundredths(options.paceScale)
+  return Math.round((Math.round(displayBpm) * 100) / paceHundredths)
 }
 
-function playbackLoopDurationFloor(bpm: number, paceAffectsMelody: boolean): number {
-  if (paceAffectsMelody) {
-    return Math.max(2, minLoopDurationForBpm(bpm))
+/** Default 2s tape minimum; a shortened loop window may go below it. */
+const DEFAULT_LOOP_DURATION_FLOOR = 2
+
+function playbackLoopDurationFloor(
+  bpm: number,
+  paceAffectsMelody: boolean,
+  loopCols: number,
+): number {
+  const windowFloor = minLoopDurationForBpm(bpm, loopCols)
+  // A deliberately shortened loop (fewer than the full grid columns) follows
+  // its window even below the 2s tape minimum, so short cells loop seamlessly.
+  if (loopCols < LOOP_COLS_MAX) {
+    return windowFloor
   }
-  return 2
+  if (paceAffectsMelody) {
+    return Math.max(DEFAULT_LOOP_DURATION_FLOOR, windowFloor)
+  }
+  return DEFAULT_LOOP_DURATION_FLOOR
 }
 
 function clampEffectiveLoopDuration(
-  loopDuration: number,
+  loopDurationSec: number,
   bpm: number,
   paceAffectsMelody: boolean,
+  loopCols: number,
 ): number {
-  const floor = playbackLoopDurationFloor(bpm, paceAffectsMelody)
-  return Math.min(LOOP_DURATION_MAX, Math.max(floor, loopDuration))
+  const floor = playbackLoopDurationFloor(bpm, paceAffectsMelody, loopCols)
+  return Math.min(LOOP_DURATION_MAX, Math.max(floor, loopDurationSec))
 }
 
-function clampEffectiveBpm(bpm: number, loopDuration: number): number {
+function clampEffectiveBpm(
+  bpm: number,
+  loopDurationSec: number,
+  loopCols: number,
+): number {
+  // Keep bpm a float: rounding here would reintroduce a melody/period
+  // mismatch and break exact seamless (100% fill) playback under pace.
   return Math.min(
     MELODY_BPM_MAX,
-    Math.max(minBpmForLoopDuration(loopDuration), Math.round(bpm)),
+    Math.max(minBpmForLoopDuration(loopDurationSec, loopCols), bpm),
   )
 }
 
 export function applyPlaybackTiming(
   pattern: LoopPattern,
   options: PaceOptions,
-): LoopPattern {
-  const paceScale = clampPaceScale(options.paceScale)
-  let loopDuration = pattern.loopDuration / paceScale
+): PlaybackTiming {
+  const paceHundredths = paceToHundredths(options.paceScale)
+  const paceScale = paceHundredths / 100
+  const loopCols = pattern.loopCols
+  let loopDurationSec = playbackLoopDurationSec(
+    pattern.loopDurationMs,
+    paceHundredths,
+  )
   let bpm = options.paceAffectsMelody ? pattern.bpm * paceScale : pattern.bpm
 
-  loopDuration = clampEffectiveLoopDuration(
-    loopDuration,
+  loopDurationSec = clampEffectiveLoopDuration(
+    loopDurationSec,
     bpm,
     options.paceAffectsMelody,
+    loopCols,
   )
   if (options.paceAffectsMelody) {
-    bpm = clampEffectiveBpm(bpm, loopDuration)
-    loopDuration = clampEffectiveLoopDuration(
-      loopDuration,
+    bpm = clampEffectiveBpm(bpm, loopDurationSec, loopCols)
+    loopDurationSec = clampEffectiveLoopDuration(
+      loopDurationSec,
       bpm,
       options.paceAffectsMelody,
+      loopCols,
     )
   }
 
   return {
-    ...pattern,
-    loopDuration,
+    loopDurationSec,
     bpm,
   }
-}
-
-function rawEffectiveLoopDuration(pattern: LoopPattern, paceScale: number): number {
-  return pattern.loopDuration / paceScale
-}
-
-function rawEffectiveBpm(
-  pattern: LoopPattern,
-  paceScale: number,
-  paceAffectsMelody: boolean,
-): number {
-  return paceAffectsMelody ? pattern.bpm * paceScale : pattern.bpm
 }
 
 function timingMatchesScale(
@@ -153,16 +212,25 @@ function timingMatchesScale(
   paceScale: number,
   paceAffectsMelody: boolean,
 ): boolean {
+  const paceHundredths = paceToHundredths(paceScale)
   const effective = applyPlaybackTiming(pattern, { paceScale, paceAffectsMelody })
-  const targetDuration = rawEffectiveLoopDuration(pattern, paceScale)
-  const targetBpm = rawEffectiveBpm(pattern, paceScale, paceAffectsMelody)
+  const targetPlaybackMs = playbackLoopDurationMs(
+    pattern.loopDurationMs,
+    paceHundredths,
+  )
+  const effectivePlaybackMs = Math.round(effective.loopDurationSec * 1000)
 
-  if (Math.abs(effective.loopDuration - targetDuration) > 0.01) {
+  if (effectivePlaybackMs !== targetPlaybackMs) {
     return false
   }
 
-  if (paceAffectsMelody && Math.abs(effective.bpm - targetBpm) > 0.5) {
-    return false
+  if (paceAffectsMelody) {
+    const targetBpm = paceAffectsMelody
+      ? pattern.bpm * (paceHundredths / 100)
+      : pattern.bpm
+    if (Math.abs(effective.bpm - targetBpm) > 0.5) {
+      return false
+    }
   }
 
   return true
@@ -231,7 +299,7 @@ export function syncLoopPlayback(
   composed: LoopPattern,
   options: PaceOptions,
 ): void {
-  const effective = applyPlaybackTiming(composed, options)
-  entry.loop.setDuration(effective.loopDuration)
-  entry.rebindPattern(effective)
+  const timing = applyPlaybackTiming(composed, options)
+  entry.loop.setDuration(timing.loopDurationSec)
+  entry.rebindPattern({ ...composed, bpm: timing.bpm })
 }

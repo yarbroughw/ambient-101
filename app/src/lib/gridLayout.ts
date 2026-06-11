@@ -4,15 +4,30 @@ import {
   GRID_SCALE_STEP_MIN,
 } from './scaleSteps'
 
-/** Two bars of 16th-note steps (fixed composable window, not tied to loop duration). */
+/** Two bars of 16th-note steps: the full composable grid width. */
 export const GRID_COLUMN_COUNT = 32
 
-const SECONDS_PER_GRID =
-  (GRID_COLUMN_COUNT * 60) / 4
+/** Shortest expressible loop is a single step. */
+export const LOOP_COLS_MIN = 1
+export const LOOP_COLS_MAX = GRID_COLUMN_COUNT
+export const DEFAULT_LOOP_COLS = GRID_COLUMN_COUNT
+
+export function clampLoopCols(loopCols: number): number {
+  if (!Number.isFinite(loopCols)) {
+    return DEFAULT_LOOP_COLS
+  }
+  return Math.min(LOOP_COLS_MAX, Math.max(LOOP_COLS_MIN, Math.round(loopCols)))
+}
+
+/** Wall-clock seconds spanned by `loopCols` 16th-note steps at 1 BPM. */
+function secondsPerLoop(loopCols: number): number {
+  return (clampLoopCols(loopCols) * 60) / 4
+}
 
 export type GridLayout = {
   stepSec: number
   columnCount: number
+  loopCols: number
   gridDuration: number
 }
 
@@ -20,35 +35,92 @@ export function stepDurationSec(bpm: number): number {
   return 60 / bpm / 4
 }
 
-/** Wall-clock span of the fixed grid at the given melody BPM. */
-export function melodyWindowDuration(bpm: number): number {
-  return SECONDS_PER_GRID / bpm
+/** Wall-clock span of the active loop window at the given melody BPM. */
+export function melodyWindowDuration(
+  bpm: number,
+  loopCols: number = LOOP_COLS_MAX,
+): number {
+  return secondsPerLoop(loopCols) / bpm
 }
 
-/** Loop duration floor: the melody grid window must fit on the tape. */
-export function minLoopDurationForBpm(bpm: number): number {
-  return melodyWindowDuration(bpm)
+/** Loop duration floor: the melody loop window must fit on the tape. */
+export function minLoopDurationForBpm(
+  bpm: number,
+  loopCols: number = LOOP_COLS_MAX,
+): number {
+  return melodyWindowDuration(bpm, loopCols)
 }
 
 /**
  * BPM floor for a given loop length: tempo cannot be slow enough that the
- * 32-step grid window exceeds the tape.
+ * loop window exceeds the tape.
  */
 export const MELODY_BPM_MAX = 240
 
-export function minBpmForLoopDuration(loopDuration: number): number {
+export function minBpmForLoopDuration(
+  loopDuration: number,
+  loopCols: number = LOOP_COLS_MAX,
+): number {
   if (loopDuration <= 0) {
     return 1
   }
-  return SECONDS_PER_GRID / loopDuration
+  return secondsPerLoop(loopCols) / loopDuration
 }
 
-export function gridLayout(bpm: number): GridLayout {
+/**
+ * Fraction of the tape period the melody window occupies, in (0, 1].
+ * 1 == seamless (melody fills the whole loop, no silent tail).
+ */
+export function melodyFill(
+  loopDuration: number,
+  bpm: number,
+  loopCols: number = LOOP_COLS_MAX,
+): number {
+  if (loopDuration <= 0) {
+    return 1
+  }
+  return melodyWindowDuration(bpm, loopCols) / loopDuration
+}
+
+/** BPM that makes the melody window occupy `fill` of the given tape period. */
+export function bpmForFill(
+  loopDuration: number,
+  fill: number,
+  loopCols: number = LOOP_COLS_MAX,
+): number {
+  const safeFill = Math.min(1, Math.max(0, fill))
+  if (loopDuration <= 0 || safeFill <= 0) {
+    return MELODY_BPM_MAX
+  }
+  return secondsPerLoop(loopCols) / (loopDuration * safeFill)
+}
+
+/**
+ * Smallest fill achievable on a tape period: the melody window cannot be
+ * shorter than its floor (MELODY_BPM_MAX), so short loops are forced fuller.
+ * Returns 1 when the loop is so short only a seamless melody fits.
+ */
+export function minFillForLoopDuration(
+  loopDuration: number,
+  loopCols: number = LOOP_COLS_MAX,
+): number {
+  if (loopDuration <= 0) {
+    return 1
+  }
+  return Math.min(1, melodyWindowDuration(MELODY_BPM_MAX, loopCols) / loopDuration)
+}
+
+export function gridLayout(
+  bpm: number,
+  loopCols: number = LOOP_COLS_MAX,
+): GridLayout {
+  const clampedCols = clampLoopCols(loopCols)
   const stepSec = stepDurationSec(bpm)
-  const gridDuration = melodyWindowDuration(bpm)
+  const gridDuration = melodyWindowDuration(bpm, clampedCols)
   return {
     stepSec,
     columnCount: GRID_COLUMN_COUNT,
+    loopCols: clampedCols,
     gridDuration,
   }
 }

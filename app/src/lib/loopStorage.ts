@@ -1,11 +1,11 @@
 import { LOOP_DELAY_DEFAULT, LOOP_REVERB_DEFAULT } from '../audio/loopEffects'
 import type { LoopPattern, PatternNote } from '../audio/patternTypes'
 import { normalizeInstrument } from '../audio/instruments/types'
-import { migrateLegacyNote } from './gridLayout'
+import { clampLoopCols, DEFAULT_LOOP_COLS, migrateLegacyNote } from './gridLayout'
 import { normalizePatternTonality, normalizeRoot } from './scaleSteps'
 
 const STORAGE_KEY = 'ambient-101:loops'
-const STORAGE_VERSION = 2
+const STORAGE_VERSION = 3
 
 export type PersistedLoops = {
   version: number
@@ -21,7 +21,11 @@ type StoredPatternNote = {
   velocity?: number
 }
 
-type StoredLoopPattern = Omit<LoopPattern, 'notes'> & {
+type StoredLoopPattern = Omit<LoopPattern, 'notes' | 'loopCols' | 'loopDurationMs'> & {
+  loopCols?: number
+  /** Legacy persisted field (float seconds). Migrated to loopDurationMs on load. */
+  loopDuration?: number
+  loopDurationMs?: number
   notes: StoredPatternNote[]
 }
 
@@ -53,15 +57,21 @@ function isStoredLoopPattern(value: unknown): value is StoredLoopPattern {
   }
 
   const pattern = value as StoredLoopPattern
+  const hasLoopDuration =
+    (typeof pattern.loopDurationMs === 'number' &&
+      Number.isFinite(pattern.loopDurationMs)) ||
+    (typeof pattern.loopDuration === 'number' &&
+      Number.isFinite(pattern.loopDuration))
   return (
     typeof pattern.id === 'string' &&
     pattern.id.length > 0 &&
     typeof pattern.label === 'string' &&
     pattern.label.length > 0 &&
-    typeof pattern.loopDuration === 'number' &&
-    Number.isFinite(pattern.loopDuration) &&
+    hasLoopDuration &&
     typeof pattern.bpm === 'number' &&
     Number.isFinite(pattern.bpm) &&
+    (pattern.loopCols === undefined ||
+      (typeof pattern.loopCols === 'number' && Number.isFinite(pattern.loopCols))) &&
     typeof pattern.scale === 'string' &&
     pattern.scale.length > 0 &&
     (pattern.root === undefined ||
@@ -87,11 +97,14 @@ function migrateStoredNotes(notes: StoredPatternNote[], bpm: number): PatternNot
     .filter((note): note is PatternNote => note !== null)
 }
 
-function normalizePattern(pattern: LoopPattern): LoopPattern {
+function normalizePattern(
+  pattern: Omit<LoopPattern, 'loopCols'> & { loopCols?: number },
+): LoopPattern {
   const tonality = normalizePatternTonality(pattern.root, pattern.scale)
 
   return {
     ...pattern,
+    loopCols: clampLoopCols(pattern.loopCols ?? DEFAULT_LOOP_COLS),
     root: normalizeRoot(tonality.root),
     scale: tonality.scale,
     instrument: normalizeInstrument(pattern.instrument),
@@ -106,8 +119,18 @@ function normalizePattern(pattern: LoopPattern): LoopPattern {
 }
 
 function normalizeStoredPattern(pattern: StoredLoopPattern): LoopPattern {
+  const loopDurationMs =
+    typeof pattern.loopDurationMs === 'number' &&
+    Number.isFinite(pattern.loopDurationMs)
+      ? Math.round(pattern.loopDurationMs)
+      : Math.round((pattern.loopDuration ?? 0) * 1000)
+
+  const { loopDuration: _legacyDuration, loopDurationMs: _legacyMs, ...rest } =
+    pattern
+
   return normalizePattern({
-    ...pattern,
+    ...rest,
+    loopDurationMs,
     notes: migrateStoredNotes(pattern.notes, pattern.bpm),
   })
 }
@@ -137,27 +160,29 @@ export function parseLoopPresetBody(
   return normalizeStoredPattern(candidate)
 }
 
-export function parseLoopPatternsJson(raw: string): LoopPattern[] {
-  const parsed: unknown = JSON.parse(raw)
-
-  if (Array.isArray(parsed)) {
-    return parsed.filter(isStoredLoopPattern).map(normalizeStoredPattern)
+export function parseLoopPatternsValue(value: unknown): LoopPattern[] {
+  if (Array.isArray(value)) {
+    return value.filter(isStoredLoopPattern).map(normalizeStoredPattern)
   }
 
-  if (isStoredLoopPattern(parsed)) {
-    return [normalizeStoredPattern(parsed)]
+  if (isStoredLoopPattern(value)) {
+    return [normalizeStoredPattern(value)]
   }
 
-  if (!parsed || typeof parsed !== 'object') {
+  if (!value || typeof value !== 'object') {
     return []
   }
 
-  const stored = parsed as Partial<PersistedLoops>
+  const stored = value as Partial<PersistedLoops>
   if (!Array.isArray(stored.loops)) {
     return []
   }
 
   return stored.loops.filter(isStoredLoopPattern).map(normalizeStoredPattern)
+}
+
+export function parseLoopPatternsJson(raw: string): LoopPattern[] {
+  return parseLoopPatternsValue(JSON.parse(raw))
 }
 
 export function buildLoopPatternsPayload(patterns: LoopPattern[]): PersistedLoops {

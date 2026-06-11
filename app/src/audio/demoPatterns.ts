@@ -12,7 +12,7 @@ const SCALE = 'minor'
 const DEFAULT_BLANK_BPM = 88
 
 const blankTemplate: Omit<LoopPattern, 'id' | 'label'> = {
-  loopDuration: 10,
+  loopDurationMs: 10000,
   bpm: DEFAULT_BLANK_BPM,
   root: ROOT,
   scale: SCALE,
@@ -47,7 +47,7 @@ export type DemoLoop = {
 }
 
 function bindPattern(pattern: LoopPattern): DemoLoop {
-  const loop = new TapeLoop(pattern.label, pattern.loopDuration)
+  const loop = new TapeLoop(pattern.label, pattern.loopDurationMs / 1000)
   let activeInstrument: InstrumentId = normalizeInstrument(pattern.instrument)
   let voice = createLoopVoiceForInstrument(
     activeInstrument,
@@ -128,35 +128,6 @@ export function createTapeLoopsFromPatterns(patterns: LoopPattern[]): DemoLoop[]
   return patterns.map((pattern) => createTapeLoop(pattern))
 }
 
-export function nextAvailableIdAndLabel(
-  baseLabel: string,
-  loops: Pick<DemoLoop, 'pattern'>[],
-): { id: string; label: string } {
-  if (!labelTaken(baseLabel, loops)) {
-    return { id: baseLabel, label: baseLabel }
-  }
-
-  const trailingNumber = baseLabel.match(/^(.*?)(\d+)$/)
-  if (trailingNumber) {
-    const base = trailingNumber[1]
-    let number = Number.parseInt(trailingNumber[2], 10) + 1
-    let candidate = `${base}${number}`
-    while (labelTaken(candidate, loops)) {
-      number += 1
-      candidate = `${base}${number}`
-    }
-    return { id: candidate, label: candidate }
-  }
-
-  let number = 2
-  let candidate = `${baseLabel}${number}`
-  while (labelTaken(candidate, loops)) {
-    number += 1
-    candidate = `${baseLabel}${number}`
-  }
-  return { id: candidate, label: candidate }
-}
-
 function labelTaken(
   candidate: string,
   loops: Pick<DemoLoop, 'pattern'>[],
@@ -167,30 +138,49 @@ function labelTaken(
   )
 }
 
+function nextNumberedLabel(
+  base: string,
+  separator: string,
+  taken: (candidate: string) => boolean,
+): string {
+  const trailingNumber = base.match(/^(.*?)(\d+)$/)
+  if (trailingNumber) {
+    const labelBase = trailingNumber[1]
+    let number = Number.parseInt(trailingNumber[2], 10) + 1
+    let candidate = `${labelBase}${number}`
+    while (taken(candidate)) {
+      number += 1
+      candidate = `${labelBase}${number}`
+    }
+    return candidate
+  }
+
+  let number = 2
+  let candidate = `${base}${separator}${number}`
+  while (taken(candidate)) {
+    number += 1
+    candidate = `${base}${separator}${number}`
+  }
+  return candidate
+}
+
+export function nextAvailableIdAndLabel(
+  baseLabel: string,
+  loops: Pick<DemoLoop, 'pattern'>[],
+): { id: string; label: string } {
+  if (!labelTaken(baseLabel, loops)) {
+    return { id: baseLabel, label: baseLabel }
+  }
+  const label = nextNumberedLabel(baseLabel, '', (c) => labelTaken(c, loops))
+  return { id: label, label }
+}
+
 export function nextDuplicateIdAndLabel(
   sourceLabel: string,
   loops: Pick<DemoLoop, 'pattern'>[],
 ): { id: string; label: string } {
-  const trailingNumber = sourceLabel.match(/^(.*?)(\d+)$/)
-
-  if (trailingNumber) {
-    const base = trailingNumber[1]
-    let number = Number.parseInt(trailingNumber[2], 10) + 1
-    let candidate = `${base}${number}`
-    while (labelTaken(candidate, loops)) {
-      number += 1
-      candidate = `${base}${number}`
-    }
-    return { id: candidate, label: candidate }
-  }
-
-  let suffix = 2
-  let candidate = `${sourceLabel}-${suffix}`
-  while (labelTaken(candidate, loops)) {
-    suffix += 1
-    candidate = `${sourceLabel}-${suffix}`
-  }
-  return { id: candidate, label: candidate }
+  const label = nextNumberedLabel(sourceLabel, '-', (c) => labelTaken(c, loops))
+  return { id: label, label }
 }
 
 export function duplicatePattern(

@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
+import type { LoopPattern } from './patternTypes'
 import { melodyBounds } from './patternTypes'
-import { createTestNote } from '../test/fixtures'
+import { createTestNote, createTestPattern } from '../test/fixtures'
+
+describe('LoopPattern', () => {
+  it('stores loop duration as integer milliseconds', () => {
+    const pattern: LoopPattern = createTestPattern({ loopDurationMs: 4010 })
+    expect(Number.isInteger(pattern.loopDurationMs)).toBe(true)
+    expect(pattern.loopDurationMs).toBe(4010)
+  })
+})
 
 describe('melodyBounds', () => {
   it('returns zeros for empty notes', () => {

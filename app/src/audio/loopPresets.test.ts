@@ -23,8 +23,9 @@ describe('loadLoopPresetsFromModules', () => {
         id: 'warm-pad',
         label: 'warm-pad',
         template: {
-          loopDuration: 11,
+          loopDurationMs: 11000,
           bpm: 96,
+          loopCols: 32,
           root: 'C',
           scale: 'minor',
           octaveShift: 0,
@@ -42,7 +43,7 @@ describe('loadLoopPresetsFromModules', () => {
     const presets = loadLoopPresetsFromModules({
       '../presets/drone.json': {
         label: 'low drone',
-        loopDuration: 12,
+        loopDurationMs: 12000,
         bpm: 60,
         root: 'C',
         scale: 'minor',

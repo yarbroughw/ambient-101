@@ -2,16 +2,20 @@ import { describe, expect, it } from 'vitest'
 import { createTestNote } from '../test/fixtures'
 import {
   GRID_COLUMN_COUNT,
+  bpmForFill,
   cellStartTime,
+  clampLoopCols,
   columnAtClientX,
   createGridNote,
   createNoteSpan,
   findNoteAt,
   gridLayout,
   gridPlayheadRatio,
+  melodyFill,
   melodyWindowDuration,
   migrateLegacyNote,
   minBpmForLoopDuration,
+  minFillForLoopDuration,
   minLoopDurationForBpm,
   moveNote,
   noteCoversCell,
@@ -44,6 +48,21 @@ describe('melodyWindowDuration', () => {
   it('spans two bars of 16th notes at the given BPM', () => {
     expect(melodyWindowDuration(120)).toBeCloseTo(4)
     expect(melodyWindowDuration(60)).toBeCloseTo(8)
+  })
+
+  it('shrinks proportionally when fewer loop columns are active', () => {
+    // 12 of 32 steps -> 12 * (1/8s) = 1.5s at 120 BPM.
+    expect(melodyWindowDuration(120, 12)).toBeCloseTo(1.5)
+    expect(melodyWindowDuration(120, 16)).toBeCloseTo(2)
+  })
+})
+
+describe('clampLoopCols', () => {
+  it('clamps to the 1..32 range and rounds', () => {
+    expect(clampLoopCols(0)).toBe(1)
+    expect(clampLoopCols(100)).toBe(32)
+    expect(clampLoopCols(11.6)).toBe(12)
+    expect(clampLoopCols(Number.NaN)).toBe(32)
   })
 })
 
@@ -368,5 +387,44 @@ describe('migrateLegacyNote', () => {
 
   it('returns null for invalid legacy notes', () => {
     expect(migrateLegacyNote({ scaleStep: 0 }, 120)).toBeNull()
+  })
+})
+
+describe('melodyFill', () => {
+  it('is the melody window as a fraction of the tape period', () => {
+    // bpm 80 -> window 6s; on a 6s tape that fully fills it (seamless).
+    expect(melodyFill(6, 80)).toBeCloseTo(1)
+    // On a 12s tape the same window is half the period.
+    expect(melodyFill(12, 80)).toBeCloseTo(0.5)
+  })
+})
+
+describe('bpmForFill', () => {
+  it('inverts melodyFill: a 100% fill makes the window equal the period', () => {
+    expect(bpmForFill(6, 1)).toBeCloseTo(80)
+    expect(melodyWindowDuration(bpmForFill(6, 1))).toBeCloseTo(6)
+  })
+
+  it('round-trips fill through bpm for an odd, non-integer-bpm period', () => {
+    // 7s seamless needs bpm 480/7 (not an integer) — the float keeps it exact.
+    const bpm = bpmForFill(7, 1)
+    expect(melodyWindowDuration(bpm)).toBeCloseTo(7)
+    expect(melodyFill(7, bpm)).toBeCloseTo(1)
+  })
+
+  it('halves the window for a 50% fill', () => {
+    const bpm = bpmForFill(8, 0.5)
+    expect(melodyWindowDuration(bpm)).toBeCloseTo(4)
+  })
+})
+
+describe('minFillForLoopDuration', () => {
+  it('forces short loops fuller (window cannot drop below its floor)', () => {
+    // 2s window floor (bpm 240) over a 6s tape => min fill 1/3.
+    expect(minFillForLoopDuration(6)).toBeCloseTo(2 / 6)
+    // A 2s tape can only hold a seamless melody.
+    expect(minFillForLoopDuration(2)).toBe(1)
+    // Long tapes can be very sparse.
+    expect(minFillForLoopDuration(60)).toBeCloseTo(2 / 60)
   })
 })

@@ -8,8 +8,11 @@ export type PatternNote = {
 export type LoopPattern = {
   id: string
   label: string
-  loopDuration: number
+  /** Tape-loop period stored as integer milliseconds (baseline, before global pace). */
+  loopDurationMs: number
   bpm: number
+  /** Active grid width in columns (1..32). The melody loops at this length. */
+  loopCols: number
   root: string
   scale: string
   octaveShift: number

@@ -18,9 +18,9 @@ export const ENSEMBLE_TEMPLATES: EnsembleTemplate[] = [
   {
     id: 'workshop-starter',
     label: 'workshop starter',
-    description: 'blank ensemble',
+    description: 'a scale exercise reel to start tinkering with',
     suggestedName: 'workshop starter',
-    presetIds: [],
+    presetIds: ['scale'],
   },
 ]
 

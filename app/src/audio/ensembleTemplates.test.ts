@@ -9,12 +9,13 @@ describe('ensembleTemplates', () => {
     expect(ENSEMBLE_TEMPLATES.length).toBeGreaterThan(0)
   })
 
-  it('instantiates workshop starter as an empty ensemble by default', () => {
+  it('instantiates workshop starter with the scale exercise reel', () => {
     const { loops, paceScale, suggestedName } =
       instantiateEnsembleTemplate('workshop-starter')
 
     expect(suggestedName).toBe('workshop starter')
     expect(paceScale).toBe(1)
-    expect(loops).toEqual([])
+    expect(loops.map((loop) => loop.label)).toEqual(['scale'])
+    expect(loops[0]?.notes.length).toBeGreaterThan(0)
   })
 })
