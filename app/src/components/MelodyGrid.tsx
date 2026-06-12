@@ -472,15 +472,17 @@ export function MelodyGrid({
   const activeColsRef = useRef(activeCols)
   const patternRef = useRef({ tonality, octaveShift, instrument })
   const disabledRef = useRef(disabled)
-  notesRef.current = notes
-  rowsRef.current = rows
-  layoutRef.current = layout
-  stepSecRef.current = layout.stepSec
-  onNotesChangeRef.current = onNotesChange
-  onLoopColsChangeRef.current = onLoopColsChange
-  activeColsRef.current = activeCols
-  patternRef.current = { tonality, octaveShift, instrument }
-  disabledRef.current = disabled
+  useEffect(() => {
+    notesRef.current = notes
+    rowsRef.current = rows
+    layoutRef.current = layout
+    stepSecRef.current = layout.stepSec
+    onNotesChangeRef.current = onNotesChange
+    onLoopColsChangeRef.current = onLoopColsChange
+    activeColsRef.current = activeCols
+    patternRef.current = { tonality, octaveShift, instrument }
+    disabledRef.current = disabled
+  })
 
   const stableOnLoopColsChange = useCallback((cols: number) => {
     onLoopColsChangeRef.current(cols)

@@ -6,7 +6,9 @@ export function useDismissable(
   ref: RefObject<HTMLElement | null>,
 ): void {
   const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
 
   useEffect(() => {
     if (!open) {

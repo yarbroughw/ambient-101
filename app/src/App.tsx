@@ -108,9 +108,11 @@ export default function App() {
   const loopsRef = useRef(loops)
   const runningByIdRef = useRef(runningById)
   const audioReadyRef = useRef(audioReady)
-  loopsRef.current = loops
-  runningByIdRef.current = runningById
-  audioReadyRef.current = audioReady
+  useEffect(() => {
+    loopsRef.current = loops
+    runningByIdRef.current = runningById
+    audioReadyRef.current = audioReady
+  })
 
   const loopIds = loops?.map(({ pattern }) => pattern.id) ?? []
   const runningCount = loopIds.filter((id) => runningById[id]).length
