@@ -35,6 +35,15 @@ import {
 } from './lib/scaleSteps'
 import { loadPaceAffectsMelody, savePaceAffectsMelody } from './lib/paceSettings'
 import {
+  loadTimelineMotion,
+  loadTimelineZoomStop,
+  saveTimelineMotion,
+  saveTimelineZoomStop,
+  type TimelineMotion,
+} from './lib/motionSettings'
+import { TimelineMotionControls } from './components/TimelineMotionControls'
+import './components/TimelineMotionControls.css'
+import {
   getEnsembleEntry,
   loadEnsemble,
   markEnsembleOpened,
@@ -88,6 +97,8 @@ export default function App() {
   // frozen playhead.
   const [audioContextRunning, setAudioContextRunning] = useState(true)
   const [paceAffectsMelody, setPaceAffectsMelody] = useState(loadPaceAffectsMelody)
+  const [timelineMotion, setTimelineMotion] = useState(loadTimelineMotion)
+  const [timelineZoomStop, setTimelineZoomStop] = useState(loadTimelineZoomStop)
   // Last value the global tonality controls represented, shown (with a trailing
   // asterisk) when reels disagree so the dropdowns never blank out to just "*".
   const [lastGlobalRoot, setLastGlobalRoot] = useState(DEFAULT_ROOT as string)
@@ -127,6 +138,16 @@ export default function App() {
     setPaceAffectsMelody(value)
     savePaceAffectsMelody(value)
     resyncAllLoops(loopsRef.current, { paceScale, paceAffectsMelody: value })
+  }
+
+  function handleTimelineMotionChange(value: TimelineMotion) {
+    setTimelineMotion(value)
+    saveTimelineMotion(value)
+  }
+
+  function handleTimelineZoomStopChange(value: number) {
+    setTimelineZoomStop(value)
+    saveTimelineZoomStop(value)
   }
 
   function handleOpenEnsemble(ensembleId: string) {
@@ -646,12 +667,24 @@ export default function App() {
         </button>
       ) : null}
 
-      <div className="view-toggle-row">
+      <div
+        className={`view-toggle-row${
+          showTimeline ? ' view-toggle-row--timeline' : ''
+        }`}
+      >
         <EnsembleSyncLabel
           loops={loops ?? []}
           pace={pace}
           runningById={runningById}
         />
+        {showTimeline ? (
+          <TimelineMotionControls
+            motion={timelineMotion}
+            zoomStop={timelineZoomStop}
+            onMotionChange={handleTimelineMotionChange}
+            onZoomStopChange={handleTimelineZoomStopChange}
+          />
+        ) : null}
         <ViewToggle
           mode={showTimeline ? 'timeline' : 'stack'}
           disabled={!hasLoops}
@@ -663,6 +696,8 @@ export default function App() {
         <EnsembleTimeline
           loops={loops ?? []}
           runningById={runningById}
+          motion={timelineMotion}
+          zoomStop={timelineZoomStop}
           onSelectLane={handleSelectLane}
         />
       ) : (

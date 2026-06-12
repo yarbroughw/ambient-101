@@ -83,13 +83,6 @@ export function playbackLoopDurationSec(
   return loopDurationMs / (paceHundredths * 10)
 }
 
-export function displayLoopDurationFromMs(
-  loopDurationMs: number,
-  paceHundredths: number,
-): number {
-  return playbackLoopDurationSec(loopDurationMs, paceHundredths)
-}
-
 function playbackLoopDurationMs(
   loopDurationMs: number,
   paceHundredths: number,

@@ -5,6 +5,14 @@ import type { LoopPattern } from '../audio/patternTypes'
 import type { TapeLoop } from '../audio/tapeLoop'
 import { melodyWindowDuration } from '../lib/gridLayout'
 import { formatDisplayLoopDuration } from '../lib/globalPace'
+import type { TimelineMotion } from '../lib/motionSettings'
+import {
+  laneMelodyWidth,
+  laneTileWidth,
+  medianPeriod,
+  visibleCycles,
+} from '../lib/timelineLayout'
+import { useLoopProgress } from '../hooks/useLoopProgress'
 import { MiniMelodyView } from './MiniMelodyView'
 import './EnsembleTimeline.css'
 
@@ -19,6 +27,8 @@ const MAX_WINDOW_SEC = 36
 type EnsembleTimelineProps = {
   loops: DemoLoop[]
   runningById: Record<string, boolean>
+  motion: TimelineMotion
+  zoomStop: number
   /** Called with the reel id when a lane is clicked (jump back to Reels). */
   onSelectLane?: (id: string) => void
 }
@@ -89,6 +99,8 @@ function useTapeLanePhase(loop: TapeLoop, running: boolean): LanePhase {
 export function EnsembleTimeline({
   loops,
   runningById,
+  motion,
+  zoomStop,
   onSelectLane,
 }: EnsembleTimelineProps) {
   const sectionRef = useRef<HTMLDivElement>(null)
@@ -113,6 +125,10 @@ export function EnsembleTimeline({
   )
   const pxPerSec = width > 0 ? width / windowSec : 0
   const playheadX = width * PLAYHEAD_FRAC
+  const cycles = visibleCycles(
+    windowSec,
+    medianPeriod(rows.map((row) => row.period)),
+  )
 
   return (
     <section
@@ -126,6 +142,9 @@ export function EnsembleTimeline({
             key={row.id}
             row={row}
             pxPerSec={pxPerSec}
+            visibleCycles={cycles}
+            motion={motion}
+            zoomStop={zoomStop}
             playheadX={playheadX}
             laneWidth={width}
             onSelect={onSelectLane}
@@ -146,6 +165,9 @@ export function EnsembleTimeline({
 type TimelineLaneProps = {
   row: RowData
   pxPerSec: number
+  visibleCycles: number
+  motion: TimelineMotion
+  zoomStop: number
   playheadX: number
   laneWidth: number
   onSelect?: (id: string) => void
@@ -154,19 +176,23 @@ type TimelineLaneProps = {
 function TimelineLane({
   row,
   pxPerSec,
+  visibleCycles,
+  motion,
+  zoomStop,
   playheadX,
   laneWidth,
   onSelect,
 }: TimelineLaneProps) {
   const { phase, lap } = useTapeLanePhase(row.loop, row.running)
+  const { lapFlashKey } = useLoopProgress(row.loop, row.running)
   const laneRef = useRef<HTMLLIElement>(null)
 
   // On each downbeat, pulse the whole lane border (like the Reels row) and
-  // bloom the playhead. `lap` starts at 0 on (re)mount, so neither fires when
-  // the view is first shown mid-playback.
-  const showDownbeat = row.running && lap > 0
+  // bloom the playhead. `lapFlashKey` resets on (re)mount so toggling views
+  // mid-playback does not replay the current lap's flash.
+  const showDownbeat = row.running && lapFlashKey > 0
   useEffect(() => {
-    if (lap === 0) {
+    if (!row.running || lapFlashKey === 0) {
       return
     }
     const el = laneRef.current
@@ -176,10 +202,21 @@ function TimelineLane({
     el.classList.remove('ensemble-timeline__lane--lap')
     void el.offsetWidth
     el.classList.add('ensemble-timeline__lane--lap')
-  }, [lap])
+  }, [lapFlashKey, row.running])
 
-  const tileWidth = row.period * pxPerSec
-  const melodyWidth = Math.min(row.melodyWindow, row.period) * pxPerSec
+  const tileWidth = laneTileWidth({
+    period: row.period,
+    pxPerSec,
+    laneWidth,
+    visibleCycles,
+    motion,
+    zoomStop,
+  })
+  const melodyWidth = laneMelodyWidth({
+    melodyWindow: row.melodyWindow,
+    period: row.period,
+    tileWidth,
+  })
   // Tiles are indexed by absolute lap so a tile keeps its identity (and any
   // in-flight note flash) when the playhead crosses the seam, instead of
   // being re-purposed for the next lap mid-glow. The strip transform is
@@ -268,7 +305,7 @@ function TimelineLane({
       ) : null}
       {showDownbeat ? (
         <span
-          key={lap}
+          key={lapFlashKey}
           className="ensemble-timeline__downbeat"
           style={{ left: `${playheadX}px` }}
           aria-hidden

@@ -60,6 +60,8 @@ describe('EnsembleTimeline seam behavior', () => {
     let progress = 0.9
     const loop = {
       getProgress: () => progress,
+      isTesting: () => false,
+      getLoopTimeSec: () => progress * (pattern.loopDurationMs / 1000),
     } as unknown as TapeLoop
     const loops = [{ pattern, loop }] as unknown as DemoLoop[]
 
@@ -67,6 +69,8 @@ describe('EnsembleTimeline seam behavior', () => {
       <EnsembleTimeline
         loops={loops}
         runningById={{ [pattern.id]: true }}
+        motion="fixed-rate"
+        zoomStop={0}
       />,
     )
 
