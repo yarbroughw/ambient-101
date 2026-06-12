@@ -14,12 +14,6 @@ export function EnsembleTitle({ name, onRename }: EnsembleTitleProps) {
 
   useEffect(() => {
     if (!editing) {
-      setDraft(name)
-    }
-  }, [name, editing])
-
-  useEffect(() => {
-    if (!editing) {
       return
     }
     const input = inputRef.current
@@ -71,7 +65,7 @@ export function EnsembleTitle({ name, onRename }: EnsembleTitleProps) {
       type="button"
       className="ensemble-title"
       title={`Rename ${name}`}
-      onClick={() => setEditing(true)}
+      onClick={() => { setDraft(name); setEditing(true) }}
     >
       {name}
     </button>

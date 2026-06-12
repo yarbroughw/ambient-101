@@ -20,12 +20,6 @@ export function LoopLabel({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(label)
 
-  useEffect(() => {
-    if (!editing) {
-      setDraft(label)
-    }
-  }, [label, editing])
-
   useLayoutEffect(() => {
     if (editing) {
       return
@@ -107,6 +101,7 @@ export function LoopLabel({
         aria-label={`Rename ${label}`}
         onClick={() => {
           if (!disabled) {
+            setDraft(label)
             setEditing(true)
           }
         }}

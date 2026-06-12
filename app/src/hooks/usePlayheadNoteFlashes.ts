@@ -71,6 +71,7 @@ export function usePlayheadNoteFlashes(
       return
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFlashes((current) => {
       const next = { ...current }
       for (const key of crossedKeys) {

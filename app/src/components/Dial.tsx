@@ -146,12 +146,6 @@ export function Dial({
     input.select()
   }, [editingReadout])
 
-  useEffect(() => {
-    if (!editingReadout) {
-      setReadoutDraft(readoutText)
-    }
-  }, [readoutText, editingReadout])
-
   function beginReadoutEdit() {
     if (disabled || !editableReadout || editingReadout) {
       return

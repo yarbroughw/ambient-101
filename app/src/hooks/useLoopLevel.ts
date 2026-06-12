@@ -8,8 +8,6 @@ export function useLoopLevel(loop: TapeLoop, active: boolean) {
 
   useEffect(() => {
     if (!active) {
-      setLevel(0)
-      setPeak(0)
       return
     }
 
@@ -30,5 +28,5 @@ export function useLoopLevel(loop: TapeLoop, active: boolean) {
     return () => cancelAnimationFrame(frameId)
   }, [active, loop])
 
-  return { level, peak }
+  return { level: active ? level : 0, peak: active ? peak : 0 }
 }

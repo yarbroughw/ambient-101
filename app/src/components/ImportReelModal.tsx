@@ -34,6 +34,7 @@ export function ImportReelModal({
       return
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setValue('')
     setError(null)
     textareaRef.current?.focus()
