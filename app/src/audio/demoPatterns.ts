@@ -2,6 +2,7 @@ import { compilePatternToSink } from './compilePattern'
 import { LOOP_DELAY_DEFAULT, LOOP_REVERB_DEFAULT } from './loopEffects'
 import { createLoopVoiceForInstrument } from './loopVoice'
 import { normalizeInstrument, type InstrumentId } from './instruments/types'
+import { DEFAULT_LOOP_COLS } from '../lib/gridLayout'
 import { createSchedulableNoteSink } from './schedulableNoteSink'
 import type { LoopPattern } from './patternTypes'
 import type { NoteSink } from './types'
@@ -13,6 +14,7 @@ const DEFAULT_BLANK_BPM = 88
 
 const blankTemplate: Omit<LoopPattern, 'id' | 'label'> = {
   loopDurationMs: 10000,
+  loopCols: DEFAULT_LOOP_COLS,
   bpm: DEFAULT_BLANK_BPM,
   root: ROOT,
   scale: SCALE,
