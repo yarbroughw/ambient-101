@@ -62,6 +62,63 @@ describe('loadLoopPatterns', () => {
     expect(pattern?.loopDurationMs).toBe(5000)
   })
 
+  it('clamps bpm up so a legacy melody window fits its tape (fill <= 1)', () => {
+    // Predates the bpm floor: at 39.8 bpm the 32-col window is ~12.06s but the
+    // tape is only 7s (fill ~1.72), which later clamps at playback and locks
+    // pace. Migration raises bpm to 480/7 so the window equals the loop.
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 3,
+        loops: [
+          {
+            id: 'bass',
+            label: 'bass',
+            bpm: 39.80099502487562,
+            scale: 'harmonic major',
+            octaveShift: -1,
+            instrument: 'bass',
+            volume: 1,
+            root: 'G',
+            loopCols: 32,
+            loopDurationMs: 7000,
+            notes: [],
+          },
+        ],
+      }),
+    )
+    const [pattern] = loadLoopPatterns()
+    // 480 sec-per-loop / 7s tape = 68.57… bpm floor.
+    expect(pattern?.bpm).toBeCloseTo(480 / 7, 6)
+    expect(pattern?.loopDurationMs).toBe(7000)
+  })
+
+  it('leaves bpm untouched when the window already fits the tape', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 3,
+        loops: [
+          {
+            id: 'melody2',
+            label: 'melody2',
+            bpm: 88,
+            scale: 'harmonic major',
+            octaveShift: 0,
+            instrument: 'pluck',
+            volume: 1,
+            root: 'G',
+            loopCols: 32,
+            loopDurationMs: 10000,
+            notes: [],
+          },
+        ],
+      }),
+    )
+    const [pattern] = loadLoopPatterns()
+    expect(pattern?.bpm).toBe(88)
+  })
+
   it('loads legacy array format and migrates second-based notes', () => {
     localStorage.setItem(
       STORAGE_KEY,

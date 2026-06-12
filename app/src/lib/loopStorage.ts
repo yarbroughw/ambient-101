@@ -1,7 +1,12 @@
 import { LOOP_DELAY_DEFAULT, LOOP_REVERB_DEFAULT } from '../audio/loopEffects'
 import type { LoopPattern, PatternNote } from '../audio/patternTypes'
 import { normalizeInstrument } from '../audio/instruments/types'
-import { clampLoopCols, DEFAULT_LOOP_COLS, migrateLegacyNote } from './gridLayout'
+import {
+  clampLoopCols,
+  DEFAULT_LOOP_COLS,
+  migrateLegacyNote,
+  minBpmForLoopDuration,
+} from './gridLayout'
 import { normalizePatternTonality, normalizeRoot } from './scaleSteps'
 
 const STORAGE_KEY = 'ambient-101:loops'
@@ -101,10 +106,23 @@ function normalizePattern(
   pattern: Omit<LoopPattern, 'loopCols'> & { loopCols?: number },
 ): LoopPattern {
   const tonality = normalizePatternTonality(pattern.root, pattern.scale)
+  const loopCols = clampLoopCols(pattern.loopCols ?? DEFAULT_LOOP_COLS)
+
+  // Legacy reels predate the bpm floor: a melody window longer than its tape
+  // (fill > 1) is now invalid, so applyPlaybackTiming clamps the played period
+  // up to fit. That desyncs the timeline (tile width from stored period, scroll
+  // rate from the clamped one → parallax) and locks global pace (every step
+  // fails timingMatchesScale). Clamp bpm up so the window fits the loop,
+  // preserving each reel's loop length and its phase relationships.
+  const bpm = Math.max(
+    pattern.bpm,
+    minBpmForLoopDuration(pattern.loopDurationMs / 1000, loopCols),
+  )
 
   return {
     ...pattern,
-    loopCols: clampLoopCols(pattern.loopCols ?? DEFAULT_LOOP_COLS),
+    loopCols,
+    bpm,
     root: normalizeRoot(tonality.root),
     scale: tonality.scale,
     instrument: normalizeInstrument(pattern.instrument),
