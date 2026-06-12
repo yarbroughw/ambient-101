@@ -2,6 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import type { PatternNote } from '../audio/patternTypes'
 import { noteKey, noteStartTime } from '../lib/gridLayout'
 
+// Heard playhead advances a few ms to tens of ms per frame after latency
+// unclamps; a single-frame jump past this is a mid-playback mount, not the
+// downbeat at column 0.
+const MAX_DOWNBEAT_CROSS_JUMP_SEC = 0.5
+
 function playheadCrossedNote(
   prevTimeSec: number,
   nextTimeSec: number,
@@ -9,6 +14,9 @@ function playheadCrossedNote(
   periodSec: number,
 ): boolean {
   if (nextTimeSec >= prevTimeSec) {
+    if (noteStartSec === 0 && prevTimeSec === 0 && nextTimeSec > 0) {
+      return nextTimeSec - prevTimeSec <= MAX_DOWNBEAT_CROSS_JUMP_SEC
+    }
     return noteStartSec > prevTimeSec && noteStartSec <= nextTimeSec
   }
 
