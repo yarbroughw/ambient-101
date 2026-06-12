@@ -53,7 +53,7 @@ export function EnsembleSyncLabel({
 
   if (runningLoops.length < 2) {
     return (
-      <p className="ensemble-sync-label">{formatSyncDuration(cycleSec)}</p>
+      <p className="ensemble-sync-label">{'resync in '}{formatSyncDuration(cycleSec)}</p>
     )
   }
 
@@ -73,6 +73,7 @@ export function EnsembleSyncLabel({
 
   return (
     <p className="ensemble-sync-label">
+      {'resync in '}
       <button
         type="button"
         className="ensemble-sync-label__toggle"
