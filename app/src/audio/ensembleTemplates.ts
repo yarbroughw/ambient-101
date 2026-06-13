@@ -14,7 +14,7 @@ export type EnsembleTemplate = {
   loops: LoopPattern[]
 }
 
-const templateModules = import.meta.glob('../ensembles/*.json', {
+const templateModules = import.meta.glob('../presets/ensembles/*.json', {
   eager: true,
   import: 'default',
 }) as Record<string, unknown>
@@ -33,15 +33,22 @@ export function parseEnsembleTemplateBody(
   }
 
   const body = data as Record<string, unknown>
-  if (typeof body.label !== 'string' || body.label.length === 0) {
+  // Accept an exported ensemble verbatim: its `name` stands in for both the
+  // dropdown label and the suggested ensemble name when those aren't set.
+  const name = typeof body.name === 'string' ? body.name : undefined
+  const label =
+    typeof body.label === 'string' && body.label.length > 0 ? body.label : name
+  if (!label) {
     return null
   }
-  if (typeof body.suggestedName !== 'string' || body.suggestedName.length === 0) {
+  const suggestedName =
+    typeof body.suggestedName === 'string' && body.suggestedName.length > 0
+      ? body.suggestedName
+      : label
+  if (body.description !== undefined && typeof body.description !== 'string') {
     return null
   }
-  if (typeof body.description !== 'string') {
-    return null
-  }
+  const description = typeof body.description === 'string' ? body.description : ''
   if (!Array.isArray(body.loops)) {
     return null
   }
@@ -63,9 +70,9 @@ export function parseEnsembleTemplateBody(
 
   return {
     id,
-    label: body.label,
-    description: body.description,
-    suggestedName: body.suggestedName,
+    label,
+    description,
+    suggestedName,
     paceScale,
     loops,
   }

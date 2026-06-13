@@ -19,7 +19,7 @@ function templateBody(overrides: Record<string, unknown> = {}) {
 describe('loadEnsembleTemplatesFromModules', () => {
   it('loads templates from JSON modules keyed by filename', () => {
     const templates = loadEnsembleTemplatesFromModules({
-      '../ensembles/workshop-starter.json': templateBody(),
+      '../presets/ensembles/workshop-starter.json': templateBody(),
     })
 
     expect(templates).toHaveLength(1)
@@ -29,17 +29,33 @@ describe('loadEnsembleTemplatesFromModules', () => {
 
   it('sorts templates by label', () => {
     const templates = loadEnsembleTemplatesFromModules({
-      '../ensembles/b.json': templateBody({ label: 'beta' }),
-      '../ensembles/a.json': templateBody({ label: 'alpha' }),
+      '../presets/ensembles/b.json': templateBody({ label: 'beta' }),
+      '../presets/ensembles/a.json': templateBody({ label: 'alpha' }),
     })
 
     expect(templates.map((template) => template.label)).toEqual(['alpha', 'beta'])
   })
 
+  it('accepts an exported ensemble, using its name as label and suggested name', () => {
+    const templates = loadEnsembleTemplatesFromModules({
+      '../presets/ensembles/airports.json': {
+        version: 1,
+        name: 'airports',
+        paceScale: 1,
+        loops: [createTestPattern({ id: 'loop', label: 'loop' })],
+      },
+    })
+
+    expect(templates).toHaveLength(1)
+    expect(templates[0]?.label).toBe('airports')
+    expect(templates[0]?.suggestedName).toBe('airports')
+    expect(templates[0]?.description).toBe('')
+  })
+
   it('rejects templates whose embedded reels fail to parse', () => {
     const templates = loadEnsembleTemplatesFromModules({
-      '../ensembles/missing-loops.json': { ...templateBody(), loops: undefined },
-      '../ensembles/bad-loop.json': templateBody({ loops: [{ label: 'broken' }] }),
+      '../presets/ensembles/missing-loops.json': { ...templateBody(), loops: undefined },
+      '../presets/ensembles/bad-loop.json': templateBody({ loops: [{ label: 'broken' }] }),
     })
 
     expect(templates).toEqual([])

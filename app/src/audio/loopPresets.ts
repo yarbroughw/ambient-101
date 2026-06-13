@@ -9,7 +9,7 @@ export type LoopPreset = {
   template: Omit<LoopPattern, 'id' | 'label'>
 }
 
-const presetModules = import.meta.glob('../presets/*.json', {
+const presetModules = import.meta.glob('../presets/reels/*.json', {
   eager: true,
   import: 'default',
 }) as Record<string, unknown>

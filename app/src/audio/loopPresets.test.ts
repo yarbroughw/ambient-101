@@ -15,7 +15,7 @@ describe('loadLoopPresetsFromModules', () => {
     const { id: _id, label: _label, ...template } = body
 
     const presets = loadLoopPresetsFromModules({
-      '../presets/warm-pad.json': template,
+      '../presets/reels/warm-pad.json': template,
     })
 
     expect(presets).toEqual([
@@ -41,7 +41,7 @@ describe('loadLoopPresetsFromModules', () => {
 
   it('uses the JSON label when provided', () => {
     const presets = loadLoopPresetsFromModules({
-      '../presets/drone.json': {
+      '../presets/reels/drone.json': {
         label: 'low drone',
         loopDurationMs: 12000,
         bpm: 60,
@@ -61,7 +61,7 @@ describe('loadLoopPresetsFromModules', () => {
 
   it('skips invalid preset files', () => {
     const presets = loadLoopPresetsFromModules({
-      '../presets/broken.json': { label: 'broken' },
+      '../presets/reels/broken.json': { label: 'broken' },
     })
 
     expect(presets).toEqual([])
