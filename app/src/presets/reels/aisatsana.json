@@ -1,0 +1,46 @@
+{
+  "id": "loop",
+  "label": "aisatsana",
+  "bpm": 88,
+  "root": "C",
+  "scale": "major",
+  "octaveShift": -1,
+  "instrument": "keys",
+  "volume": 1,
+  "reverb": 0.67,
+  "delay": 0,
+  "notes": [
+    {
+      "scaleStep": 2,
+      "startCol": 0,
+      "spanCols": 3,
+      "velocity": 0.7
+    },
+    {
+      "scaleStep": 4,
+      "startCol": 4,
+      "spanCols": 3,
+      "velocity": 0.7
+    },
+    {
+      "scaleStep": 0,
+      "startCol": 8,
+      "spanCols": 3,
+      "velocity": 0.7
+    },
+    {
+      "scaleStep": 7,
+      "startCol": 12,
+      "spanCols": 3,
+      "velocity": 0.7
+    },
+    {
+      "scaleStep": 6,
+      "startCol": 16,
+      "spanCols": 3,
+      "velocity": 0.7
+    }
+  ],
+  "loopCols": 32,
+  "loopDurationMs": 10000
+}
