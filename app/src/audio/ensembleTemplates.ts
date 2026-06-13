@@ -1,6 +1,6 @@
 import { DEFAULT_PACE_SCALE } from '../lib/globalPace'
+import { parseLoopPatternsValue } from '../lib/loopStorage'
 import type { LoopPattern } from './patternTypes'
-import { createPatternFromPreset, getLoopPreset } from './loopPresets'
 import { nextAvailableIdAndLabel } from './demoPatterns'
 
 export type EnsembleTemplateId = string
@@ -11,7 +11,7 @@ export type EnsembleTemplate = {
   description: string
   suggestedName: string
   paceScale?: number
-  presetIds?: string[]
+  loops: LoopPattern[]
 }
 
 const templateModules = import.meta.glob('../ensembles/*.json', {
@@ -42,16 +42,15 @@ export function parseEnsembleTemplateBody(
   if (typeof body.description !== 'string') {
     return null
   }
+  if (!Array.isArray(body.loops)) {
+    return null
+  }
 
-  let presetIds: string[] | undefined
-  if (body.presetIds !== undefined) {
-    if (
-      !Array.isArray(body.presetIds) ||
-      !body.presetIds.every((entry) => typeof entry === 'string')
-    ) {
-      return null
-    }
-    presetIds = [...body.presetIds]
+  const loops = parseLoopPatternsValue(body.loops)
+  // Reject the template outright if any embedded reel fails to parse, rather
+  // than silently dropping reels and instantiating a partial ensemble.
+  if (loops.length !== body.loops.length) {
+    return null
   }
 
   let paceScale: number | undefined
@@ -67,8 +66,8 @@ export function parseEnsembleTemplateBody(
     label: body.label,
     description: body.description,
     suggestedName: body.suggestedName,
-    presetIds,
     paceScale,
+    loops,
   }
 }
 
@@ -98,23 +97,25 @@ const TEMPLATE_BY_ID = new Map(
 
 export const ENSEMBLE_TEMPLATES = LOADED_TEMPLATES
 
-function instantiateFromPresetIds(presetIds: string[]): LoopPattern[] {
-  const loops: LoopPattern[] = []
+// Embedded reels carry their authored labels; reassign fresh ids and dedupe
+// labels so a freshly instantiated ensemble has no collisions.
+function instantiateLoops(loops: LoopPattern[]): LoopPattern[] {
+  const result: LoopPattern[] = []
 
-  for (const presetId of presetIds) {
-    const preset = getLoopPreset(presetId)
-    if (!preset) {
-      throw new Error(`Ensemble template references unknown preset "${presetId}"`)
-    }
-
+  for (const loop of loops) {
     const { id, label } = nextAvailableIdAndLabel(
-      preset.label,
-      loops.map((pattern) => ({ pattern })),
+      loop.label,
+      result.map((pattern) => ({ pattern })),
     )
-    loops.push(createPatternFromPreset(presetId, id, label))
+    result.push({
+      ...loop,
+      id,
+      label,
+      notes: loop.notes.map((note) => ({ ...note })),
+    })
   }
 
-  return loops
+  return result
 }
 
 export function instantiateEnsembleTemplate(templateId: EnsembleTemplateId): {
@@ -127,10 +128,8 @@ export function instantiateEnsembleTemplate(templateId: EnsembleTemplateId): {
     throw new Error(`Unknown ensemble template "${templateId}"`)
   }
 
-  const loops = instantiateFromPresetIds(template.presetIds ?? [])
-
   return {
-    loops,
+    loops: instantiateLoops(template.loops),
     paceScale: template.paceScale ?? DEFAULT_PACE_SCALE,
     suggestedName: template.suggestedName,
   }
