@@ -45,7 +45,7 @@ export function EnsembleSyncLabel({
   )
 
   if (loops.length < 2) {
-    return null
+    return <p className="ensemble-sync-label" aria-hidden="true" />
   }
 
   const cycleSec = ensembleCycleMs(periodsMs) / 1000

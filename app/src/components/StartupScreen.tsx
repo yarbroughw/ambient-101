@@ -252,7 +252,7 @@ export function StartupScreen({ onOpen }: StartupScreenProps) {
               disabled={busyId != null}
               onClick={() => setTemplatesOpen((open) => !open)}
             >
-              templates
+              presets
               <span className="startup-templates__caret" aria-hidden>
                 ▾
               </span>
