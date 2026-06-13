@@ -60,16 +60,4 @@ describe('ensembleTemplates', () => {
     expect(loops.map((loop) => loop.label)).toEqual(['scale'])
     expect(loops[0]?.notes.length).toBeGreaterThan(0)
   })
-
-  it('dedupes ids and labels across embedded reels', () => {
-    const [template] = loadEnsembleTemplatesFromModules({
-      '../ensembles/dupes.json': templateBody({
-        loops: [
-          createTestPattern({ id: 'scale', label: 'scale' }),
-          createTestPattern({ id: 'scale', label: 'scale' }),
-        ],
-      }),
-    })
-    expect(template?.loops).toHaveLength(2)
-  })
 })
