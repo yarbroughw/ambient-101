@@ -6,6 +6,14 @@
   --color-active: #6858c8;
   --color-loop-bg: #ddd4c4;
   --color-mini-melody-bg: #aeb8c8;
+  /* Silent-tape tail in the timeline: the melody-track colour muted halfway
+     toward the palette's neutral mid-tone (--color-outline). Outline is darker
+     than the track in light palettes and lighter than it in dark ones, so this
+     single rule darkens light-mode tails and lifts dark-mode tails to a dim
+     haze — both end up low-contrast and recessed, in the palette's own hue,
+     with no warm/cool clash. Derived from the two tokens so it tracks every
+     palette's override; the inner var()s resolve in the palette's scope. */
+  --color-timeline-tail: color-mix(in srgb, var(--color-mini-melody-bg), var(--color-outline));
   --color-canvas-bg: #9ea8b8;
   --color-outline: #707888;
   --color-labels: #585868;

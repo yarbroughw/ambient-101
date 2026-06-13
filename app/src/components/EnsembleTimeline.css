@@ -81,6 +81,26 @@
   bottom: 0;
 }
 
+/* The silent tail after the melody window: blank tape running to the next
+   loop seam. Cool, slightly recessed fill (see --color-timeline-tail) so the
+   silence sinks back rather than reading as a warm gap. The faint horizontal
+   hairlines evoke magnetic tape passing the head; being parallel to the tape's
+   travel they stay still as the strip scrolls (no barber-pole shimmer). `left`
+   is set inline to the melody width; it runs to the tile's right edge. */
+.ensemble-timeline__tile-tail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 3px,
+      color-mix(in srgb, var(--color-outline) 18%, transparent) 3px 4px
+    ),
+    var(--color-timeline-tail);
+}
+
 .ensemble-timeline__tile-melody .mini-melody,
 .ensemble-timeline__tile-melody .mini-melody__track {
   height: 100%;

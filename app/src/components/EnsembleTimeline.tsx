@@ -247,6 +247,12 @@ function TimelineLane({
           style={{ left: `${i * tileWidth}px`, width: `${tileWidth}px` }}
         >
           <div className="ensemble-timeline__seam" />
+          {melodyWidth < tileWidth ? (
+            <div
+              className="ensemble-timeline__tile-tail"
+              style={{ left: `${melodyWidth}px` }}
+            />
+          ) : null}
           <div
             className="ensemble-timeline__tile-melody"
             style={{ width: `${melodyWidth}px` }}
