@@ -31,6 +31,7 @@ import {
   resizeNoteEnd,
   resizeNoteStart,
   rowAtClientY,
+  rowAtClientYMeasured,
   stepDurationSec,
 } from './gridLayout'
 
@@ -297,6 +298,23 @@ describe('rowAtClientY', () => {
   it('returns null below the last row', () => {
     const dataTop = 100 + 14 + 2
     expect(rowAtClientY(dataTop + 100, { top: 100 }, metrics)).toBeNull()
+  })
+})
+
+describe('rowAtClientYMeasured', () => {
+  const rowCount = 23
+  const dataTop = 200
+  const rowHeight = 14
+
+  it('maps the bottom two rows correctly', () => {
+    const metrics = { dataTop, rowHeight, rowCount }
+    expect(rowAtClientYMeasured(dataTop + 21 * rowHeight + 6, metrics)).toBe(21)
+    expect(rowAtClientYMeasured(dataTop + 22 * rowHeight + 6, metrics)).toBe(22)
+  })
+
+  it('returns null below the last row', () => {
+    const metrics = { dataTop, rowHeight, rowCount }
+    expect(rowAtClientYMeasured(dataTop + rowCount * rowHeight, metrics)).toBeNull()
   })
 })
 

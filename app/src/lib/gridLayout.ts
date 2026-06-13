@@ -190,12 +190,31 @@ export function rowAtClientY(
 ): number | null {
   const { cellSize, gap, headerHeight, rowCount } = metrics
   const dataTop = gridRect.top + headerHeight + gap
+  return rowAtClientYMeasured(clientY, {
+    dataTop,
+    rowHeight: cellSize + gap,
+    rowCount,
+  })
+}
+
+export type MeasuredRowMetrics = {
+  dataTop: number
+  rowHeight: number
+  rowCount: number
+}
+
+/** Map pointer Y to a row index using measured layout (cell top + stride). */
+export function rowAtClientYMeasured(
+  clientY: number,
+  metrics: MeasuredRowMetrics,
+): number | null {
+  const { dataTop, rowHeight, rowCount } = metrics
   const relativeY = clientY - dataTop
   if (relativeY < 0) {
     return null
   }
 
-  const rowIndex = Math.floor(relativeY / (cellSize + gap))
+  const rowIndex = Math.floor(relativeY / rowHeight)
   if (rowIndex < 0 || rowIndex >= rowCount) {
     return null
   }

@@ -15,14 +15,12 @@ import {
   removeNote,
   resizeNoteEnd,
   resizeNoteStart,
-  rowAtClientY,
+  rowAtClientYMeasured,
   type GridPointerMetrics,
 } from '../lib/gridLayout'
 import { GRID_SCALE_STEP_MAX, GRID_SCALE_STEP_MIN, gridScaleRows, stepToPitch } from '../lib/scaleSteps'
 import { usePlayheadNoteFlashes } from '../hooks/usePlayheadNoteFlashes'
 import './MelodyGrid.css'
-
-const GRID_HEADER_HEIGHT = 14
 
 type MelodyGridProps = {
   pattern: Pick<LoopPattern, 'notes' | 'root' | 'scale' | 'octaveShift' | 'instrument'>
@@ -531,22 +529,27 @@ export function MelodyGrid({
     [pointerMetrics],
   )
 
-  const rowAtPointer = useCallback(
-    (clientY: number): number | null => {
-      const grid = gridRef.current
-      const metrics = pointerMetrics()
-      if (!grid || !metrics) {
-        return null
-      }
+  const rowAtPointer = useCallback((clientY: number): number | null => {
+    const grid = gridRef.current
+    if (!grid) {
+      return null
+    }
 
-      return rowAtClientY(clientY, grid.getBoundingClientRect(), {
-        ...metrics,
-        headerHeight: GRID_HEADER_HEIGHT,
-        rowCount: rowsRef.current.length,
-      })
-    },
-    [pointerMetrics],
-  )
+    const firstCell = grid.querySelector<HTMLElement>('[data-grid-cell]')
+    if (!firstCell) {
+      return null
+    }
+
+    const cellRect = firstCell.getBoundingClientRect()
+    const styles = getComputedStyle(grid)
+    const gap = Number.parseFloat(styles.gap) || 1
+
+    return rowAtClientYMeasured(clientY, {
+      dataTop: cellRect.top,
+      rowHeight: cellRect.height + gap,
+      rowCount: rowsRef.current.length,
+    })
+  }, [])
 
   const handleCellPointerDown = useCallback(
     (
@@ -631,8 +634,14 @@ export function MelodyGrid({
       event.stopPropagation()
 
       const col = columnAtPointer(event.clientX)
-      const rowIndex = rowAtPointer(event.clientY)
-      if (col === null || rowIndex === null) {
+      if (col === null) {
+        return
+      }
+
+      const rowIndex = rowsRef.current.findIndex(
+        (row) => row.scaleStep === note.scaleStep,
+      )
+      if (rowIndex < 0) {
         return
       }
 
