@@ -3,7 +3,7 @@ import { PluckPolySynth } from './pluckPolySynth'
 import { INSTRUMENT_RECIPES } from './recipes'
 import type { InstrumentId } from './types'
 
-export type InstrumentPolySynth = Tone.PolySynth | PluckPolySynth
+export type InstrumentPolySynth = Tone.PolySynth<any> | PluckPolySynth
 
 export function createInstrumentPolySynth(instrument: InstrumentId): InstrumentPolySynth {
   const recipe = INSTRUMENT_RECIPES[instrument]
