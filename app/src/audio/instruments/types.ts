@@ -6,6 +6,13 @@ export const INSTRUMENT_IDS = [
   'organ',
   'keys',
   'glass',
+  'strings',
+  'reed',
+  'marimba',
+  'harp',
+  'koto',
+  'gong',
+  'brass',
 ] as const
 
 export type InstrumentId = (typeof INSTRUMENT_IDS)[number]

@@ -18,6 +18,16 @@ export function createInstrumentPolySynth(instrument: InstrumentId): InstrumentP
       // PluckSynth is not Monophonic, so Tone.PolySynth cannot voice it.
       return new PluckPolySynth(recipe.options)
     }
+    case 'am': {
+      const synth = new Tone.PolySynth(Tone.AMSynth)
+      synth.set(recipe.options as Tone.AMSynthOptions)
+      return synth
+    }
+    case 'duo': {
+      const synth = new Tone.PolySynth(Tone.DuoSynth)
+      synth.set(recipe.options as Tone.DuoSynthOptions)
+      return synth
+    }
     default: {
       const synth = new Tone.PolySynth(Tone.Synth)
       synth.set(recipe.options as Tone.SynthOptions)

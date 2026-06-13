@@ -55,10 +55,56 @@ type PluckInstrumentRecipe = BaseRecipe & {
   }
 }
 
+type AmInstrumentRecipe = BaseRecipe & {
+  kind: 'am'
+  options: {
+    harmonicity: number
+    oscillator: { type: 'sine' | 'triangle' }
+    envelope: {
+      attack: number
+      decay: number
+      sustain: number
+      release: number
+    }
+    modulation: { type: 'sine' | 'square' }
+    modulationEnvelope: {
+      attack: number
+      decay: number
+      sustain: number
+      release: number
+    }
+    volume: number
+  }
+}
+
+type DuoVoiceRecipe = {
+  oscillator: { type: 'sawtooth' | 'square' | 'triangle' | 'sine' }
+  envelope: {
+    attack: number
+    decay: number
+    sustain: number
+    release: number
+  }
+}
+
+type DuoInstrumentRecipe = BaseRecipe & {
+  kind: 'duo'
+  options: {
+    harmonicity: number
+    vibratoAmount: number
+    vibratoRate: number
+    voice0: DuoVoiceRecipe
+    voice1: DuoVoiceRecipe
+    volume: number
+  }
+}
+
 export type InstrumentRecipe =
   | SynthInstrumentRecipe
   | FmInstrumentRecipe
   | PluckInstrumentRecipe
+  | AmInstrumentRecipe
+  | DuoInstrumentRecipe
 
 export const INSTRUMENT_RECIPES: Record<InstrumentId, InstrumentRecipe> = {
   pad: {
@@ -145,5 +191,121 @@ export const INSTRUMENT_RECIPES: Record<InstrumentId, InstrumentRecipe> = {
     filterFrequency: 4200,
     outputGain: 0.46,
     previewGain: 0.44,
+  },
+  // Lush detuned saw pair. Two sustained voices stack, so it is kept well
+  // below the percussive voices to avoid dominating a layered ensemble.
+  strings: {
+    kind: 'duo',
+    options: {
+      harmonicity: 1.005,
+      vibratoAmount: 0.08,
+      vibratoRate: 4.5,
+      voice0: {
+        oscillator: { type: 'sawtooth' },
+        envelope: { attack: 0.3, decay: 0.2, sustain: 0.85, release: 2.5 },
+      },
+      voice1: {
+        oscillator: { type: 'sawtooth' },
+        envelope: { attack: 0.4, decay: 0.2, sustain: 0.85, release: 2.8 },
+      },
+      volume: -12,
+    },
+    filterFrequency: 2200,
+    outputGain: 0.42,
+    previewGain: 0.42,
+  },
+  // Hollow, reedy sustained tone (clarinet-ish) via amplitude modulation.
+  reed: {
+    kind: 'am',
+    options: {
+      harmonicity: 2,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.08, decay: 0.2, sustain: 0.85, release: 0.6 },
+      modulation: { type: 'square' },
+      modulationEnvelope: { attack: 0.05, decay: 0.1, sustain: 0.6, release: 0.4 },
+      volume: 0,
+    },
+    filterFrequency: 2400,
+    outputGain: 0.5,
+    previewGain: 0.49,
+  },
+  // Woody, short FM mallet. Integer harmonicity keeps it harmonic.
+  marimba: {
+    kind: 'fm',
+    options: {
+      harmonicity: 1,
+      modulationIndex: 4,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.001, decay: 0.4, sustain: 0, release: 0.4 },
+      modulation: { type: 'sine' },
+      modulationEnvelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.2 },
+      volume: -5,
+    },
+    filterFrequency: 2200,
+    outputGain: 0.52,
+    previewGain: 0.52,
+  },
+  // Soft plucked string, allowed to ring (Karplus-Strong).
+  harp: {
+    kind: 'pluck',
+    options: {
+      attackNoise: 0.7,
+      dampening: 3200,
+      resonance: 0.96,
+      hold: 0.5,
+      release: 2,
+      volume: 6,
+    },
+    filterFrequency: 3500,
+    outputGain: 0.5,
+    previewGain: 0.5,
+  },
+  // Brighter, more sharply plucked string than the harp.
+  koto: {
+    kind: 'pluck',
+    options: {
+      attackNoise: 1.5,
+      dampening: 4500,
+      resonance: 0.9,
+      hold: 0.3,
+      release: 1.4,
+      volume: 3,
+    },
+    filterFrequency: 4200,
+    outputGain: 0.48,
+    previewGain: 0.48,
+  },
+  // Dark, inharmonic, long-decaying metallic FM tone. Long tails accumulate
+  // energy across a loop, so it is held quieter than the bell.
+  gong: {
+    kind: 'fm',
+    options: {
+      harmonicity: 3.3,
+      modulationIndex: 18,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.002, decay: 3, sustain: 0, release: 3 },
+      modulation: { type: 'sine' },
+      modulationEnvelope: { attack: 0.002, decay: 1.5, sustain: 0, release: 1.5 },
+      volume: -6,
+    },
+    filterFrequency: 3000,
+    outputGain: 0.46,
+    previewGain: 0.44,
+  },
+  // Bright sustained FM brass; modulation sustains so the tone stays brassy.
+  brass: {
+    kind: 'fm',
+    options: {
+      harmonicity: 1,
+      modulationIndex: 6,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.15, decay: 0.2, sustain: 0.8, release: 0.6 },
+      modulation: { type: 'sine' },
+      modulationEnvelope: { attack: 0.2, decay: 0.2, sustain: 0.7, release: 0.5 },
+      volume: -5,
+    },
+    filterFrequency: 2600,
+    outputGain: 0.48,
+    previewGain: 0.47,
   },
 }
