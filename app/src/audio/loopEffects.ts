@@ -1,5 +1,5 @@
 import * as Tone from 'tone'
-import { getMasterInput } from './globalEffects'
+import { getMasterInput, getReverbSend } from './globalEffects'
 
 export const LOOP_REVERB_DEFAULT = 0.75
 export const LOOP_DELAY_DEFAULT = 0.3
@@ -24,11 +24,8 @@ export function createLoopEffectsBus(
 
   const input = new Tone.Gain(1)
   const dry = new Tone.Gain(1)
-  const reverb = new Tone.Reverb({
-    decay: 6,
-    preDelay: 0.03,
-    wet: 1,
-  })
+  // Wet send into the shared reverb (see globalEffects). The crossfade is kept:
+  // dry falls as the send rises, so reverb=1 is fully wet, matching the old bus.
   const reverbSend = new Tone.Gain(reverbLevel)
   const delay = new Tone.PingPongDelay({
     delayTime: 0.45,
@@ -39,16 +36,13 @@ export function createLoopEffectsBus(
   const masterInput = getMasterInput()
 
   input.connect(dry)
-  input.connect(reverb)
-  reverb.connect(reverbSend)
+  input.connect(reverbSend)
+  reverbSend.connect(getReverbSend())
   input.connect(delay)
   delay.connect(delaySend)
 
   dry.connect(masterInput)
-  reverbSend.connect(masterInput)
   delaySend.connect(masterInput)
-
-  void reverb.generate()
 
   function refreshMix(): void {
     const t = Tone.now()
@@ -74,15 +68,14 @@ export function createLoopEffectsBus(
       refreshMix()
     },
     dispose() {
+      // The shared reverb persists; only this reel's send chain is torn down.
       input.disconnect()
       dry.disconnect()
-      reverb.disconnect()
       reverbSend.disconnect()
       delay.disconnect()
       delaySend.disconnect()
       input.dispose()
       dry.dispose()
-      reverb.dispose()
       reverbSend.dispose()
       delay.dispose()
       delaySend.dispose()
