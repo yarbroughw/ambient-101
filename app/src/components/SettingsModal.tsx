@@ -104,8 +104,7 @@ export function SettingsModal({
                   lock melody tempo
                 </span>
                 <span className="settings-modal__hint">
-                  keep melody length when changing tape or pace — for phasing
-                  with other loops.
+                  keep melody length when changing tape or pace
                 </span>
               </span>
             </label>
