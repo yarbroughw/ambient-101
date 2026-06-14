@@ -91,6 +91,12 @@ describe('stepToPitch', () => {
   it('applies octave shift across scale degrees', () => {
     expect(stepToPitch({ root: 'C', scale: 'minor' }, 0, 1)).toBe('C5')
   })
+
+  it('steps by semitone in chromatic scale', () => {
+    expect(stepToPitch({ root: 'C', scale: 'chromatic' }, 0)).toBe('C4')
+    expect(stepToPitch({ root: 'C', scale: 'chromatic' }, 1)).toBe('Db4')
+    expect(stepToPitch({ root: 'C', scale: 'chromatic' }, -1)).toBe('B3')
+  })
 })
 
 describe('formatScaleStepLabel', () => {

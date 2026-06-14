@@ -31,6 +31,7 @@ export const DEFAULT_ROOT: WorkshopRoot = 'C'
 export const WORKSHOP_SCALE_TYPES = [
   'minor',
   'major',
+  'chromatic',
   'dorian',
   'phrygian',
   'lydian',
@@ -153,6 +154,7 @@ export function scaleTypeLabel(scaleType: string): string {
 const SCALE_TYPE_ABBREV: Record<WorkshopScaleType, string> = {
   minor: 'minor',
   major: 'major',
+  chromatic: 'chromatic',
   dorian: 'dorian',
   phrygian: 'phrygian',
   lydian: 'lydian',
