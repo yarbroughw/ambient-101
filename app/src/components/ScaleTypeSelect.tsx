@@ -66,7 +66,10 @@ export function ScaleTypeSelect({
     }
 
     function update() {
-      const fits = measureEl.scrollWidth <= readoutEl.clientWidth
+      const readout = readoutRef.current
+      const measure = measureRef.current
+      if (!readout || !measure) return
+      const fits = measure.scrollWidth <= readout.clientWidth
       setPreferFullLabel(fits)
     }
 
