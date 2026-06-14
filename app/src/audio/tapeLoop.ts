@@ -7,6 +7,13 @@ import {
 } from './outputLatency'
 import type { TapeLoopCallback } from './types'
 
+// Loops with no explicit shared downbeat still need a small lead so the first
+// callback is scheduled ahead of the clock cursor rather than in the past —
+// otherwise Tone.js skips the first iteration and the loop starts silent. Must
+// exceed one Tone.js clock interval (50ms) plus typical render time. The
+// shared-start path (play all) supplies its own equivalent lead.
+export const DEFAULT_START_LEAD_SEC = 0.15
+
 export class TapeLoop {
   readonly label: string
 
@@ -102,7 +109,7 @@ export class TapeLoop {
     this.clearScheduledNotes()
     this.disposeToneLoop()
 
-    const startAt = atTimeSec ?? Tone.now()
+    const startAt = atTimeSec ?? Tone.now() + DEFAULT_START_LEAD_SEC
     this.toneLoop = new Tone.Loop(this.recording, this.durationSeconds)
     // Tone.Loop runs on the transport timeline; startAt is an audio-clock
     // time, so convert — passing it raw starts the loop late by the

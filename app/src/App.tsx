@@ -66,6 +66,7 @@ import {
   createPatternFromPreset,
   LOOP_PRESETS,
 } from './audio/loopPresets'
+import { DEFAULT_START_LEAD_SEC } from './audio/tapeLoop'
 import type { ImportReelResult } from './components/ImportReelModal'
 import { parseLoopPatternsJson } from './lib/loopStorage'
 import './components/AddLoopControls.css'
@@ -78,10 +79,9 @@ import './components/TapeLoopRow.css'
 import './App.css'
 
 // Shared downbeat scheduled slightly ahead so per-loop setup cost can't
-// stagger the reels' actual starts.
-// Must exceed one Tone.js clock interval (50ms) plus typical React render time
-// so the first Tone.js callback always fires before the scheduled loop start.
-const START_ALL_LEAD_SEC = 0.15
+// stagger the reels' actual starts. Reuses the same lead the single-loop
+// start path applies, so the two can't drift.
+const START_ALL_LEAD_SEC = DEFAULT_START_LEAD_SEC
 
 export default function App() {
   const [audioReady, setAudioReady] = useState(false)
