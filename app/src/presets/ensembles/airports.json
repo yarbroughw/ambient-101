@@ -14,7 +14,7 @@
       "instrument": "keys",
       "volume": 1,
       "reverb": 0.75,
-      "delay": 0.3,
+      "delay": 0,
       "notes": [
         {
           "scaleStep": 0,
@@ -59,6 +59,7 @@
           "velocity": 0.7
         }
       ],
+      "chorus": 0.27,
       "loopDurationMs": 20000
     },
     {
@@ -70,7 +71,7 @@
       "scale": "mixolydian",
       "octaveShift": 1,
       "instrument": "pluck",
-      "volume": 0.88725,
+      "volume": 0.725199951171875,
       "reverb": 0.75,
       "delay": 0.3,
       "notes": [
@@ -127,7 +128,7 @@
       "root": "D",
       "scale": "mixolydian",
       "octaveShift": -2,
-      "instrument": "strings",
+      "instrument": "bass",
       "volume": 0.2635499877929687,
       "reverb": 0.17,
       "delay": 0.3,
@@ -169,8 +170,8 @@
       "octaveShift": 0,
       "instrument": "glass",
       "volume": 0.805900146484375,
-      "reverb": 0.75,
-      "delay": 0.3,
+      "reverb": 0.8,
+      "delay": 0.07,
       "notes": [
         {
           "scaleStep": 0,
@@ -199,11 +200,79 @@
         {
           "scaleStep": 2,
           "startCol": 8,
-          "spanCols": 2,
+          "spanCols": 4,
           "velocity": 0.7
         }
       ],
+      "chorus": 0.07,
+      "attack": 0.76,
       "loopDurationMs": 23300
+    },
+    {
+      "id": "loop5",
+      "label": "loop5",
+      "loopCols": 32,
+      "bpm": 42.96455424274973,
+      "root": "D",
+      "scale": "mixolydian",
+      "octaveShift": 0,
+      "instrument": "bell",
+      "volume": 1,
+      "reverb": 0.75,
+      "delay": 0.16,
+      "notes": [
+        {
+          "scaleStep": 3,
+          "startCol": 0,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 2,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 4,
+          "startCol": 4,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 2,
+          "startCol": 6,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 2,
+          "startCol": 28,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 26,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 3,
+          "startCol": 24,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 3,
+          "startCol": 22,
+          "spanCols": 1,
+          "velocity": 0.7
+        }
+      ],
+      "chorus": 0,
+      "cutoff": 5140,
+      "loopDurationMs": 26600
     }
   ]
 }
