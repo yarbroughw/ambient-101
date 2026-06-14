@@ -11,8 +11,8 @@ import './SettingsModal.css'
 
 type SettingsModalProps = {
   open: boolean
-  paceAffectsMelody: boolean
-  onPaceAffectsMelodyChange: (value: boolean) => void
+  lockMelodyTempo: boolean
+  onLockMelodyTempoChange: (value: boolean) => void
   visualLatencyOffsetMs: number
   onVisualLatencyOffsetMsChange: (value: number) => void
   onClose: () => void
@@ -24,15 +24,15 @@ function formatLatencyMs(sec: number): string {
 
 export function SettingsModal({
   open,
-  paceAffectsMelody,
-  onPaceAffectsMelodyChange,
+  lockMelodyTempo,
+  onLockMelodyTempoChange,
   visualLatencyOffsetMs,
   onVisualLatencyOffsetMsChange,
   onClose,
 }: SettingsModalProps) {
   const titleId = useId()
   const closeRef = useRef<HTMLButtonElement>(null)
-  const paceSettingId = useId()
+  const lockMelodyTempoSettingId = useId()
   const visualLatencySettingId = useId()
   const deviceLatencySec = open ? getOutputLatencySec() : 0
   const totalLatencySec = open ? getTotalVisualLatencySec() : 0
@@ -92,19 +92,20 @@ export function SettingsModal({
             <h3 className="settings-modal__section-title">playback</h3>
             <label className="settings-modal__checkbox">
               <input
-                id={paceSettingId}
+                id={lockMelodyTempoSettingId}
                 type="checkbox"
-                checked={paceAffectsMelody}
+                checked={lockMelodyTempo}
                 onChange={(event) =>
-                  onPaceAffectsMelodyChange(event.target.checked)
+                  onLockMelodyTempoChange(event.target.checked)
                 }
               />
               <span className="settings-modal__checkbox-text">
                 <span className="settings-modal__checkbox-label">
-                  pace affects melody tempo
+                  lock melody tempo
                 </span>
                 <span className="settings-modal__hint">
-                  let the global pace control speed up or slow down melodies.
+                  keep melody length when changing tape or pace — for phasing
+                  with other loops.
                 </span>
               </span>
             </label>

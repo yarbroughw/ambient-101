@@ -95,8 +95,9 @@ export function LoopEditor({
   const fill = melodyFill(playbackLoopDuration, playbackBpm, loopCols)
   const fillMin = minFillForLoopDuration(playbackLoopDuration, loopCols)
   const melodySeconds = melodyWindowDuration(playbackBpm, loopCols)
-  const loopDurationFloor =
-    loopCols < LOOP_COLS_MAX
+  const loopDurationFloor = paceOptions.lockMelodyTempo
+    ? melodyWindowDuration(pattern.bpm, loopCols)
+    : loopCols < LOOP_COLS_MAX
       ? melodyWindowDuration(MELODY_BPM_MAX, loopCols)
       : MIN_LOOP_DURATION
   const displayLoopDurationMin = loopDurationFloor / paceScale
@@ -121,23 +122,31 @@ export function LoopEditor({
     }
 
     const targetPlaybackBpm = bpmForFill(playbackLoopDuration, targetFill, loopCols)
-    const storedBpm = paceOptions.paceAffectsMelody
-      ? (targetPlaybackBpm * 100) / paceHundredths
-      : targetPlaybackBpm
+    const storedBpm = paceOptions.lockMelodyTempo
+      ? targetPlaybackBpm
+      : (targetPlaybackBpm * 100) / paceHundredths
     onBpmChange(
       clampStoredBpm(storedBpm, storedSec, loopCols),
     )
   }
 
-  // Changing the period preserves the fill fraction: a seamless reel stays
-  // seamless, a reel with a tail keeps the same proportion of silence. We do
-  // that by re-deriving bpm from the new period and the current fill.
   function handleLoopDurationChange(displayNext: number) {
     if (!Number.isFinite(displayNext)) {
       return
     }
 
     let storedMs = loopDurationMsFromDisplay(displayNext, paceHundredths)
+
+    if (paceOptions.lockMelodyTempo) {
+      const minMs = loopDurationMsFromDisplay(
+        melodyWindowDuration(pattern.bpm, loopCols),
+        paceHundredths,
+      )
+      storedMs = Math.min(LOOP_DURATION_MAX_MS, Math.max(minMs, storedMs))
+      onLoopTimingChange(storedMs, pattern.bpm)
+      return
+    }
+
     const minPlaybackSec = loopCols < LOOP_COLS_MAX ? 0 : MIN_LOOP_DURATION
     const minMs =
       minPlaybackSec > 0

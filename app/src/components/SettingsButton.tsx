@@ -19,14 +19,14 @@ function GearIcon() {
 
 type SettingsButtonProps = {
   disabled?: boolean
-  paceAffectsMelody: boolean
-  onPaceAffectsMelodyChange: (value: boolean) => void
+  lockMelodyTempo: boolean
+  onLockMelodyTempoChange: (value: boolean) => void
 }
 
 export function SettingsButton({
   disabled = false,
-  paceAffectsMelody,
-  onPaceAffectsMelodyChange,
+  lockMelodyTempo,
+  onLockMelodyTempoChange,
 }: SettingsButtonProps) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [visualLatencyOffsetMs, setVisualLatencyOffsetMs] = useState(
@@ -53,8 +53,8 @@ export function SettingsButton({
       </button>
       <SettingsModal
         open={settingsOpen}
-        paceAffectsMelody={paceAffectsMelody}
-        onPaceAffectsMelodyChange={onPaceAffectsMelodyChange}
+        lockMelodyTempo={lockMelodyTempo}
+        onLockMelodyTempoChange={onLockMelodyTempoChange}
         visualLatencyOffsetMs={visualLatencyOffsetMs}
         onVisualLatencyOffsetMsChange={handleVisualLatencyOffsetMsChange}
         onClose={() => setSettingsOpen(false)}

@@ -8,7 +8,7 @@ import './GlobalPaceControl.css'
 
 type GlobalPaceControlProps = {
   paceScale: number
-  paceAffectsMelody: boolean
+  lockMelodyTempo: boolean
   patterns: LoopPattern[]
   disabled?: boolean
   onPaceScaleChange: (paceScale: number) => void
@@ -16,13 +16,13 @@ type GlobalPaceControlProps = {
 
 export function GlobalPaceControl({
   paceScale,
-  paceAffectsMelody,
+  lockMelodyTempo,
   patterns,
   disabled = false,
   onPaceScaleChange,
 }: GlobalPaceControlProps) {
-  const canIncrease = canStepPaceScale(patterns, paceScale, 'up', paceAffectsMelody)
-  const canDecrease = canStepPaceScale(patterns, paceScale, 'down', paceAffectsMelody)
+  const canIncrease = canStepPaceScale(patterns, paceScale, 'up', lockMelodyTempo)
+  const canDecrease = canStepPaceScale(patterns, paceScale, 'down', lockMelodyTempo)
 
   return (
     <div className="toolbar__pace-wrap" aria-label="Global pace">

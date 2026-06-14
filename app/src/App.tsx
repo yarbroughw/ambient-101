@@ -19,6 +19,7 @@ import {
 } from './audio/audioSession'
 import {
   applyPlaybackTiming,
+  adaptPatternForLockMelodyTempoChange,
   DEFAULT_PACE_SCALE,
   syncLoopPlayback,
   type PaceOptions,
@@ -33,7 +34,7 @@ import {
   normalizeRoot,
   representativeValue,
 } from './lib/scaleSteps'
-import { loadPaceAffectsMelody, savePaceAffectsMelody } from './lib/paceSettings'
+import { loadLockMelodyTempo, saveLockMelodyTempo } from './lib/paceSettings'
 import {
   loadTimelineMotion,
   loadTimelineZoomStop,
@@ -96,7 +97,7 @@ export default function App() {
   // while loops are "playing" we surface a resume affordance instead of a
   // frozen playhead.
   const [audioContextRunning, setAudioContextRunning] = useState(true)
-  const [paceAffectsMelody, setPaceAffectsMelody] = useState(loadPaceAffectsMelody)
+  const [lockMelodyTempo, setLockMelodyTempo] = useState(loadLockMelodyTempo)
   const [timelineMotion, setTimelineMotion] = useState(loadTimelineMotion)
   const [timelineZoomStop, setTimelineZoomStop] = useState(loadTimelineZoomStop)
   // Last value the global tonality controls represented, shown (with a trailing
@@ -120,7 +121,7 @@ export default function App() {
   const allStopped = runningCount === 0
 
   function paceOptions(): PaceOptions {
-    return { paceScale, paceAffectsMelody }
+    return { paceScale, lockMelodyTempo }
   }
 
   function resyncAllLoops(
@@ -131,15 +132,32 @@ export default function App() {
   }
 
   function handlePaceScaleChange(nextScale: number) {
-    const options = { paceScale: nextScale, paceAffectsMelody }
+    const options = { paceScale: nextScale, lockMelodyTempo }
     setPaceScale(nextScale)
     resyncAllLoops(loopsRef.current, options)
   }
 
-  function handlePaceAffectsMelodyChange(value: boolean) {
-    setPaceAffectsMelody(value)
-    savePaceAffectsMelody(value)
-    resyncAllLoops(loopsRef.current, { paceScale, paceAffectsMelody: value })
+  function handleLockMelodyTempoChange(value: boolean) {
+    const previous = lockMelodyTempo
+    setLockMelodyTempo(value)
+    saveLockMelodyTempo(value)
+
+    const options = { paceScale, lockMelodyTempo: value }
+    const entries = loopsRef.current
+    if (!entries) {
+      return
+    }
+
+    const updated = entries.map((entry) => {
+      const nextPattern = adaptPatternForLockMelodyTempoChange(
+        entry.pattern,
+        options,
+        previous,
+      )
+      syncLoopPlayback(entry, nextPattern, options)
+      return { ...entry, pattern: nextPattern }
+    })
+    setLoops(updated)
   }
 
   function handleTimelineMotionChange(value: TimelineMotion) {
@@ -160,7 +178,7 @@ export default function App() {
     const entries = createTapeLoopsFromPatterns(patterns)
     resyncAllLoops(entries, {
       paceScale: nextPaceScale,
-      paceAffectsMelody,
+      lockMelodyTempo,
     })
     setLastGlobalRoot(
       representativeValue(
@@ -653,8 +671,8 @@ export default function App() {
     return (
       <div className="app app--startup">
         <SettingsButton
-          paceAffectsMelody={paceAffectsMelody}
-          onPaceAffectsMelodyChange={handlePaceAffectsMelodyChange}
+          lockMelodyTempo={lockMelodyTempo}
+          onLockMelodyTempoChange={handleLockMelodyTempoChange}
         />
         <StartupScreen onOpen={handleOpenEnsemble} />
       </div>
@@ -666,8 +684,8 @@ export default function App() {
       <BackButton onClick={handleBackToStartup} />
       <EnsembleTitle name={ensembleName} onRename={handleEnsembleRename} />
       <SettingsButton
-        paceAffectsMelody={paceAffectsMelody}
-        onPaceAffectsMelodyChange={handlePaceAffectsMelodyChange}
+        lockMelodyTempo={lockMelodyTempo}
+        onLockMelodyTempoChange={handleLockMelodyTempoChange}
       />
       <div className="toolbar">
         <div className="toolbar__transport">
@@ -691,7 +709,7 @@ export default function App() {
           </div>
           <GlobalPaceControl
             paceScale={paceScale}
-            paceAffectsMelody={paceAffectsMelody}
+            lockMelodyTempo={lockMelodyTempo}
             patterns={composedPatterns}
             disabled={!loops?.length}
             onPaceScaleChange={handlePaceScaleChange}
