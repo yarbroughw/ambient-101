@@ -10,7 +10,6 @@ export const INSTRUMENT_IDS = [
   'reed',
   'marimba',
   'harp',
-  'koto',
   'gong',
   'brass',
 ] as const
@@ -25,6 +24,9 @@ export function isInstrumentId(value: string): value is InstrumentId {
 
 const LEGACY_INSTRUMENT_ALIASES: Record<string, InstrumentId> = {
   mallet: 'keys',
+  // koto was a Karplus-Strong pluck voice, removed with the pluck synth kind.
+  // The new harp is its closest surviving timbre.
+  koto: 'harp',
 }
 
 export function normalizeInstrument(value: string): InstrumentId {

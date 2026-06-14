@@ -43,18 +43,6 @@ type FmInstrumentRecipe = BaseRecipe & {
   }
 }
 
-type PluckInstrumentRecipe = BaseRecipe & {
-  kind: 'pluck'
-  options: {
-    attackNoise: number
-    dampening: number
-    resonance: number
-    hold: number
-    release: number
-    volume: number
-  }
-}
-
 type AmInstrumentRecipe = BaseRecipe & {
   kind: 'am'
   options: {
@@ -102,7 +90,6 @@ type DuoInstrumentRecipe = BaseRecipe & {
 export type InstrumentRecipe =
   | SynthInstrumentRecipe
   | FmInstrumentRecipe
-  | PluckInstrumentRecipe
   | AmInstrumentRecipe
   | DuoInstrumentRecipe
 
@@ -245,35 +232,19 @@ export const INSTRUMENT_RECIPES: Record<InstrumentId, InstrumentRecipe> = {
     outputGain: 0.52,
     previewGain: 0.52,
   },
-  // Soft plucked string, allowed to ring (Karplus-Strong).
+  // Warm plucked-string with a long ring: fast attack, no sustain, long
+  // decay/release tail. Triangle keeps it softer than the square-wave pluck and
+  // it rings far longer than glass, so it reads as a harp rather than either.
   harp: {
-    kind: 'pluck',
+    kind: 'synth',
     options: {
-      attackNoise: 0.7,
-      dampening: 3200,
-      resonance: 0.96,
-      hold: 0.5,
-      release: 2,
-      volume: 6,
+      oscillator: { type: 'triangle' },
+      envelope: { attack: 0.005, decay: 1.8, sustain: 0, release: 2.2 },
+      volume: -9,
     },
     filterFrequency: 3500,
     outputGain: 0.5,
     previewGain: 0.5,
-  },
-  // Brighter, more sharply plucked string than the harp.
-  koto: {
-    kind: 'pluck',
-    options: {
-      attackNoise: 1.5,
-      dampening: 4500,
-      resonance: 0.9,
-      hold: 0.3,
-      release: 1.4,
-      volume: 3,
-    },
-    filterFrequency: 4200,
-    outputGain: 0.48,
-    previewGain: 0.48,
   },
   // Dark, inharmonic, long-decaying metallic FM tone. Long tails accumulate
   // energy across a loop, so it is held quieter than the bell.

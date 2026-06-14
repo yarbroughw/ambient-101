@@ -1,9 +1,8 @@
 import * as Tone from 'tone'
-import { PluckPolySynth } from './pluckPolySynth'
 import { INSTRUMENT_RECIPES } from './recipes'
 import type { InstrumentId } from './types'
 
-export type InstrumentPolySynth = Tone.PolySynth<any> | PluckPolySynth
+export type InstrumentPolySynth = Tone.PolySynth<any>
 
 export function createInstrumentPolySynth(instrument: InstrumentId): InstrumentPolySynth {
   const recipe = INSTRUMENT_RECIPES[instrument]
@@ -13,10 +12,6 @@ export function createInstrumentPolySynth(instrument: InstrumentId): InstrumentP
       const synth = new Tone.PolySynth(Tone.FMSynth)
       synth.set(recipe.options as Tone.FMSynthOptions)
       return synth
-    }
-    case 'pluck': {
-      // PluckSynth is not Monophonic, so Tone.PolySynth cannot voice it.
-      return new PluckPolySynth(recipe.options)
     }
     case 'am': {
       const synth = new Tone.PolySynth(Tone.AMSynth)
@@ -46,4 +41,17 @@ export function instrumentPreviewGain(instrument: InstrumentId): number {
 
 export function instrumentFilterFrequency(instrument: InstrumentId): number {
   return INSTRUMENT_RECIPES[instrument].filterFrequency
+}
+
+/** Recipe default amplitude attack/release, used as the dial baseline when a
+ * reel has no envelope override. The envelope lives in different places per
+ * synth kind. */
+export function instrumentEnvelope(instrument: InstrumentId): {
+  attack: number
+  release: number
+} {
+  const recipe = INSTRUMENT_RECIPES[instrument]
+  const envelope =
+    recipe.kind === 'duo' ? recipe.options.voice0.envelope : recipe.options.envelope
+  return { attack: envelope.attack, release: envelope.release }
 }
