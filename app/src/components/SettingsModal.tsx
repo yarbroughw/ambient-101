@@ -83,46 +83,66 @@ export function SettingsModal({
           </button>
         </div>
         <div className="settings-modal__body">
-          <PaletteSelector />
-          <label className="settings-modal__checkbox">
-            <input
-              id={paceSettingId}
-              type="checkbox"
-              checked={paceAffectsMelody}
-              onChange={(event) => onPaceAffectsMelodyChange(event.target.checked)}
-            />
-            <span>pace affects melody tempo</span>
-          </label>
-          <div className="settings-modal__field">
-            <div className="settings-modal__field-header">
-              <label
-                htmlFor={visualLatencySettingId}
-                className="settings-modal__field-label"
-              >
-                visual sync offset
-              </label>
-              <span className="settings-modal__field-value">
-                {formatVisualLatencyOffsetMs(visualLatencyOffsetMs)}
+          <section className="settings-modal__section">
+            <h3 className="settings-modal__section-title">appearance</h3>
+            <PaletteSelector />
+          </section>
+
+          <section className="settings-modal__section">
+            <h3 className="settings-modal__section-title">playback</h3>
+            <label className="settings-modal__checkbox">
+              <input
+                id={paceSettingId}
+                type="checkbox"
+                checked={paceAffectsMelody}
+                onChange={(event) =>
+                  onPaceAffectsMelodyChange(event.target.checked)
+                }
+              />
+              <span className="settings-modal__checkbox-text">
+                <span className="settings-modal__checkbox-label">
+                  pace affects melody tempo
+                </span>
+                <span className="settings-modal__hint">
+                  let the global pace control speed up or slow down melodies.
+                </span>
               </span>
+            </label>
+          </section>
+
+          <section className="settings-modal__section">
+            <h3 className="settings-modal__section-title">sync</h3>
+            <div className="settings-modal__field">
+              <div className="settings-modal__field-header">
+                <label
+                  htmlFor={visualLatencySettingId}
+                  className="settings-modal__field-label"
+                >
+                  visual sync offset
+                </label>
+                <span className="settings-modal__field-value">
+                  {formatVisualLatencyOffsetMs(visualLatencyOffsetMs)}
+                </span>
+              </div>
+              <input
+                id={visualLatencySettingId}
+                className="settings-modal__range"
+                type="range"
+                min={VISUAL_LATENCY_OFFSET_MS_MIN}
+                max={VISUAL_LATENCY_OFFSET_MS_MAX}
+                step={VISUAL_LATENCY_OFFSET_MS_STEP}
+                value={visualLatencyOffsetMs}
+                onChange={(event) =>
+                  onVisualLatencyOffsetMsChange(Number(event.target.value))
+                }
+              />
+              <p className="settings-modal__hint">
+                delay playheads to match what you hear. device reports{' '}
+                {formatLatencyMs(deviceLatencySec)}; total compensation{' '}
+                {formatLatencyMs(totalLatencySec)}.
+              </p>
             </div>
-            <input
-              id={visualLatencySettingId}
-              className="settings-modal__range"
-              type="range"
-              min={VISUAL_LATENCY_OFFSET_MS_MIN}
-              max={VISUAL_LATENCY_OFFSET_MS_MAX}
-              step={VISUAL_LATENCY_OFFSET_MS_STEP}
-              value={visualLatencyOffsetMs}
-              onChange={(event) =>
-                onVisualLatencyOffsetMsChange(Number(event.target.value))
-              }
-            />
-            <p className="settings-modal__hint">
-              delay playheads to match what you hear. device reports{' '}
-              {formatLatencyMs(deviceLatencySec)}; total compensation{' '}
-              {formatLatencyMs(totalLatencySec)}.
-            </p>
-          </div>
+          </section>
         </div>
       </div>
     </div>

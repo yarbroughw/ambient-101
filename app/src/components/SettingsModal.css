@@ -10,8 +10,8 @@
 }
 
 .settings-modal__panel {
-  width: min(100%, 300px);
-  padding: 14px 14px 12px;
+  width: min(100%, 380px);
+  padding: 22px 24px 24px;
   border: 1px solid var(--color-outline);
   background: var(--color-loop-bg);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
@@ -22,21 +22,22 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
 .settings-modal__title {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 400;
+  letter-spacing: 0.08em;
   text-transform: lowercase;
   color: var(--color-btn-text);
 }
 
 .settings-modal__close {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border: 1px solid var(--color-outline);
   background: transparent;
@@ -54,28 +55,65 @@
 .settings-modal__body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+}
+
+.settings-modal__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-outline) 55%, transparent);
+}
+
+.settings-modal__section:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.settings-modal__section:last-child {
+  padding-bottom: 0;
+}
+
+.settings-modal__section-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-labels);
 }
 
 .settings-modal__checkbox {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 10px;
   font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 1.35;
-  color: var(--color-btn-text);
   cursor: pointer;
 }
 
 .settings-modal__checkbox input {
-  margin-top: 1px;
+  margin-top: 2px;
+  accent-color: var(--color-btn-text);
+}
+
+.settings-modal__checkbox-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-modal__checkbox-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--color-btn-text);
 }
 
 .settings-modal__field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .settings-modal__field-header {
@@ -87,7 +125,7 @@
 
 .settings-modal__field-label {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.35;
   text-transform: lowercase;
   color: var(--color-btn-text);
@@ -95,7 +133,7 @@
 
 .settings-modal__field-value {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.35;
   color: var(--color-labels);
   white-space: nowrap;
@@ -111,7 +149,7 @@
 .settings-modal__hint {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 9px;
-  line-height: 1.4;
+  font-size: 10px;
+  line-height: 1.45;
   color: var(--color-labels);
 }
