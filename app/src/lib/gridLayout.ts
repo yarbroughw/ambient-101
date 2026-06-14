@@ -163,18 +163,28 @@ export type GridPointerMetrics = {
   gap: number
 }
 
-export function columnAtClientX(
+export type MeasuredColumnMetrics = {
+  dataLeft: number
+  colWidth: number
+  columnCount: number
+}
+
+/**
+ * Map pointer X to a column index using measured layout (cell left + stride).
+ * Measuring a real cell keeps this in the same coordinate space as the pointer,
+ * which `getComputedStyle` CSS-variable widths do not under a `zoom` transform.
+ */
+export function columnAtClientXMeasured(
   clientX: number,
-  gridRect: Pick<DOMRect, 'left'>,
-  metrics: GridPointerMetrics,
+  metrics: MeasuredColumnMetrics,
 ): number {
-  const { columnCount, labelWidth, cellSize, gap } = metrics
-  const relativeX = clientX - gridRect.left - labelWidth - gap
+  const { dataLeft, colWidth, columnCount } = metrics
+  const relativeX = clientX - dataLeft
   if (relativeX < 0) {
     return 0
   }
 
-  const col = Math.floor(relativeX / (cellSize + gap))
+  const col = Math.floor(relativeX / colWidth)
   return Math.min(columnCount - 1, Math.max(0, col))
 }
 

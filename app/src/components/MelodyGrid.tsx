@@ -4,7 +4,7 @@ import type { LoopPattern, PatternNote } from '../audio/patternTypes'
 import {
   GRID_COLUMN_COUNT,
   cellStartTime,
-  columnAtClientX,
+  columnAtClientXMeasured,
   findNoteAt,
   gridLayout,
   gridPlayheadRatio,
@@ -502,32 +502,48 @@ export function MelodyGrid({
       return null
     }
 
+    const firstCell = grid.querySelector<HTMLElement>('[data-grid-cell]')
+    if (!firstCell) {
+      return null
+    }
+
+    const cellRect = firstCell.getBoundingClientRect()
     const styles = getComputedStyle(grid)
     const labelWidth =
       Number.parseFloat(styles.getPropertyValue('--melody-grid-step-width')) || 26
-    const cellSize =
-      Number.parseFloat(styles.getPropertyValue('--melody-grid-cell-size')) || 13
+    const gap = Number.parseFloat(styles.gap) || 1
 
+    // Measure the rendered cell so the stride matches pointer coordinates even
+    // under the root `zoom` transform, which CSS-variable widths ignore.
     return {
       columnCount: layoutRef.current.columnCount,
       labelWidth,
-      cellSize,
-      gap: 1,
+      cellSize: cellRect.width,
+      gap,
     }
   }, [])
 
-  const columnAtPointer = useCallback(
-    (clientX: number): number | null => {
-      const grid = gridRef.current
-      const metrics = pointerMetrics()
-      if (!grid || !metrics) {
-        return null
-      }
+  const columnAtPointer = useCallback((clientX: number): number | null => {
+    const grid = gridRef.current
+    if (!grid) {
+      return null
+    }
 
-      return columnAtClientX(clientX, grid.getBoundingClientRect(), metrics)
-    },
-    [pointerMetrics],
-  )
+    const firstCell = grid.querySelector<HTMLElement>('[data-grid-cell]')
+    if (!firstCell) {
+      return null
+    }
+
+    const cellRect = firstCell.getBoundingClientRect()
+    const styles = getComputedStyle(grid)
+    const gap = Number.parseFloat(styles.gap) || 1
+
+    return columnAtClientXMeasured(clientX, {
+      dataLeft: cellRect.left,
+      colWidth: cellRect.width + gap,
+      columnCount: layoutRef.current.columnCount,
+    })
+  }, [])
 
   const rowAtPointer = useCallback((clientY: number): number | null => {
     const grid = gridRef.current

@@ -5,7 +5,7 @@ import {
   bpmForFill,
   cellStartTime,
   clampLoopCols,
-  columnAtClientX,
+  columnAtClientXMeasured,
   createGridNote,
   createNoteSpan,
   findNoteAt,
@@ -133,24 +133,32 @@ describe('gridPlayheadRatio', () => {
   })
 })
 
-describe('columnAtClientX', () => {
+describe('columnAtClientXMeasured', () => {
+  // dataLeft is the measured left of the first cell; colWidth is the measured
+  // cell stride. Both share the pointer's coordinate space, so a `zoom` factor
+  // cancels out instead of skewing the mapping toward the left.
   const metrics = {
     columnCount: GRID_COLUMN_COUNT,
-    labelWidth: 40,
-    cellSize: 10,
-    gap: 2,
+    dataLeft: 100,
+    colWidth: 12,
   }
 
-  it('returns 0 when pointer is in the label area', () => {
-    expect(columnAtClientX(50, { left: 100 }, metrics)).toBe(0)
+  it('returns 0 when pointer is before the first cell', () => {
+    expect(columnAtClientXMeasured(50, metrics)).toBe(0)
   })
 
   it('maps pointer position to column index', () => {
-    expect(columnAtClientX(100 + 40 + 2 + 12, { left: 100 }, metrics)).toBe(1)
+    expect(columnAtClientXMeasured(100 + 12 + 6, metrics)).toBe(1)
+  })
+
+  it('reaches the last column at the right edge', () => {
+    expect(columnAtClientXMeasured(100 + (GRID_COLUMN_COUNT - 1) * 12, metrics)).toBe(
+      GRID_COLUMN_COUNT - 1,
+    )
   })
 
   it('clamps to the last column', () => {
-    expect(columnAtClientX(10000, { left: 100 }, metrics)).toBe(GRID_COLUMN_COUNT - 1)
+    expect(columnAtClientXMeasured(10000, metrics)).toBe(GRID_COLUMN_COUNT - 1)
   })
 })
 
