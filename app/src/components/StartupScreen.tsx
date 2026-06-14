@@ -152,11 +152,71 @@ export function StartupScreen({ onOpen }: StartupScreenProps) {
     <div className="startup-screen">
       <h1 className="startup-screen__title">ambient 101: music for usb ports</h1>
 
-      <section className="startup-screen__section" aria-label="Saved ensembles">
-        <h2 className="startup-screen__heading">your ensembles</h2>
-        {entries.length === 0 ? (
-          <p className="startup-screen__empty">no saved ensembles yet</p>
-        ) : (
+      <section className="startup-screen__section" aria-label="New ensemble">
+        <div className="startup-screen__new">
+          <button
+            type="button"
+            className="startup-screen__new-btn"
+            disabled={busyId != null}
+            onClick={handleCreateBlank}
+          >
+            new
+          </button>
+
+          <div className="startup-templates" ref={templatesRef}>
+            <button
+              type="button"
+              className={`startup-templates__trigger${
+                templatesOpen ? ' is-open' : ''
+              }`}
+              aria-haspopup="menu"
+              aria-expanded={templatesOpen}
+              aria-controls={menuId}
+              disabled={busyId != null}
+              onClick={() => setTemplatesOpen((open) => !open)}
+            >
+              presets
+              <span className="startup-templates__caret" aria-hidden>
+                ▾
+              </span>
+            </button>
+
+            {templatesOpen ? (
+              <div id={menuId} className="startup-templates__menu" role="menu">
+                {ENSEMBLE_TEMPLATES.map((template) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    className="startup-templates__item"
+                    role="menuitem"
+                    onClick={() => handleCreateFromTemplate(template.id)}
+                  >
+                    {template.label}
+                  </button>
+                ))}
+                {ENSEMBLE_TEMPLATES.length > 0 ? (
+                  <div className="startup-templates__divider" role="separator" />
+                ) : null}
+                <button
+                  type="button"
+                  className="startup-templates__item"
+                  role="menuitem"
+                  onClick={() => {
+                    setTemplatesOpen(false)
+                    setImportOpen(true)
+                  }}
+                >
+                  import JSON
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      {entries.length > 0 ? (
+        <section className="startup-screen__section" aria-label="Saved ensembles">
+          <h2 className="startup-screen__heading">your ensembles</h2>
           <ul className="startup-ensembles">
             {entries.map((entry) => {
               const recentlyOpened = lastOpenedId === entry.id
@@ -225,71 +285,8 @@ export function StartupScreen({ onOpen }: StartupScreenProps) {
               )
             })}
           </ul>
-        )}
-      </section>
-
-      <section className="startup-screen__section" aria-label="New ensemble">
-        <h2 className="startup-screen__heading">new ensemble</h2>
-        <div className="startup-screen__new">
-          <button
-            type="button"
-            className="startup-screen__new-btn"
-            disabled={busyId != null}
-            onClick={handleCreateBlank}
-          >
-            blank
-          </button>
-
-          <div className="startup-templates" ref={templatesRef}>
-            <button
-              type="button"
-              className={`startup-templates__trigger${
-                templatesOpen ? ' is-open' : ''
-              }`}
-              aria-haspopup="menu"
-              aria-expanded={templatesOpen}
-              aria-controls={menuId}
-              disabled={busyId != null}
-              onClick={() => setTemplatesOpen((open) => !open)}
-            >
-              presets
-              <span className="startup-templates__caret" aria-hidden>
-                ▾
-              </span>
-            </button>
-
-            {templatesOpen ? (
-              <div id={menuId} className="startup-templates__menu" role="menu">
-                {ENSEMBLE_TEMPLATES.map((template) => (
-                  <button
-                    key={template.id}
-                    type="button"
-                    className="startup-templates__item"
-                    role="menuitem"
-                    onClick={() => handleCreateFromTemplate(template.id)}
-                  >
-                    {template.label}
-                  </button>
-                ))}
-                {ENSEMBLE_TEMPLATES.length > 0 ? (
-                  <div className="startup-templates__divider" role="separator" />
-                ) : null}
-                <button
-                  type="button"
-                  className="startup-templates__item"
-                  role="menuitem"
-                  onClick={() => {
-                    setTemplatesOpen(false)
-                    setImportOpen(true)
-                  }}
-                >
-                  import JSON
-                </button>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       {openError ? (
         <p className="startup-screen__error" role="alert">

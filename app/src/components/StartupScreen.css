@@ -31,14 +31,6 @@
   color: var(--color-labels);
 }
 
-.startup-screen__empty {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: lowercase;
-  color: var(--color-labels);
-}
-
 .startup-ensembles {
   list-style: none;
   margin: 0;
