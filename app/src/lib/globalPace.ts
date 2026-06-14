@@ -2,6 +2,8 @@ import type { LoopPattern } from '../audio/patternTypes'
 import {
   LOOP_COLS_MAX,
   MELODY_BPM_MAX,
+  bpmForFill,
+  melodyFill,
   minBpmForLoopDuration,
   minLoopDurationForBpm,
 } from './gridLayout'
@@ -24,7 +26,7 @@ export const LOOP_DURATION_DRAG_STEP = 0.1
 
 export type PaceOptions = {
   paceScale: number
-  paceAffectsMelody: boolean
+  lockMelodyTempo: boolean
 }
 
 export type PlaybackTiming = {
@@ -114,7 +116,7 @@ export function composedBpmFromDisplay(
   displayBpm: number,
   options: PaceOptions,
 ): number {
-  if (!options.paceAffectsMelody) {
+  if (options.lockMelodyTempo) {
     return Math.round(displayBpm)
   }
 
@@ -127,7 +129,7 @@ const DEFAULT_LOOP_DURATION_FLOOR = 2
 
 function playbackLoopDurationFloor(
   bpm: number,
-  paceAffectsMelody: boolean,
+  lockMelodyTempo: boolean,
   loopCols: number,
 ): number {
   const windowFloor = minLoopDurationForBpm(bpm, loopCols)
@@ -136,7 +138,7 @@ function playbackLoopDurationFloor(
   if (loopCols < LOOP_COLS_MAX) {
     return windowFloor
   }
-  if (paceAffectsMelody) {
+  if (!lockMelodyTempo) {
     return Math.max(DEFAULT_LOOP_DURATION_FLOOR, windowFloor)
   }
   return DEFAULT_LOOP_DURATION_FLOOR
@@ -145,10 +147,10 @@ function playbackLoopDurationFloor(
 function clampEffectiveLoopDuration(
   loopDurationSec: number,
   bpm: number,
-  paceAffectsMelody: boolean,
+  lockMelodyTempo: boolean,
   loopCols: number,
 ): number {
-  const floor = playbackLoopDurationFloor(bpm, paceAffectsMelody, loopCols)
+  const floor = playbackLoopDurationFloor(bpm, lockMelodyTempo, loopCols)
   return Math.min(LOOP_DURATION_MAX, Math.max(floor, loopDurationSec))
 }
 
@@ -176,20 +178,20 @@ export function applyPlaybackTiming(
     pattern.loopDurationMs,
     paceHundredths,
   )
-  let bpm = options.paceAffectsMelody ? pattern.bpm * paceScale : pattern.bpm
+  let bpm = options.lockMelodyTempo ? pattern.bpm : pattern.bpm * paceScale
 
   loopDurationSec = clampEffectiveLoopDuration(
     loopDurationSec,
     bpm,
-    options.paceAffectsMelody,
+    options.lockMelodyTempo,
     loopCols,
   )
-  if (options.paceAffectsMelody) {
+  if (!options.lockMelodyTempo) {
     bpm = clampEffectiveBpm(bpm, loopDurationSec, loopCols)
     loopDurationSec = clampEffectiveLoopDuration(
       loopDurationSec,
       bpm,
-      options.paceAffectsMelody,
+      options.lockMelodyTempo,
       loopCols,
     )
   }
@@ -200,13 +202,43 @@ export function applyPlaybackTiming(
   }
 }
 
+export function adaptPatternForLockMelodyTempoChange(
+  pattern: LoopPattern,
+  options: PaceOptions,
+  previousLockMelodyTempo: boolean,
+): LoopPattern {
+  if (previousLockMelodyTempo === options.lockMelodyTempo) {
+    return pattern
+  }
+
+  const timing = applyPlaybackTiming(pattern, {
+    paceScale: options.paceScale,
+    lockMelodyTempo: previousLockMelodyTempo,
+  })
+
+  if (options.lockMelodyTempo) {
+    return { ...pattern, bpm: timing.bpm }
+  }
+
+  const fill = melodyFill(
+    timing.loopDurationSec,
+    timing.bpm,
+    pattern.loopCols,
+  )
+  const storedSec = storedLoopDurationSec(pattern.loopDurationMs)
+  return {
+    ...pattern,
+    bpm: bpmForFill(storedSec, fill, pattern.loopCols),
+  }
+}
+
 function timingMatchesScale(
   pattern: LoopPattern,
   paceScale: number,
-  paceAffectsMelody: boolean,
+  lockMelodyTempo: boolean,
 ): boolean {
   const paceHundredths = paceToHundredths(paceScale)
-  const effective = applyPlaybackTiming(pattern, { paceScale, paceAffectsMelody })
+  const effective = applyPlaybackTiming(pattern, { paceScale, lockMelodyTempo })
   const targetPlaybackMs = playbackLoopDurationMs(
     pattern.loopDurationMs,
     paceHundredths,
@@ -217,13 +249,21 @@ function timingMatchesScale(
     return false
   }
 
-  if (paceAffectsMelody) {
-    const targetBpm = paceAffectsMelody
-      ? pattern.bpm * (paceHundredths / 100)
-      : pattern.bpm
-    if (Math.abs(effective.bpm - targetBpm) > 0.5) {
+  if (lockMelodyTempo) {
+    const fill = melodyFill(
+      effective.loopDurationSec,
+      effective.bpm,
+      pattern.loopCols,
+    )
+    if (fill > 1 + 1e-9) {
       return false
     }
+    return true
+  }
+
+  const targetBpm = pattern.bpm * (paceHundredths / 100)
+  if (Math.abs(effective.bpm - targetBpm) > 0.5) {
+    return false
   }
 
   return true
@@ -233,7 +273,7 @@ export function canStepPaceHundredths(
   patterns: LoopPattern[],
   currentHundredths: number,
   direction: 'up' | 'down',
-  paceAffectsMelody: boolean,
+  lockMelodyTempo: boolean,
 ): boolean {
   if (patterns.length === 0) {
     return false
@@ -246,7 +286,7 @@ export function canStepPaceHundredths(
 
   const nextScale = paceFromHundredths(nextHundredths)
   return patterns.every((pattern) =>
-    timingMatchesScale(pattern, nextScale, paceAffectsMelody),
+    timingMatchesScale(pattern, nextScale, lockMelodyTempo),
   )
 }
 
@@ -254,13 +294,13 @@ export function canStepPaceScale(
   patterns: LoopPattern[],
   currentScale: number,
   direction: 'up' | 'down',
-  paceAffectsMelody: boolean,
+  lockMelodyTempo: boolean,
 ): boolean {
   return canStepPaceHundredths(
     patterns,
     paceToHundredths(currentScale),
     direction,
-    paceAffectsMelody,
+    lockMelodyTempo,
   )
 }
 

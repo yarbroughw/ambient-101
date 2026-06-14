@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  adaptPatternForLockMelodyTempoChange,
   applyPlaybackTiming,
   canStepPaceScale,
   composedBpmFromDisplay,
@@ -11,37 +12,37 @@ import {
   formatPaceScale,
   stepPaceScale,
 } from './globalPace'
-import { bpmForFill, melodyWindowDuration } from './gridLayout'
+import { bpmForFill, melodyFill, melodyWindowDuration } from './gridLayout'
 import { createTestPattern } from '../test/fixtures'
 
 describe('applyPlaybackTiming', () => {
-  it('scales cooldown only by default', () => {
+  it('scales cooldown and bpm when melody tempo is unlocked', () => {
     const pattern = createTestPattern({ loopDurationMs: 10000, bpm: 100 })
     const effective = applyPlaybackTiming(pattern, {
       paceScale: 1.2,
-      paceAffectsMelody: false,
-    })
-
-    expect(effective.loopDurationSec).toBe(10 / 1.2)
-    expect(effective.bpm).toBe(100)
-  })
-
-  it('scales cooldown and bpm when melody is included', () => {
-    const pattern = createTestPattern({ loopDurationMs: 10000, bpm: 100 })
-    const effective = applyPlaybackTiming(pattern, {
-      paceScale: 1.2,
-      paceAffectsMelody: true,
+      lockMelodyTempo: false,
     })
 
     expect(effective.loopDurationSec).toBe(10 / 1.2)
     expect(effective.bpm).toBe(120)
   })
 
+  it('scales cooldown only when melody tempo is locked', () => {
+    const pattern = createTestPattern({ loopDurationMs: 10000, bpm: 100 })
+    const effective = applyPlaybackTiming(pattern, {
+      paceScale: 1.2,
+      lockMelodyTempo: true,
+    })
+
+    expect(effective.loopDurationSec).toBe(10 / 1.2)
+    expect(effective.bpm).toBe(100)
+  })
+
   it('does not clamp cooldown-only pace to the melody grid floor', () => {
     const pattern = createTestPattern({ loopDurationMs: 7000, bpm: 72 })
     const effective = applyPlaybackTiming(pattern, {
       paceScale: 1.2,
-      paceAffectsMelody: false,
+      lockMelodyTempo: true,
     })
 
     expect(effective.loopDurationSec).toBeCloseTo(7 / 1.2)
@@ -57,7 +58,7 @@ describe('applyPlaybackTiming', () => {
     })
     const effective = applyPlaybackTiming(pattern, {
       paceScale: 1,
-      paceAffectsMelody: true,
+      lockMelodyTempo: false,
     })
 
     expect(window).toBeLessThan(2)
@@ -75,7 +76,7 @@ describe('seamless (100% fill) under pace', () => {
     })
     const effective = applyPlaybackTiming(pattern, {
       paceScale: 1.2,
-      paceAffectsMelody: true,
+      lockMelodyTempo: false,
     })
 
     expect(melodyWindowDuration(effective.bpm)).toBeCloseTo(
@@ -90,7 +91,7 @@ describe('seamless (100% fill) under pace', () => {
     })
     const effective = applyPlaybackTiming(pattern, {
       paceScale: 1,
-      paceAffectsMelody: true,
+      lockMelodyTempo: false,
     })
 
     expect(melodyWindowDuration(effective.bpm)).toBeCloseTo(7)
@@ -138,40 +139,83 @@ describe('loopDurationMsFromDisplay', () => {
 })
 
 describe('composedBpmFromDisplay', () => {
-  it('inverts display bpm when melody pace is enabled', () => {
+  it('inverts display bpm when melody tempo is unlocked', () => {
     expect(
-      composedBpmFromDisplay(106, { paceScale: 1.1, paceAffectsMelody: true }),
+      composedBpmFromDisplay(106, { paceScale: 1.1, lockMelodyTempo: false }),
     ).toBe(96)
   })
 
-  it('passes through display bpm when melody pace is disabled', () => {
+  it('passes through display bpm when melody tempo is locked', () => {
     expect(
-      composedBpmFromDisplay(106, { paceScale: 1.1, paceAffectsMelody: false }),
+      composedBpmFromDisplay(106, { paceScale: 1.1, lockMelodyTempo: true }),
     ).toBe(106)
   })
 })
 
 describe('applyPlaybackTiming display values', () => {
-  it('updates cooldown display at pace while leaving bpm unchanged by default', () => {
+  it('updates cooldown display at pace while leaving bpm unchanged when locked', () => {
     const pattern = createTestPattern({ loopDurationMs: 10000, bpm: 96 })
     const effective = applyPlaybackTiming(pattern, {
       paceScale: 1.2,
-      paceAffectsMelody: false,
+      lockMelodyTempo: true,
     })
 
     expect(formatDisplayLoopDuration(effective.loopDurationSec)).toBe('8.33')
     expect(formatDisplayBpm(effective.bpm)).toBe(96)
   })
 
-  it('updates both cooldown and bpm display when melody pace is enabled', () => {
+  it('updates both cooldown and bpm display when melody tempo is unlocked', () => {
     const pattern = createTestPattern({ loopDurationMs: 10000, bpm: 96 })
     const effective = applyPlaybackTiming(pattern, {
       paceScale: 1.1,
-      paceAffectsMelody: true,
+      lockMelodyTempo: false,
     })
 
     expect(formatDisplayLoopDuration(effective.loopDurationSec)).toBe('9.09')
     expect(formatDisplayBpm(effective.bpm)).toBe(106)
+  })
+})
+
+describe('adaptPatternForLockMelodyTempoChange', () => {
+  it('keeps heard melody speed when locking tempo', () => {
+    const pattern = createTestPattern({ loopDurationMs: 10000, bpm: 96 })
+    const next = adaptPatternForLockMelodyTempoChange(
+      pattern,
+      { paceScale: 1.2, lockMelodyTempo: true },
+      false,
+    )
+
+    expect(next.bpm).toBeCloseTo(115.2)
+    const timing = applyPlaybackTiming(next, {
+      paceScale: 1.2,
+      lockMelodyTempo: true,
+    })
+    expect(timing.bpm).toBeCloseTo(115.2)
+  })
+
+  it('keeps fill when unlocking tempo', () => {
+    const pattern = createTestPattern({ loopDurationMs: 10000, bpm: 115.2 })
+    const lockedTiming = applyPlaybackTiming(pattern, {
+      paceScale: 1.2,
+      lockMelodyTempo: true,
+    })
+    const lockedFill = melodyFill(
+      lockedTiming.loopDurationSec,
+      lockedTiming.bpm,
+    )
+
+    const next = adaptPatternForLockMelodyTempoChange(
+      pattern,
+      { paceScale: 1.2, lockMelodyTempo: false },
+      true,
+    )
+    const unlockedTiming = applyPlaybackTiming(next, {
+      paceScale: 1.2,
+      lockMelodyTempo: false,
+    })
+    expect(
+      melodyFill(unlockedTiming.loopDurationSec, unlockedTiming.bpm),
+    ).toBeCloseTo(lockedFill)
   })
 })
 
@@ -193,28 +237,39 @@ describe('stepPaceScale', () => {
 })
 
 describe('canStepPaceScale', () => {
-  it('allows speeding up demo loops in cooldown-only mode', () => {
+  it('allows speeding up low-fill loops when melody tempo is locked', () => {
     const patterns = [
-      createTestPattern({ id: 'bass', label: 'bass', loopDurationMs: 7000, bpm: 72 }),
+      createTestPattern({ id: 'bass', label: 'bass', loopDurationMs: 12000, bpm: 72 }),
       createTestPattern({
         id: 'melody1',
         label: 'melody1',
-        loopDurationMs: 11000,
+        loopDurationMs: 16000,
         bpm: 96,
       }),
       createTestPattern({
         id: 'melody2',
         label: 'melody2',
-        loopDurationMs: 10000,
+        loopDurationMs: 14000,
         bpm: 88,
       }),
     ]
 
-    expect(canStepPaceScale(patterns, 1, 'up', false)).toBe(true)
+    expect(canStepPaceScale(patterns, 1, 'up', true)).toBe(true)
   })
 
   it('blocks slowing down when cooldown would exceed the max', () => {
     const patterns = [createTestPattern({ loopDurationMs: 55000, bpm: 96 })]
-    expect(canStepPaceScale(patterns, 1, 'down', false)).toBe(false)
+    expect(canStepPaceScale(patterns, 1, 'down', true)).toBe(false)
+  })
+
+  it('blocks speeding up when a seamless loop would exceed 100% fill', () => {
+    const patterns = [
+      createTestPattern({
+        loopDurationMs: 7000,
+        bpm: bpmForFill(7, 1),
+      }),
+    ]
+
+    expect(canStepPaceScale(patterns, 1, 'up', true)).toBe(false)
   })
 })
