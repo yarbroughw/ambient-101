@@ -74,14 +74,10 @@ describe('ensembleStorage', () => {
       nextDefaultEnsembleName([{ name: 'ensemble 1' } as never]),
     ).toBe('ensemble 2')
 
-    expect(nextAvailableEnsembleName('workshop starter', [])).toBe(
-      'workshop starter',
-    )
+    expect(nextAvailableEnsembleName('airports', [])).toBe('airports')
     expect(
-      nextAvailableEnsembleName('workshop starter', [
-        { name: 'workshop starter' } as never,
-      ]),
-    ).toBe('workshop starter 2')
+      nextAvailableEnsembleName('airports', [{ name: 'airports' } as never]),
+    ).toBe('airports 2')
   })
 
   it('does not mark a newly created ensemble as last opened', () => {

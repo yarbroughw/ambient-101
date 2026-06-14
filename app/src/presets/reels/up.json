@@ -1,13 +1,13 @@
 {
-    "label": "scale",
-    "loopDurationMs": 6000,
-    "bpm": 80,
+    "id": "scale",
+    "label": "up",
+    "bpm": 54.54545454545455,
     "root": "C",
-    "scale": "minor",
+    "scale": "lydian",
     "octaveShift": 0,
     "instrument": "keys",
     "volume": 1,
-    "reverb": 0.5,
+    "reverb": 0.42,
     "delay": 0,
     "notes": [
       {
@@ -18,45 +18,71 @@
       },
       {
         "scaleStep": 1,
-        "startCol": 4,
+        "startCol": 1,
         "spanCols": 1,
         "velocity": 0.7
       },
       {
         "scaleStep": 2,
-        "startCol": 8,
+        "startCol": 2,
         "spanCols": 1,
         "velocity": 0.7
       },
       {
         "scaleStep": 3,
-        "startCol": 12,
+        "startCol": 3,
         "spanCols": 1,
         "velocity": 0.7
       },
       {
         "scaleStep": 4,
-        "startCol": 16,
+        "startCol": 4,
         "spanCols": 1,
         "velocity": 0.7
       },
       {
         "scaleStep": 5,
-        "startCol": 20,
+        "startCol": 5,
         "spanCols": 1,
         "velocity": 0.7
       },
       {
         "scaleStep": 6,
-        "startCol": 24,
+        "startCol": 6,
         "spanCols": 1,
         "velocity": 0.7
       },
       {
         "scaleStep": 7,
-        "startCol": 28,
+        "startCol": 7,
+        "spanCols": 1,
+        "velocity": 0.7
+      },
+      {
+        "scaleStep": 8,
+        "startCol": 8,
+        "spanCols": 1,
+        "velocity": 0.7
+      },
+      {
+        "scaleStep": 9,
+        "startCol": 9,
+        "spanCols": 1,
+        "velocity": 0.7
+      },
+      {
+        "scaleStep": 10,
+        "startCol": 10,
+        "spanCols": 1,
+        "velocity": 0.7
+      },
+      {
+        "scaleStep": 11,
+        "startCol": 11,
         "spanCols": 1,
         "velocity": 0.7
       }
-    ]
+    ],
+    "loopCols": 12,
+    "loopDurationMs": 3300
   }

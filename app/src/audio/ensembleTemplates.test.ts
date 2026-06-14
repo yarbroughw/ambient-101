@@ -19,11 +19,11 @@ function templateBody(overrides: Record<string, unknown> = {}) {
 describe('loadEnsembleTemplatesFromModules', () => {
   it('loads templates from JSON modules keyed by filename', () => {
     const templates = loadEnsembleTemplatesFromModules({
-      '../presets/ensembles/workshop-starter.json': templateBody(),
+      '../presets/ensembles/starter.json': templateBody(),
     })
 
     expect(templates).toHaveLength(1)
-    expect(templates[0]?.id).toBe('workshop-starter')
+    expect(templates[0]?.id).toBe('starter')
     expect(templates[0]?.loops.map((loop) => loop.label)).toEqual(['scale'])
   })
 
@@ -67,13 +67,13 @@ describe('ensembleTemplates', () => {
     expect(ENSEMBLE_TEMPLATES.length).toBeGreaterThan(0)
   })
 
-  it('instantiates workshop starter with the scale exercise reel', () => {
+  it('instantiates airports from the bundled preset', () => {
     const { loops, paceScale, suggestedName } =
-      instantiateEnsembleTemplate('workshop-starter')
+      instantiateEnsembleTemplate('airports')
 
-    expect(suggestedName).toBe('workshop starter')
+    expect(suggestedName).toBe('airports')
     expect(paceScale).toBe(1)
-    expect(loops.map((loop) => loop.label)).toEqual(['scale'])
+    expect(loops.length).toBeGreaterThan(0)
     expect(loops[0]?.notes.length).toBeGreaterThan(0)
   })
 })
