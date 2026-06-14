@@ -34,6 +34,27 @@ type StoredLoopPattern = Omit<LoopPattern, 'notes' | 'loopCols' | 'loopDurationM
   notes: StoredPatternNote[]
 }
 
+// Clamp bounds for optional per-reel voice overrides.
+const CUTOFF_MIN_HZ = 20
+const CUTOFF_MAX_HZ = 20000
+const RESONANCE_MAX_Q = 30
+const ENVELOPE_TIME_MAX_S = 10
+
+function isOptionalFiniteNumber(value: unknown): boolean {
+  return value === undefined || (typeof value === 'number' && Number.isFinite(value))
+}
+
+function clampOptional(
+  value: number | undefined,
+  min: number,
+  max: number,
+): number | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+  return Math.min(max, Math.max(min, value))
+}
+
 function isStoredPatternNote(value: unknown): value is StoredPatternNote {
   if (!value || typeof value !== 'object') {
     return false
@@ -91,6 +112,11 @@ function isStoredLoopPattern(value: unknown): value is StoredLoopPattern {
       (typeof pattern.reverb === 'number' && Number.isFinite(pattern.reverb))) &&
     (pattern.delay === undefined ||
       (typeof pattern.delay === 'number' && Number.isFinite(pattern.delay))) &&
+    isOptionalFiniteNumber(pattern.cutoff) &&
+    isOptionalFiniteNumber(pattern.resonance) &&
+    isOptionalFiniteNumber(pattern.chorus) &&
+    isOptionalFiniteNumber(pattern.attack) &&
+    isOptionalFiniteNumber(pattern.release) &&
     Array.isArray(pattern.notes) &&
     pattern.notes.every(isStoredPatternNote)
   )
@@ -129,6 +155,11 @@ function normalizePattern(
     volume: Math.min(1, Math.max(0, pattern.volume)),
     reverb: Math.min(1, Math.max(0, pattern.reverb ?? LOOP_REVERB_DEFAULT)),
     delay: Math.min(1, Math.max(0, pattern.delay ?? LOOP_DELAY_DEFAULT)),
+    cutoff: clampOptional(pattern.cutoff, CUTOFF_MIN_HZ, CUTOFF_MAX_HZ),
+    resonance: clampOptional(pattern.resonance, 0, RESONANCE_MAX_Q),
+    chorus: clampOptional(pattern.chorus, 0, 1),
+    attack: clampOptional(pattern.attack, 0, ENVELOPE_TIME_MAX_S),
+    release: clampOptional(pattern.release, 0, ENVELOPE_TIME_MAX_S),
     notes: pattern.notes.map((note) => ({
       ...note,
       velocity: note.velocity ?? 1,

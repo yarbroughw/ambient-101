@@ -1,6 +1,6 @@
 import { compilePatternToSink } from './compilePattern'
 import { LOOP_DELAY_DEFAULT, LOOP_REVERB_DEFAULT } from './loopEffects'
-import { createLoopVoiceForInstrument } from './loopVoice'
+import { createLoopVoiceForInstrument, type VoiceOverrides } from './loopVoice'
 import { normalizeInstrument, type InstrumentId } from './instruments/types'
 import { DEFAULT_LOOP_COLS } from '../lib/gridLayout'
 import { createSchedulableNoteSink } from './schedulableNoteSink'
@@ -46,6 +46,20 @@ export type DemoLoop = {
   setVolume: (amount: number) => void
   setReverb: (amount: number) => void
   setDelay: (amount: number) => void
+  setCutoff: (hz: number) => void
+  setResonance: (q: number) => void
+  setChorus: (amount: number) => void
+  setEnvelope: (attack: number | undefined, release: number | undefined) => void
+}
+
+function voiceOverridesFromPattern(pattern: LoopPattern): VoiceOverrides {
+  return {
+    cutoff: pattern.cutoff,
+    resonance: pattern.resonance,
+    chorus: pattern.chorus,
+    attack: pattern.attack,
+    release: pattern.release,
+  }
 }
 
 function bindPattern(pattern: LoopPattern): DemoLoop {
@@ -55,6 +69,7 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
     activeInstrument,
     pattern.reverb,
     pattern.delay,
+    voiceOverridesFromPattern(pattern),
   )
   voice.setVolume(pattern.volume ?? 1)
 
@@ -83,6 +98,7 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
       activeInstrument,
       next.reverb,
       next.delay,
+      voiceOverridesFromPattern(next),
     )
     voice.setVolume(next.volume ?? 1)
     bindVoiceHooks()
@@ -96,6 +112,10 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
       voice.setVolume(next.volume ?? 1)
       voice.setReverb(next.reverb)
       voice.setDelay(next.delay)
+      voice.setCutoff(next.cutoff)
+      voice.setResonance(next.resonance)
+      voice.setChorus(next.chorus)
+      voice.setEnvelope(next.attack, next.release)
     }
     loop.record(compilePatternToSink(next, sink))
   }
@@ -112,14 +132,49 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
     voice.setDelay(amount)
   }
 
+  function setCutoff(hz: number) {
+    voice.setCutoff(hz)
+  }
+
+  function setResonance(q: number) {
+    voice.setResonance(q)
+  }
+
+  function setChorus(amount: number) {
+    voice.setChorus(amount)
+  }
+
+  function setEnvelope(attack: number | undefined, release: number | undefined) {
+    voice.setEnvelope(attack, release)
+  }
+
   rebindPattern(pattern)
   bindVoiceHooks()
 
-  return { pattern, loop, rebindPattern, setVolume, setReverb, setDelay }
+  return {
+    pattern,
+    loop,
+    rebindPattern,
+    setVolume,
+    setReverb,
+    setDelay,
+    setCutoff,
+    setResonance,
+    setChorus,
+    setEnvelope,
+  }
 }
 
-export function createBlankPattern(id: string, label: string): LoopPattern {
-  return instantiatePatternFromTemplate(blankTemplate, id, label)
+export function createBlankPattern(
+  id: string,
+  label: string,
+  tonality?: Pick<LoopPattern, 'root' | 'scale'>,
+): LoopPattern {
+  return instantiatePatternFromTemplate(
+    tonality ? { ...blankTemplate, ...tonality } : blankTemplate,
+    id,
+    label,
+  )
 }
 
 export function createTapeLoop(pattern: LoopPattern): DemoLoop {

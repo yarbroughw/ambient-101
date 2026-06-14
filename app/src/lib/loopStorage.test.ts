@@ -157,6 +157,68 @@ describe('loadLoopPatterns', () => {
     expect(loadLoopPatterns()).toEqual([])
   })
 
+  it('round-trips per-reel voice overrides', () => {
+    const pattern = createTestPattern({
+      id: 'voiced',
+      label: 'voiced',
+      cutoff: 3200,
+      resonance: 4,
+      chorus: 0.5,
+      attack: 0.4,
+      release: 2.5,
+    })
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: 3, loops: [pattern] }),
+    )
+    const [loaded] = loadLoopPatterns()
+    expect(loaded).toMatchObject({
+      cutoff: 3200,
+      resonance: 4,
+      chorus: 0.5,
+      attack: 0.4,
+      release: 2.5,
+    })
+  })
+
+  it('clamps voice overrides into range', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 3,
+        loops: [
+          {
+            ...createTestPattern(),
+            cutoff: 99999,
+            resonance: -2,
+            chorus: 5,
+            attack: -1,
+            release: 999,
+          },
+        ],
+      }),
+    )
+    const [pattern] = loadLoopPatterns()
+    expect(pattern?.cutoff).toBe(20000)
+    expect(pattern?.resonance).toBe(0)
+    expect(pattern?.chorus).toBe(1)
+    expect(pattern?.attack).toBe(0)
+    expect(pattern?.release).toBe(10)
+  })
+
+  it('leaves voice overrides undefined when absent (recipe defaults)', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: 3, loops: [createTestPattern()] }),
+    )
+    const [pattern] = loadLoopPatterns()
+    expect(pattern?.cutoff).toBeUndefined()
+    expect(pattern?.resonance).toBeUndefined()
+    expect(pattern?.chorus).toBeUndefined()
+    expect(pattern?.attack).toBeUndefined()
+    expect(pattern?.release).toBeUndefined()
+  })
+
   it('normalizes volume and effect sends to 0–1', () => {
     localStorage.setItem(
       STORAGE_KEY,

@@ -1,11 +1,29 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createBlankPattern,
   duplicatePattern,
   importPattern,
   nextAvailableIdAndLabel,
   nextDuplicateIdAndLabel,
 } from './demoPatterns'
 import { createTestLoopEntry, createTestPattern } from '../test/fixtures'
+
+describe('createBlankPattern', () => {
+  it('uses default tonality when none is provided', () => {
+    const pattern = createBlankPattern('loop', 'loop')
+    expect(pattern.root).toBe('C')
+    expect(pattern.scale).toBe('minor')
+  })
+
+  it('applies provided root and scale', () => {
+    const pattern = createBlankPattern('loop', 'loop', {
+      root: 'F',
+      scale: 'dorian',
+    })
+    expect(pattern.root).toBe('F')
+    expect(pattern.scale).toBe('dorian')
+  })
+})
 
 describe('nextAvailableIdAndLabel', () => {
   it('returns the base label when unused', () => {

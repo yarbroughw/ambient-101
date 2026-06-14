@@ -20,6 +20,21 @@ export type LoopPattern = {
   volume: number
   reverb: number
   delay: number
+  /**
+   * Per-reel voice overrides. All optional: when absent the instrument's recipe
+   * default is used, so older saved loops and presets load unchanged. Cleared on
+   * instrument change (each instrument has its own natural brightness/envelope).
+   */
+  /** Low-pass filter cutoff in Hz. Default: instrument recipe filterFrequency. */
+  cutoff?: number
+  /** Low-pass filter resonance (Q). Default: ~1. */
+  resonance?: number
+  /** Chorus wet amount, 0–1. Default: 0 (dry). */
+  chorus?: number
+  /** Amplitude envelope attack in seconds. Overrides recipe envelope.attack. */
+  attack?: number
+  /** Amplitude envelope release in seconds. Overrides recipe envelope.release. */
+  release?: number
   notes: PatternNote[]
 }
 
