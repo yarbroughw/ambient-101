@@ -26,6 +26,8 @@ export type VoiceOverrides = {
   resonance?: number
   /** Chorus wet, 0–1. Default: 0 (dry). */
   chorus?: number
+  /** Synth output gain, 0–1. Default: 1 (full). Tames instrument loudness. */
+  gain?: number
   /** Envelope attack in seconds. Overrides recipe envelope.attack. */
   attack?: number
   /** Envelope release in seconds. Overrides recipe envelope.release. */
@@ -114,6 +116,8 @@ export type LoopVoice = {
   getLevel: () => number
   setVolume: (amount: number) => void
   getVolume: () => number
+  setGain: (amount: number) => void
+  getGain: () => number
   setReverb: (amount: number) => void
   setDelay: (amount: number) => void
   setCutoff: (hz: number | undefined) => void
@@ -146,6 +150,7 @@ export function createLoopVoiceForInstrument(
   let chain: SynthChain | null = buildSynthChain(instrumentId, effects.input, overrides)
   let sink = createSynthNoteSink(chain.synth)
   let volume = 1
+  let synthGain = Math.min(1, Math.max(0, overrides.gain ?? 1))
   let reverbAmount = reverb
   let delayAmount = delay
   // Track overrides so a chain rebuild (prepare/silence cycle) restores them.
@@ -158,7 +163,10 @@ export function createLoopVoiceForInstrument(
 
     const t = Tone.now()
     chain.gain.gain.cancelScheduledValues(t)
-    chain.gain.gain.rampTo(instrumentOutputGain(instrumentId) * volume, 0.02)
+    chain.gain.gain.rampTo(
+      instrumentOutputGain(instrumentId) * volume * synthGain,
+      0.02,
+    )
   }
 
   function disposeChain() {
@@ -222,6 +230,14 @@ export function createLoopVoiceForInstrument(
     },
     getVolume() {
       return volume
+    },
+    setGain(amount: number) {
+      synthGain = Math.min(1, Math.max(0, amount))
+      voice.gain = synthGain
+      applyVolume()
+    },
+    getGain() {
+      return synthGain
     },
     setReverb(amount: number) {
       reverbAmount = Math.min(1, Math.max(0, amount))

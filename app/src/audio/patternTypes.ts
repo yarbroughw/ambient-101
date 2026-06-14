@@ -31,6 +31,12 @@ export type LoopPattern = {
   resonance?: number
   /** Chorus wet amount, 0–1. Default: 0 (dry). */
   chorus?: number
+  /**
+   * Synth output gain, 0–1. Default: 1. Tames the instrument's own loudness
+   * (e.g. to soften a dense, multi-note voice). Distinct from `volume`, which
+   * is the reel-level fader for relative balance between reels.
+   */
+  gain?: number
   /** Amplitude envelope attack in seconds. Overrides recipe envelope.attack. */
   attack?: number
   /** Amplitude envelope release in seconds. Overrides recipe envelope.release. */

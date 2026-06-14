@@ -94,6 +94,7 @@ type TapeLoopRowProps = {
   onCutoffChange: (hz: number) => void
   onResonanceChange: (q: number) => void
   onChorusChange: (amount: number) => void
+  onGainChange: (amount: number) => void
   onAttackChange: (attack: number) => void
   onReleaseChange: (release: number) => void
   onLoopColsChange: (loopCols: number) => void
@@ -126,6 +127,7 @@ export function TapeLoopRow({
   onCutoffChange,
   onResonanceChange,
   onChorusChange,
+  onGainChange,
   onAttackChange,
   onReleaseChange,
   onLoopColsChange,
@@ -289,7 +291,7 @@ export function TapeLoopRow({
         <div className="reel-lane__tape tape-loop-row__tape-content">
           <div className="reel-lane__meta tape-loop-row__content-meta">
             <span title={`melody window · BPM ${formatDisplayBpm(playbackBpm)}`}>
-              melody: {melodyWindowSec.toFixed(1)}s
+              melody: {formatDisplayLoopDuration(melodyWindowSec)}s
             </span>
             <span title={`instrument: ${pattern.instrument}`}>
               instrument: {pattern.instrument}
@@ -358,6 +360,7 @@ export function TapeLoopRow({
             onCutoffChange={onCutoffChange}
             onResonanceChange={onResonanceChange}
             onChorusChange={onChorusChange}
+            onGainChange={onGainChange}
             onAttackChange={onAttackChange}
             onReleaseChange={onReleaseChange}
             onLoopColsChange={onLoopColsChange}

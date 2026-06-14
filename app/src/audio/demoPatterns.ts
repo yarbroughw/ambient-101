@@ -44,6 +44,7 @@ export type DemoLoop = {
   loop: TapeLoop
   rebindPattern: (pattern: LoopPattern) => void
   setVolume: (amount: number) => void
+  setGain: (amount: number) => void
   setReverb: (amount: number) => void
   setDelay: (amount: number) => void
   setCutoff: (hz: number) => void
@@ -57,6 +58,7 @@ function voiceOverridesFromPattern(pattern: LoopPattern): VoiceOverrides {
     cutoff: pattern.cutoff,
     resonance: pattern.resonance,
     chorus: pattern.chorus,
+    gain: pattern.gain,
     attack: pattern.attack,
     release: pattern.release,
   }
@@ -72,6 +74,7 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
     voiceOverridesFromPattern(pattern),
   )
   voice.setVolume(pattern.volume ?? 1)
+  voice.setGain(pattern.gain ?? 1)
 
   const innerSink: NoteSink = {
     triggerAttackRelease(note, duration, time, velocity = 1) {
@@ -101,6 +104,7 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
       voiceOverridesFromPattern(next),
     )
     voice.setVolume(next.volume ?? 1)
+    voice.setGain(next.gain ?? 1)
     bindVoiceHooks()
   }
 
@@ -110,6 +114,7 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
       replaceVoice(next)
     } else {
       voice.setVolume(next.volume ?? 1)
+      voice.setGain(next.gain ?? 1)
       voice.setReverb(next.reverb)
       voice.setDelay(next.delay)
       voice.setCutoff(next.cutoff)
@@ -122,6 +127,10 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
 
   function setVolume(amount: number) {
     voice.setVolume(amount)
+  }
+
+  function setGain(amount: number) {
+    voice.setGain(amount)
   }
 
   function setReverb(amount: number) {
@@ -156,6 +165,7 @@ function bindPattern(pattern: LoopPattern): DemoLoop {
     loop,
     rebindPattern,
     setVolume,
+    setGain,
     setReverb,
     setDelay,
     setCutoff,

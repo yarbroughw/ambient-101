@@ -585,7 +585,7 @@ export default function App() {
 
   function handleVoiceParamChange(
     id: string,
-    param: 'cutoff' | 'resonance' | 'chorus' | 'attack' | 'release',
+    param: 'cutoff' | 'resonance' | 'chorus' | 'gain' | 'attack' | 'release',
     value: number,
   ) {
     const entry = loopsRef.current?.find((e) => e.pattern.id === id)
@@ -598,7 +598,7 @@ export default function App() {
         ? clamp(20, 20000)
         : param === 'resonance'
           ? clamp(0, 30)
-          : param === 'chorus'
+          : param === 'chorus' || param === 'gain'
             ? clamp(0, 1)
             : clamp(0, 10) // attack / release, in seconds
 
@@ -606,6 +606,7 @@ export default function App() {
     if (param === 'cutoff') entry.setCutoff(next)
     else if (param === 'resonance') entry.setResonance(next)
     else if (param === 'chorus') entry.setChorus(next)
+    else if (param === 'gain') entry.setGain(next)
     else {
       const attack = param === 'attack' ? next : entry.pattern.attack
       const release = param === 'release' ? next : entry.pattern.release
@@ -822,6 +823,9 @@ export default function App() {
             }
             onChorusChange={(amount) =>
               handleVoiceParamChange(pattern.id, 'chorus', amount)
+            }
+            onGainChange={(amount) =>
+              handleVoiceParamChange(pattern.id, 'gain', amount)
             }
             onAttackChange={(attack) =>
               handleVoiceParamChange(pattern.id, 'attack', attack)

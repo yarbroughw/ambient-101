@@ -59,6 +59,7 @@ type LoopEditorProps = {
   onCutoffChange: (hz: number) => void
   onResonanceChange: (q: number) => void
   onChorusChange: (amount: number) => void
+  onGainChange: (amount: number) => void
   onAttackChange: (attack: number) => void
   onReleaseChange: (release: number) => void
   onLoopColsChange: (loopCols: number) => void
@@ -84,6 +85,7 @@ export function LoopEditor({
   onCutoffChange,
   onResonanceChange,
   onChorusChange,
+  onGainChange,
   onAttackChange,
   onReleaseChange,
   onLoopColsChange,
@@ -110,6 +112,7 @@ export function LoopEditor({
   const cutoffValue = pattern.cutoff ?? instrumentFilterFrequency(instrumentId)
   const resonanceValue = pattern.resonance ?? 1
   const chorusValue = pattern.chorus ?? 0
+  const gainValue = pattern.gain ?? 1
   const attackValue = pattern.attack ?? envelopeDefaults.attack
   const releaseValue = pattern.release ?? envelopeDefaults.release
 
@@ -188,6 +191,7 @@ export function LoopEditor({
         cutoff={cutoffValue}
         resonance={resonanceValue}
         chorus={chorusValue}
+        gain={gainValue}
         attack={attackValue}
         release={releaseValue}
         onReverbChange={onReverbChange}
@@ -196,6 +200,7 @@ export function LoopEditor({
         onCutoffChange={onCutoffChange}
         onResonanceChange={onResonanceChange}
         onChorusChange={onChorusChange}
+        onGainChange={onGainChange}
         onAttackChange={onAttackChange}
         onReleaseChange={onReleaseChange}
       />

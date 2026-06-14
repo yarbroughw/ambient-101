@@ -37,6 +37,7 @@ type EditorSubheaderProps = {
   cutoff: number
   resonance: number
   chorus: number
+  gain: number
   attack: number
   release: number
   disabled?: boolean
@@ -51,6 +52,7 @@ type EditorSubheaderProps = {
   onCutoffChange: (hz: number) => void
   onResonanceChange: (q: number) => void
   onChorusChange: (amount: number) => void
+  onGainChange: (amount: number) => void
   onAttackChange: (attack: number) => void
   onReleaseChange: (release: number) => void
 }
@@ -75,6 +77,7 @@ export function EditorSubheader({
   cutoff,
   resonance,
   chorus,
+  gain,
   attack,
   release,
   disabled = false,
@@ -89,6 +92,7 @@ export function EditorSubheader({
   onCutoffChange,
   onResonanceChange,
   onChorusChange,
+  onGainChange,
   onAttackChange,
   onReleaseChange,
 }: EditorSubheaderProps) {
@@ -246,7 +250,7 @@ export function EditorSubheader({
             <span className="editor-panel__expander-caret" aria-hidden>
               {showSound ? '▾' : '▸'}
             </span>
-            sound
+            edit
           </button>
         </div>
       </section>
@@ -255,6 +259,24 @@ export function EditorSubheader({
       {/* Row 2 — how it sounds: filter, envelope, fx. Hidden until expanded. */}
       {showSound ? (
       <div className="editor-panel__row">
+      {/* level: tame the voice's own loudness (distinct from the reel fader) */}
+      <section className="editor-panel__group" aria-label="Level">
+        <span className="editor-panel__group-label">level</span>
+        <div className="editor-panel__body">
+          <Dial
+            label="volume"
+            value={gain}
+            min={0}
+            max={1}
+            step={0.01}
+            size={PANEL_DIAL_SIZE}
+            disabled={disabled}
+            formatReadout={(value) => `${Math.round(value * 100)}`}
+            onChange={onGainChange}
+          />
+        </div>
+      </section>
+
       {/* filter: low-pass shaping of the voice */}
       <section className="editor-panel__group" aria-label="Filter">
         <span className="editor-panel__group-label">filter</span>
