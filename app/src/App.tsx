@@ -409,7 +409,13 @@ export default function App() {
   function handleAddBlankLoop() {
     const existing = loopsRef.current ?? []
     const { id, label } = nextAvailableIdAndLabel('loop', existing)
-    const entry = createTapeLoop(createBlankPattern(id, label))
+    const reelRoots = existing.map(({ pattern }) => pattern.root)
+    const reelScaleTypes = existing.map(({ pattern }) => pattern.scale)
+    const rootConsensus = globalSelectValue(reelRoots, lastGlobalRoot)
+    const scaleConsensus = globalSelectValue(reelScaleTypes, lastGlobalScale)
+    const root = rootConsensus === MIXED_VALUE ? lastGlobalRoot : rootConsensus
+    const scale = scaleConsensus === MIXED_VALUE ? lastGlobalScale : scaleConsensus
+    const entry = createTapeLoop(createBlankPattern(id, label, { root, scale }))
     syncLoopPlayback(entry, entry.pattern, paceOptions())
     setLoops((prev) => [...(prev ?? []), entry])
   }
@@ -547,7 +553,54 @@ export default function App() {
   }
 
   function handleInstrumentChange(id: string, instrument: string) {
-    updatePattern(id, { instrument })
+    // Cutoff, resonance and the A/R envelope are relative to each instrument's
+    // natural voice, so clear them; the rebuilt voice falls back to the new
+    // instrument's recipe defaults. Chorus is instrument-agnostic and persists.
+    updatePattern(id, {
+      instrument,
+      cutoff: undefined,
+      resonance: undefined,
+      attack: undefined,
+      release: undefined,
+    })
+  }
+
+  function handleVoiceParamChange(
+    id: string,
+    param: 'cutoff' | 'resonance' | 'chorus' | 'attack' | 'release',
+    value: number,
+  ) {
+    const entry = loopsRef.current?.find((e) => e.pattern.id === id)
+    if (!entry) {
+      return
+    }
+    const clamp = (lo: number, hi: number) => Math.min(hi, Math.max(lo, value))
+    const next =
+      param === 'cutoff'
+        ? clamp(20, 20000)
+        : param === 'resonance'
+          ? clamp(0, 30)
+          : param === 'chorus'
+            ? clamp(0, 1)
+            : clamp(0, 10) // attack / release, in seconds
+
+    // Live voice update only — these are timbral params, no note recompile.
+    if (param === 'cutoff') entry.setCutoff(next)
+    else if (param === 'resonance') entry.setResonance(next)
+    else if (param === 'chorus') entry.setChorus(next)
+    else {
+      const attack = param === 'attack' ? next : entry.pattern.attack
+      const release = param === 'release' ? next : entry.pattern.release
+      entry.setEnvelope(attack, release)
+    }
+
+    setLoops((prev) =>
+      prev?.map((e) =>
+        e.pattern.id === id
+          ? { ...e, pattern: { ...e.pattern, [param]: next } }
+          : e,
+      ) ?? prev,
+    )
   }
 
   function handleGlobalRootChange(root: string) {
@@ -742,6 +795,21 @@ export default function App() {
             }
             onInstrumentChange={(instrument) =>
               handleInstrumentChange(pattern.id, instrument)
+            }
+            onCutoffChange={(hz) =>
+              handleVoiceParamChange(pattern.id, 'cutoff', hz)
+            }
+            onResonanceChange={(q) =>
+              handleVoiceParamChange(pattern.id, 'resonance', q)
+            }
+            onChorusChange={(amount) =>
+              handleVoiceParamChange(pattern.id, 'chorus', amount)
+            }
+            onAttackChange={(attack) =>
+              handleVoiceParamChange(pattern.id, 'attack', attack)
+            }
+            onReleaseChange={(release) =>
+              handleVoiceParamChange(pattern.id, 'release', release)
             }
             onLoopColsChange={(cols) => handleLoopColsChange(pattern.id, cols)}
             onDuplicate={() => handleDuplicateLoop(pattern.id)}

@@ -91,6 +91,11 @@ type TapeLoopRowProps = {
   onReverbChange: (reverb: number) => void
   onDelayChange: (delay: number) => void
   onInstrumentChange: (instrument: string) => void
+  onCutoffChange: (hz: number) => void
+  onResonanceChange: (q: number) => void
+  onChorusChange: (amount: number) => void
+  onAttackChange: (attack: number) => void
+  onReleaseChange: (release: number) => void
   onLoopColsChange: (loopCols: number) => void
   onDuplicate: () => void
   onDelete: () => void
@@ -118,6 +123,11 @@ export function TapeLoopRow({
   onReverbChange,
   onDelayChange,
   onInstrumentChange,
+  onCutoffChange,
+  onResonanceChange,
+  onChorusChange,
+  onAttackChange,
+  onReleaseChange,
   onLoopColsChange,
   onDuplicate,
   onDelete,
@@ -345,6 +355,11 @@ export function TapeLoopRow({
             onReverbChange={onReverbChange}
             onDelayChange={onDelayChange}
             onInstrumentChange={onInstrumentChange}
+            onCutoffChange={onCutoffChange}
+            onResonanceChange={onResonanceChange}
+            onChorusChange={onChorusChange}
+            onAttackChange={onAttackChange}
+            onReleaseChange={onReleaseChange}
             onLoopColsChange={onLoopColsChange}
           />
         </div>

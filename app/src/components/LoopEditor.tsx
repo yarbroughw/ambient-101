@@ -1,4 +1,9 @@
 import type { LoopPattern, PatternNote } from '../audio/patternTypes'
+import { normalizeInstrument } from '../audio/instruments/types'
+import {
+  instrumentEnvelope,
+  instrumentFilterFrequency,
+} from '../audio/instruments/createInstrumentPolySynth'
 import {
   LOOP_COLS_MAX,
   MELODY_BPM_MAX,
@@ -51,6 +56,11 @@ type LoopEditorProps = {
   onReverbChange: (reverb: number) => void
   onDelayChange: (delay: number) => void
   onInstrumentChange: (instrument: string) => void
+  onCutoffChange: (hz: number) => void
+  onResonanceChange: (q: number) => void
+  onChorusChange: (amount: number) => void
+  onAttackChange: (attack: number) => void
+  onReleaseChange: (release: number) => void
   onLoopColsChange: (loopCols: number) => void
 }
 
@@ -71,6 +81,11 @@ export function LoopEditor({
   onReverbChange,
   onDelayChange,
   onInstrumentChange,
+  onCutoffChange,
+  onResonanceChange,
+  onChorusChange,
+  onAttackChange,
+  onReleaseChange,
   onLoopColsChange,
 }: LoopEditorProps) {
   const paceScale = clampPaceScale(paceOptions.paceScale)
@@ -86,6 +101,16 @@ export function LoopEditor({
       : MIN_LOOP_DURATION
   const displayLoopDurationMin = loopDurationFloor / paceScale
   const displayLoopDurationMax = LOOP_DURATION_MAX / paceScale
+
+  // Voice overrides fall back to the instrument's recipe defaults for display
+  // when unset (absent == recipe default; see patternTypes).
+  const instrumentId = normalizeInstrument(pattern.instrument)
+  const envelopeDefaults = instrumentEnvelope(instrumentId)
+  const cutoffValue = pattern.cutoff ?? instrumentFilterFrequency(instrumentId)
+  const resonanceValue = pattern.resonance ?? 1
+  const chorusValue = pattern.chorus ?? 0
+  const attackValue = pattern.attack ?? envelopeDefaults.attack
+  const releaseValue = pattern.release ?? envelopeDefaults.release
 
   // The fill dial controls how much of the tape period the melody window
   // occupies. We translate a target (playback-space) fill into a stored bpm,
@@ -151,9 +176,19 @@ export function LoopEditor({
         onLoopDurationChange={handleLoopDurationChange}
         reverb={pattern.reverb}
         delay={pattern.delay}
+        cutoff={cutoffValue}
+        resonance={resonanceValue}
+        chorus={chorusValue}
+        attack={attackValue}
+        release={releaseValue}
         onReverbChange={onReverbChange}
         onDelayChange={onDelayChange}
         onInstrumentChange={onInstrumentChange}
+        onCutoffChange={onCutoffChange}
+        onResonanceChange={onResonanceChange}
+        onChorusChange={onChorusChange}
+        onAttackChange={onAttackChange}
+        onReleaseChange={onReleaseChange}
       />
 
       <MelodyGrid
