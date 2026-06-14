@@ -73,7 +73,7 @@ export function EnsembleSyncLabel({
 
   return (
     <p className="ensemble-sync-label">
-      {'resync in '}
+      {showElapsed ? 'running for ' : 'resync in '}
       <button
         type="button"
         className="ensemble-sync-label__toggle"
