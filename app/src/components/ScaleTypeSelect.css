@@ -37,6 +37,13 @@
   color: var(--color-btn-text);
 }
 
+.scale-type-select__measure {
+  position: absolute;
+  visibility: hidden;
+  height: 0;
+  overflow: hidden;
+}
+
 .scale-type-select--loop-editor .scale-type-select__native {
   padding: 0 14px 0 4px;
 }

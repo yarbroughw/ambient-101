@@ -13,6 +13,7 @@
 
 .toolbar {
   --toolbar-height: var(--loop-row-height);
+  --toolbar-tonality-width: 120px;
   --toolbar-tonality-gap: 4px;
   --toolbar-row-height: calc(
     (var(--toolbar-height) - var(--toolbar-tonality-gap)) / 2
@@ -49,7 +50,7 @@
 .toolbar__spectrum {
   justify-self: stretch;
   width: 100%;
-  min-width: 96px;
+  min-width: 72px;
   height: var(--toolbar-height);
 }
 
@@ -70,7 +71,7 @@
   flex-direction: column;
   gap: var(--toolbar-tonality-gap);
   justify-self: start;
-  width: 96px;
+  width: var(--toolbar-tonality-width);
   height: var(--toolbar-height);
 }
 
