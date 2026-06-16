@@ -1,0 +1,493 @@
+{
+  "version": 1,
+  "name": "jeanette",
+  "paceScale": 1,
+  "loops": [
+    {
+      "id": "loop",
+      "label": "loop",
+      "loopCols": 32,
+      "bpm": 110.42097998619745,
+      "root": "D",
+      "scale": "dorian",
+      "octaveShift": -1,
+      "instrument": "glass",
+      "volume": 1,
+      "reverb": 0.84,
+      "delay": 0.37,
+      "notes": [
+        {
+          "scaleStep": 0,
+          "startCol": 0,
+          "spanCols": 3,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 5,
+          "startCol": 8,
+          "spanCols": 4,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 9,
+          "startCol": 5,
+          "spanCols": 3,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 20,
+          "spanCols": 4,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 10,
+          "startCol": 18,
+          "spanCols": 4,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 5,
+          "startCol": 26,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 5,
+          "startCol": 28,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 9,
+          "startCol": 27,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -2,
+          "startCol": 11,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 9,
+          "startCol": 15,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -5,
+          "startCol": 22,
+          "spanCols": 4,
+          "velocity": 0.7
+        }
+      ],
+      "cutoff": 3500,
+      "resonance": 7,
+      "attack": 0.84,
+      "release": 8.25,
+      "chorus": 0.19,
+      "loopDurationMs": 6300
+    },
+    {
+      "id": "aisatsana",
+      "label": "aisatsana",
+      "bpm": 113.63636363636363,
+      "root": "D",
+      "scale": "dorian",
+      "octaveShift": -1,
+      "instrument": "organ",
+      "volume": 1,
+      "reverb": 0.62,
+      "delay": 0.94,
+      "notes": [
+        {
+          "scaleStep": 2,
+          "startCol": 0,
+          "spanCols": 3,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 4,
+          "startCol": 4,
+          "spanCols": 3,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 0,
+          "startCol": 8,
+          "spanCols": 3,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 7,
+          "startCol": 12,
+          "spanCols": 3,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 6,
+          "startCol": 16,
+          "spanCols": 3,
+          "velocity": 0.7
+        }
+      ],
+      "loopCols": 32,
+      "chorus": 0.1,
+      "loopDurationMs": 12800
+    },
+    {
+      "id": "piano phase",
+      "label": "piano phase",
+      "bpm": 14.236001265422335,
+      "loopCols": 24,
+      "root": "D",
+      "scale": "dorian",
+      "octaveShift": 0,
+      "instrument": "reed",
+      "volume": 0.29878125,
+      "reverb": 0.98,
+      "delay": 0.61,
+      "notes": [
+        {
+          "scaleStep": -3,
+          "startCol": 0,
+          "spanCols": 2,
+          "velocity": 0.8
+        },
+        {
+          "scaleStep": -2,
+          "startCol": 2,
+          "spanCols": 2,
+          "velocity": 0.8
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 4,
+          "spanCols": 2,
+          "velocity": 0.8
+        },
+        {
+          "scaleStep": -2,
+          "startCol": 10,
+          "spanCols": 2,
+          "velocity": 0.8
+        },
+        {
+          "scaleStep": -3,
+          "startCol": 12,
+          "spanCols": 2,
+          "velocity": 0.8
+        },
+        {
+          "scaleStep": 2,
+          "startCol": 14,
+          "spanCols": 2,
+          "velocity": 0.8
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 16,
+          "spanCols": 2,
+          "velocity": 0.8
+        },
+        {
+          "scaleStep": -2,
+          "startCol": 18,
+          "spanCols": 2,
+          "velocity": 0.8
+        },
+        {
+          "scaleStep": 3,
+          "startCol": 20,
+          "spanCols": 2,
+          "velocity": 0.8
+        },
+        {
+          "scaleStep": 2,
+          "startCol": 22,
+          "spanCols": 2,
+          "velocity": 0.8
+        }
+      ],
+      "chorus": 0.06,
+      "release": 3.25,
+      "loopDurationMs": 43600
+    },
+    {
+      "id": "loop2",
+      "label": "loop2",
+      "loopCols": 32,
+      "bpm": 54.61372169757651,
+      "root": "D",
+      "scale": "dorian",
+      "octaveShift": 0,
+      "instrument": "bell",
+      "volume": 0.34675,
+      "reverb": 0.75,
+      "delay": 0.3,
+      "notes": [
+        {
+          "scaleStep": 0,
+          "startCol": 6,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 6,
+          "startCol": 12,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -7,
+          "startCol": 16,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 15,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 7,
+          "startCol": 25,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -2,
+          "startCol": 29,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 8,
+          "startCol": 1,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 2,
+          "startCol": 2,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 4,
+          "startCol": 3,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 7,
+          "startCol": 5,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -1,
+          "startCol": 7,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 0,
+          "startCol": 8,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 2,
+          "startCol": 8,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 0,
+          "startCol": 10,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -5,
+          "startCol": 10,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 4,
+          "startCol": 20,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 6,
+          "startCol": 20,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 0,
+          "startCol": 25,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 4,
+          "startCol": 25,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 0,
+          "startCol": 22,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 0,
+          "startCol": 19,
+          "spanCols": 3,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 4,
+          "startCol": 21,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 0,
+          "startCol": 11,
+          "spanCols": 3,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 6,
+          "startCol": 8,
+          "spanCols": 4,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 8,
+          "startCol": 2,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -7,
+          "startCol": 12,
+          "spanCols": 4,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 7,
+          "startCol": 26,
+          "spanCols": 4,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -2,
+          "startCol": 26,
+          "spanCols": 3,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 6,
+          "startCol": 17,
+          "spanCols": 3,
+          "velocity": 0.7
+        }
+      ],
+      "cutoff": 1800,
+      "loopDurationMs": 18720
+    },
+    {
+      "id": "loop3",
+      "label": "loop3",
+      "loopCols": 32,
+      "bpm": 34.664548277605256,
+      "root": "D",
+      "scale": "dorian",
+      "octaveShift": 0,
+      "instrument": "harp",
+      "volume": 0.5583750000000001,
+      "reverb": 0.66,
+      "delay": 0.69,
+      "notes": [
+        {
+          "scaleStep": 6,
+          "startCol": 9,
+          "spanCols": 6,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -4,
+          "startCol": 17,
+          "spanCols": 5,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -1,
+          "startCol": 27,
+          "spanCols": 4,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 4,
+          "startCol": 26,
+          "spanCols": 4,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 0,
+          "startCol": 18,
+          "spanCols": 4,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 4,
+          "startCol": 16,
+          "spanCols": 5,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 2,
+          "startCol": 10,
+          "spanCols": 4,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 4,
+          "startCol": 2,
+          "spanCols": 5,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 7,
+          "startCol": 3,
+          "spanCols": 5,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -1,
+          "startCol": 1,
+          "spanCols": 5,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -5,
+          "startCol": 25,
+          "spanCols": 6,
+          "velocity": 0.7
+        }
+      ],
+      "release": 1.6,
+      "loopDurationMs": 22700
+    }
+  ]
+}

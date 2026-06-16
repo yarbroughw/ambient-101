@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "name": "zea",
+  "paceScale": 1,
+  "loops": [
+    {
+      "id": "loop",
+      "label": "loop",
+      "loopCols": 14,
+      "bpm": 104.33669683929365,
+      "root": "C",
+      "scale": "mixolydian",
+      "octaveShift": 0,
+      "instrument": "pluck",
+      "volume": 1,
+      "reverb": 0.75,
+      "delay": 0.3,
+      "notes": [
+        {
+          "scaleStep": 3,
+          "startCol": 3,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 4,
+          "startCol": 4,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 5,
+          "startCol": 5,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 6,
+          "startCol": 8,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -1,
+          "startCol": 10,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 0,
+          "startCol": 12,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": -2,
+          "startCol": 13,
+          "spanCols": 1,
+          "velocity": 0.7
+        }
+      ],
+      "loopDurationMs": 4375
+    }
+  ]
+}
