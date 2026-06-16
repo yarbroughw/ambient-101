@@ -3,6 +3,7 @@
   flex-direction: column;
   gap: 20px;
   width: min(100%, 420px);
+  margin: auto;
   padding: 24px;
 }
 
