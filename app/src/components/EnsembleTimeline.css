@@ -212,3 +212,25 @@
   color: var(--color-labels);
   pointer-events: none;
 }
+
+.ensemble-timeline--fullscreen {
+  padding: 0;
+}
+
+.ensemble-timeline--fullscreen .ensemble-timeline__rows {
+  gap: 0;
+  height: 100%;
+}
+
+.ensemble-timeline--fullscreen .ensemble-timeline__lane {
+  height: var(--timeline-lane-height);
+  flex: 0 0 var(--timeline-lane-height);
+}
+
+.ensemble-timeline--fullscreen .ensemble-timeline__lane + .ensemble-timeline__lane {
+  border-top: none;
+}
+
+.ensemble-timeline--fullscreen .ensemble-timeline__playhead {
+  bottom: 0;
+}

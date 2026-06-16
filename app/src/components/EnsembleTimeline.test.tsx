@@ -6,6 +6,7 @@ import type { DemoLoop } from '../audio/demoPatterns'
 import { createTestNote, createTestPattern } from '../test/fixtures'
 
 const LANE_WIDTH = 440
+let measuredHeight = 70
 
 class ResizeObserverStub {
   observe() {}
@@ -37,11 +38,17 @@ beforeEach(() => {
     configurable: true,
     get: () => LANE_WIDTH,
   })
+  Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+    configurable: true,
+    get: () => measuredHeight,
+  })
 })
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  measuredHeight = 70
   delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth
+  delete (HTMLElement.prototype as { clientHeight?: number }).clientHeight
 })
 
 describe('EnsembleTimeline seam behavior', () => {
@@ -112,5 +119,36 @@ describe('EnsembleTimeline seam behavior', () => {
       { note: `${(22 / 24) * 100}%`, tile: '0px' },
       { note: '0%', tile: `${tileWidth}px` },
     ])
+  })
+})
+
+describe('EnsembleTimeline fullscreen layout', () => {
+  it('scales lane height to fit all rows in the measured container', () => {
+    measuredHeight = 300
+    const patternA = createTestPattern({ id: 'a', label: 'a' })
+    const patternB = createTestPattern({ id: 'b', label: 'b' })
+    const loop = {
+      getProgress: () => 0,
+      isTesting: () => false,
+      getLoopTimeSec: () => 0,
+    } as unknown as TapeLoop
+    const loops = [
+      { pattern: patternA, loop },
+      { pattern: patternB, loop },
+    ] as unknown as DemoLoop[]
+
+    const { container } = render(
+      <EnsembleTimeline
+        layout="fullscreen"
+        loops={loops}
+        runningById={{}}
+        motion="fixed-rate"
+        zoomStop={0}
+      />,
+    )
+
+    const section = container.querySelector('.ensemble-timeline') as HTMLElement
+    expect(section.classList.contains('ensemble-timeline--fullscreen')).toBe(true)
+    expect(section.style.getPropertyValue('--timeline-lane-height')).toBe('150px')
   })
 })

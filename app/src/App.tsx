@@ -11,6 +11,9 @@ import { BackButton } from './components/BackButton'
 import { StartupScreen } from './components/StartupScreen'
 import { TapeLoopRow } from './components/TapeLoopRow'
 import { EnsembleTimeline } from './components/EnsembleTimeline'
+import { TimelineFullscreenButton } from './components/TimelineFullscreenButton'
+import './components/TimelineFullscreenButton.css'
+import { TimelineFullscreenOverlay } from './components/TimelineFullscreenOverlay'
 import type { LoopPattern, PatternNote } from './audio/patternTypes'
 import {
   audioNowSec,
@@ -100,6 +103,7 @@ export default function App() {
   const [lockMelodyTempo, setLockMelodyTempo] = useState(loadLockMelodyTempo)
   const [timelineMotion, setTimelineMotion] = useState(loadTimelineMotion)
   const [timelineZoomStop, setTimelineZoomStop] = useState(loadTimelineZoomStop)
+  const [timelineFullscreen, setTimelineFullscreen] = useState(false)
   // Last value the global tonality controls represented, shown (with a trailing
   // asterisk) when reels disagree so the dropdowns never blank out to just "*".
   const [lastGlobalRoot, setLastGlobalRoot] = useState(DEFAULT_ROOT as string)
@@ -109,10 +113,12 @@ export default function App() {
   const loopsRef = useRef(loops)
   const runningByIdRef = useRef(runningById)
   const audioReadyRef = useRef(audioReady)
+  const viewModeRef = useRef(viewMode)
   useEffect(() => {
     loopsRef.current = loops
     runningByIdRef.current = runningById
     audioReadyRef.current = audioReady
+    viewModeRef.current = viewMode
   })
 
   const loopIds = loops?.map(({ pattern }) => pattern.id) ?? []
@@ -333,14 +339,63 @@ export default function App() {
       }
 
       event.preventDefault()
-      setViewMode((mode) => (mode === 'stack' ? 'timeline' : 'stack'))
+      setViewMode((mode) => {
+        if (mode === 'timeline') {
+          setTimelineFullscreen(false)
+          return 'stack'
+        }
+        return 'timeline'
+      })
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
+  useEffect(() => {
+    function isTypingTarget(target: EventTarget | null): boolean {
+      if (!(target instanceof HTMLElement)) {
+        return false
+      }
+      return (
+        target.closest('input, textarea, select, [contenteditable="true"]') != null
+      )
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'f' || event.repeat) {
+        return
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return
+      }
+      if (!audioReadyRef.current || isTypingTarget(event.target)) {
+        return
+      }
+      if (!loopsRef.current?.length) {
+        return
+      }
+      if (viewModeRef.current !== 'timeline') {
+        return
+      }
+
+      event.preventDefault()
+      setTimelineFullscreen((open) => !open)
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  function handleViewModeChange(mode: 'stack' | 'timeline') {
+    if (mode === 'stack') {
+      setTimelineFullscreen(false)
+    }
+    setViewMode(mode)
+  }
+
   function handleSelectLane(id: string) {
+    setTimelineFullscreen(false)
     setViewMode('stack')
     // Double rAF: wait for the stack view to commit and paint before scrolling.
     requestAnimationFrame(() => {
@@ -667,6 +722,7 @@ export default function App() {
 
   const hasLoops = (loops?.length ?? 0) > 0
   const showTimeline = viewMode === 'timeline' && hasLoops
+  const timelineFullscreenActive = showTimeline && timelineFullscreen
 
   if (!audioReady) {
     return (
@@ -759,15 +815,34 @@ export default function App() {
             onZoomStopChange={handleTimelineZoomStopChange}
           />
         ) : null}
-        <ViewToggle
-          mode={showTimeline ? 'timeline' : 'stack'}
-          disabled={!hasLoops}
-          onModeChange={setViewMode}
-        />
+        <div className="view-toggle-cluster">
+          <TimelineFullscreenButton
+            active={timelineFullscreenActive}
+            hidden={!showTimeline}
+            onClick={() => setTimelineFullscreen((open) => !open)}
+          />
+          <ViewToggle
+            mode={showTimeline ? 'timeline' : 'stack'}
+            disabled={!hasLoops}
+            onModeChange={handleViewModeChange}
+          />
+        </div>
       </div>
 
-      {showTimeline ? (
+      {timelineFullscreenActive ? (
+        <TimelineFullscreenOverlay
+          loops={loops ?? []}
+          runningById={runningById}
+          motion={timelineMotion}
+          zoomStop={timelineZoomStop}
+          onMotionChange={handleTimelineMotionChange}
+          onZoomStopChange={handleTimelineZoomStopChange}
+          onSelectLane={handleSelectLane}
+          onClose={() => setTimelineFullscreen(false)}
+        />
+      ) : showTimeline ? (
         <EnsembleTimeline
+          layout="inline"
           loops={loops ?? []}
           runningById={runningById}
           motion={timelineMotion}

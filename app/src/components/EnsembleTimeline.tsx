@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { RefObject } from 'react'
+import type { CSSProperties, RefObject } from 'react'
 import type { DemoLoop } from '../audio/demoPatterns'
 import type { LoopPattern } from '../audio/patternTypes'
 import type { TapeLoop } from '../audio/tapeLoop'
@@ -24,11 +24,14 @@ const PLAYHEAD_FRAC = 0.4
 const MIN_WINDOW_SEC = 10
 const MAX_WINDOW_SEC = 36
 
+export type EnsembleTimelineLayout = 'inline' | 'fullscreen'
+
 type EnsembleTimelineProps = {
   loops: DemoLoop[]
   runningById: Record<string, boolean>
   motion: TimelineMotion
   zoomStop: number
+  layout?: EnsembleTimelineLayout
   /** Called with the reel id when a lane is clicked (jump back to Reels). */
   onSelectLane?: (id: string) => void
 }
@@ -43,20 +46,23 @@ type RowData = {
   running: boolean
 }
 
-function useMeasuredWidth(ref: RefObject<HTMLElement | null>): number {
-  const [width, setWidth] = useState(0)
+type MeasuredSize = { width: number; height: number }
+
+function useMeasuredSize(ref: RefObject<HTMLElement | null>): MeasuredSize {
+  const [size, setSize] = useState<MeasuredSize>({ width: 0, height: 0 })
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) {
       return
     }
-    const update = () => setWidth(el.clientWidth)
+    const update = () =>
+      setSize({ width: el.clientWidth, height: el.clientHeight })
     update()
     const observer = new ResizeObserver(update)
     observer.observe(el)
     return () => observer.disconnect()
   }, [ref])
-  return width
+  return size
 }
 
 type LanePhase = { phase: number; lap: number }
@@ -101,10 +107,11 @@ export function EnsembleTimeline({
   runningById,
   motion,
   zoomStop,
+  layout = 'inline',
   onSelectLane,
 }: EnsembleTimelineProps) {
   const sectionRef = useRef<HTMLDivElement>(null)
-  const width = useMeasuredWidth(sectionRef)
+  const { width, height } = useMeasuredSize(sectionRef)
 
   // The tape is laid out at composed (unpaced) scale, so pace shows up as
   // scroll speed rather than rescaling every tile.
@@ -129,12 +136,22 @@ export function EnsembleTimeline({
     windowSec,
     medianPeriod(rows.map((row) => row.period)),
   )
+  const isFullscreen = layout === 'fullscreen'
+  const laneHeight =
+    isFullscreen && height > 0 && rows.length > 0 ? height / rows.length : null
 
   return (
     <section
       ref={sectionRef}
-      className="ensemble-timeline"
+      className={`ensemble-timeline${
+        isFullscreen ? ' ensemble-timeline--fullscreen' : ''
+      }`}
       aria-label="Ensemble timeline"
+      style={
+        laneHeight != null
+          ? ({ '--timeline-lane-height': `${laneHeight}px` } as CSSProperties)
+          : undefined
+      }
     >
       <ul className="ensemble-timeline__rows">
         {rows.map((row) => (

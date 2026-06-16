@@ -1,0 +1,39 @@
+.timeline-fullscreen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 3px 8px;
+  border: 1px solid var(--color-outline);
+  border-right: none;
+  background: transparent;
+  color: var(--color-labels);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.timeline-fullscreen-btn:hover:not(.is-active) {
+  color: var(--color-btn-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.timeline-fullscreen-btn.is-active {
+  background: var(--color-outline);
+  color: var(--color-loop-bg);
+}
+
+.timeline-fullscreen-btn--hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.timeline-fullscreen-btn:focus-visible {
+  outline: 1px solid var(--color-active);
+  outline-offset: -1px;
+}
+
+.timeline-fullscreen-btn__icon {
+  display: block;
+  width: 9px;
+  height: 9px;
+}

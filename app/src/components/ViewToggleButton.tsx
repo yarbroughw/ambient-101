@@ -17,16 +17,6 @@ export function ViewToggle({
     <div className="view-toggle" role="group" aria-label="Reel area view">
       <button
         type="button"
-        className={`view-toggle__option${mode === 'stack' ? ' is-active' : ''}`}
-        disabled={disabled}
-        aria-pressed={mode === 'stack'}
-        title="edit reels (t)"
-        onClick={() => onModeChange('stack')}
-      >
-        reels
-      </button>
-      <button
-        type="button"
         className={`view-toggle__option${mode === 'timeline' ? ' is-active' : ''}`}
         disabled={disabled}
         aria-pressed={mode === 'timeline'}
@@ -34,6 +24,16 @@ export function ViewToggle({
         onClick={() => onModeChange('timeline')}
       >
         timeline
+      </button>
+      <button
+        type="button"
+        className={`view-toggle__option${mode === 'stack' ? ' is-active' : ''}`}
+        disabled={disabled}
+        aria-pressed={mode === 'stack'}
+        title="edit reels (t)"
+        onClick={() => onModeChange('stack')}
+      >
+        reels
       </button>
     </div>
   )

@@ -211,3 +211,8 @@
 .view-toggle-row--timeline {
   grid-template-columns: 1fr auto auto;
 }
+
+.view-toggle-cluster {
+  display: inline-flex;
+  align-items: stretch;
+}
