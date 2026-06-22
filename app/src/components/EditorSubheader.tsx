@@ -19,7 +19,7 @@ import './LoopEditor.css'
 // Grouped editor control panel: timing · key · voice (row 1) and the
 // collapsible filter · envelope · fx (row 2), toggled from the voice group.
 const FILL_STEP = 0.01
-const PANEL_DIAL_SIZE = 40
+const PANEL_DIAL_SIZE = 54
 
 type EditorSubheaderProps = {
   fill: number
@@ -287,6 +287,7 @@ export function EditorSubheader({
             min={20}
             max={12000}
             step={20}
+            scale="log"
             size={PANEL_DIAL_SIZE}
             disabled={disabled}
             editableReadout

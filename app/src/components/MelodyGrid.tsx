@@ -225,11 +225,11 @@ const MelodyGridBody = memo(function MelodyGridBody({
     <>
       <div
         ref={gridRef}
-        className="melody-grid"
+        className="melody-grid melody-grid--fluid"
         role="grid"
         aria-label="Melody step grid"
         style={{
-          gridTemplateColumns: `var(--melody-grid-step-width) repeat(${layout.columnCount}, var(--melody-grid-cell-size)) var(--melody-grid-pitch-width)`,
+          gridTemplateColumns: `var(--melody-grid-step-width) repeat(${layout.columnCount}, minmax(0, 1fr)) var(--melody-grid-pitch-width)`,
         }}
       >
         <div className="melody-grid__corner melody-grid__corner--step" role="presentation" />
@@ -392,12 +392,7 @@ const MelodyGridBody = memo(function MelodyGridBody({
         })}
       </div>
 
-      <div
-        className="melody-grid__brace"
-        style={{
-          left: `calc(var(--melody-grid-step-width) + ${activeCols} * (var(--melody-grid-cell-size) + 1px))`,
-        }}
-      >
+      <div className="melody-grid__brace">
         <div
           className="melody-grid__brace-handle"
           role="slider"
@@ -898,12 +893,15 @@ export function MelodyGrid({
   }, [drag, columnAtPointer, rowAtPointer, pointerMetrics, previewStep, endDrag])
 
   const frameStyle = useMemo(
-    () => ({ ['--melody-grid-column-count' as string]: layout.columnCount }),
-    [layout.columnCount],
+    () => ({
+      ['--melody-grid-column-count' as string]: layout.columnCount,
+      ['--melody-grid-active-cols' as string]: activeCols,
+    }),
+    [layout.columnCount, activeCols],
   )
 
   return (
-    <div className="melody-grid__scroll">
+    <div className="melody-grid__scroll melody-grid__scroll--fluid">
       <div className="melody-grid__frame" style={frameStyle}>
         <MelodyGridBody
           notes={notes}

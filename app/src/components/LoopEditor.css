@@ -16,12 +16,12 @@
 }
 
 /* Each row groups related controls; row 1 = what plays, row 2 = how it sounds.
-   Groups are centred within the reel. */
+   Groups stretch across the reel width for touch-friendly targets. */
 .editor-panel__row {
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
-  justify-content: center;
+  justify-content: space-between;
 }
 
 .editor-panel__group {
@@ -190,4 +190,121 @@
   line-height: 1;
   text-align: center;
   color: var(--color-btn-text);
+}
+
+/* Expanded reel editor: stretch controls and the note grid across the full
+   reel width so touch targets stay large on narrow layouts. */
+.tape-loop-row__editor {
+  --melody-grid-step-width: 34px;
+  --melody-grid-pitch-width: 42px;
+  --melody-grid-header-height: 16px;
+  --editor-dial-size: 54px;
+  --editor-slider-min-width: 96px;
+}
+
+.tape-loop-row__editor .editor-panel__row:first-child {
+  padding-inline: 40px;
+}
+
+.tape-loop-row__editor .editor-panel__group {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 2px 10px;
+  align-items: center;
+}
+
+.tape-loop-row__editor .editor-panel__group:first-child {
+  padding-left: 0;
+}
+
+.tape-loop-row__editor .editor-panel__group:last-child {
+  padding-right: 0;
+}
+
+.tape-loop-row__editor .editor-panel__body {
+  width: 100%;
+  justify-content: center;
+}
+
+.tape-loop-row__editor .editor-panel__body--timing {
+  gap: 20px;
+}
+
+.tape-loop-row__editor .editor-panel__body--timing .slider {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: var(--editor-slider-min-width);
+  --slider-width: var(--editor-slider-min-width);
+}
+
+.tape-loop-row__editor .editor-panel__body--timing .slider__track {
+  min-width: 0;
+  height: 18px;
+}
+
+.tape-loop-row__editor .editor-panel__body--timing .slider__thumb {
+  width: 12px;
+  height: 12px;
+}
+
+.tape-loop-row__editor .editor-panel__group-label {
+  font-size: 9px;
+}
+
+.tape-loop-row__editor .editor-panel__field,
+.tape-loop-row__editor .editor-panel__field--stacked {
+  grid-template-columns: 28px 1fr;
+}
+
+.tape-loop-row__editor .editor-panel__field-label {
+  font-size: 8px;
+}
+
+.tape-loop-row__editor .editor-panel__select {
+  height: 22px;
+  font-size: 9px;
+}
+
+.tape-loop-row__editor .editor-panel__octave {
+  height: 22px;
+}
+
+.tape-loop-row__editor .editor-panel__octave-btn {
+  width: 20px;
+  height: 20px;
+  font-size: 9px;
+}
+
+.tape-loop-row__editor .editor-panel__octave-readout {
+  font-size: 8px;
+}
+
+.tape-loop-row__editor .editor-panel__expander {
+  height: 22px;
+  font-size: 9px;
+}
+
+.tape-loop-row__editor .dial__readout,
+.tape-loop-row__editor .dial__readout-input {
+  font-size: 9px;
+}
+
+.tape-loop-row__editor .dial__label {
+  font-size: 9px;
+}
+
+.tape-loop-row__editor .dial__sublabel {
+  font-size: 8px;
+}
+
+.tape-loop-row__editor .melody-grid__col-header,
+.tape-loop-row__editor .melody-grid__axis-label {
+  font-size: 9px;
+}
+
+.tape-loop-row__editor .melody-grid__brace-handle {
+  top: calc(-1 * var(--melody-grid-header-height));
+  left: -10px;
+  width: 20px;
+  height: var(--melody-grid-header-height);
 }
