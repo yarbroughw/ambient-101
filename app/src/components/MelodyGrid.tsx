@@ -731,6 +731,8 @@ export function MelodyGrid({
         return
       }
 
+      event.preventDefault()
+
       if (active.kind === 'brace') {
         const metrics = pointerMetrics()
         if (!metrics) {
