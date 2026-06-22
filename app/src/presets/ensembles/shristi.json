@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "name": "mighty tunes",
+  "paceScale": 1,
+  "loops": [
+    {
+      "id": "loop",
+      "label": "loop",
+      "loopCols": 31,
+      "bpm": 77.5,
+      "root": "C",
+      "scale": "mixolydian",
+      "octaveShift": 0,
+      "instrument": "glass",
+      "volume": 1,
+      "reverb": 0.36,
+      "delay": 0.3,
+      "notes": [
+        {
+          "scaleStep": 1,
+          "startCol": 1,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 3,
+          "startCol": 3,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 5,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 7,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 3,
+          "startCol": 9,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 11,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+
+          "startCol": 13,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 3,
+          "startCol": 15,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 17,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 19,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 3,
+          "startCol": 21,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 23,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 25,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 3,
+          "startCol": 27,
+          "spanCols": 1,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 29,
+          "spanCols": 1,
+          "velocity": 0.7
+        }
+      ],
+      "chorus": 0.24,
+      "loopDurationMs": 6000
+    },
+    {
+
+      "id": "loop-2",
+      "label": "loop-2",
+      "loopCols": 31,
+      "bpm": 77.5,
+      "root": "C",
+      "scale": "mixolydian",
+      "octaveShift": 0,
+      "instrument": "marimba",
+      "volume": 1,
+      "reverb": 0.36,
+      "delay": 0.3,
+      "notes": [
+        {
+          "scaleStep": 3,
+          "startCol": 3,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 5,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 3,
+          "startCol": 8,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 10,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 3,
+          "startCol": 13,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 2,
+          "startCol": 14,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 15,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 0,
+          "startCol": 16,
+
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 3,
+          "startCol": 18,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 2,
+          "startCol": 19,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 1,
+          "startCol": 20,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 0,
+          "startCol": 21,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 0,
+          "startCol": 29,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 2,
+          "startCol": 27,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 0,
+          "startCol": 25,
+          "spanCols": 2,
+          "velocity": 0.7
+        },
+        {
+          "scaleStep": 2,
+          "startCol": 24,
+          "spanCols": 2,
+          "velocity": 0.7
+        }
+      ],
+      "chorus": 0.24,
+      "loopDurationMs": 6000
+    }
+  ]
+}
