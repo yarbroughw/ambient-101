@@ -1,4 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import {
+  controlRatioToValue,
+  controlStepRatio,
+  type ControlScale,
+  valueToControlRatio,
+} from '../lib/controlScale'
 import './Dial.css'
 
 type DialProps = {
@@ -16,6 +22,8 @@ type DialProps = {
    */
   softMin?: number
   step?: number
+  /** Map dial position to value. Use `log` for frequency-like ranges. */
+  scale?: ControlScale
   size?: number
   disabled?: boolean
   className?: string
@@ -83,6 +91,7 @@ export function Dial({
   max = 1,
   softMin,
   step = 0.01,
+  scale = 'linear',
   size = 32,
   disabled = false,
   className = '',
@@ -105,9 +114,9 @@ export function Dial({
   const visualSize = isToolbar ? TOOLBAR_DIAL_SIZE : size
 
   const lowerBound = softMin != null ? Math.min(max, Math.max(min, softMin)) : min
-  const ratio = (value - min) / (max - min)
+  const ratio = valueToControlRatio(value, min, max, scale)
   const valueAngle = START_DEG + ratio * SWEEP_DEG
-  const lowerRatio = (lowerBound - min) / (max - min)
+  const lowerRatio = valueToControlRatio(lowerBound, min, max, scale)
   const lowerAngle = START_DEG + lowerRatio * SWEEP_DEG
   const stroke = visualSize >= 40 ? 3.5 : 3
   const radius = (visualSize - stroke) / 2
@@ -126,8 +135,17 @@ export function Dial({
   const notchOuter = polarToCartesian(center, center, radius + stroke * 0.6, lowerAngle)
 
   function updateFromPointer(clientY: number, originY: number, originValue: number) {
-    const delta = (originY - clientY) * 0.006 * (max - min)
-    onChange(snap(originValue + delta, step, lowerBound, max))
+    const originRatio = valueToControlRatio(originValue, min, max, scale)
+    const deltaRatio = (originY - clientY) * 0.006
+    onChange(
+      snap(controlRatioToValue(originRatio + deltaRatio, min, max, scale), step, lowerBound, max),
+    )
+  }
+
+  function nudge(direction: 1 | -1, multiplier = 1) {
+    const stepRatio = controlStepRatio(value, step, min, max, scale)
+    const nextRatio = valueToControlRatio(value, min, max, scale) + direction * stepRatio * multiplier
+    onChange(snap(controlRatioToValue(nextRatio, min, max, scale), step, lowerBound, max))
   }
 
   const readoutText = formatReadout ? formatReadout(value) : String(Math.round(ratio * 100))
@@ -231,11 +249,11 @@ export function Dial({
           }
           if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
             e.preventDefault()
-            onChange(snap(value + step, step, lowerBound, max))
+            nudge(1)
           }
           if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
             e.preventDefault()
-            onChange(snap(value - step, step, lowerBound, max))
+            nudge(-1)
           }
         }}
         onWheel={(e) => {
@@ -243,8 +261,7 @@ export function Dial({
             return
           }
           e.preventDefault()
-          const delta = e.deltaY > 0 ? -step * 4 : step * 4
-          onChange(snap(value + delta, step, lowerBound, max))
+          nudge(e.deltaY > 0 ? -1 : 1, 4)
         }}
       >
         <svg
