@@ -929,7 +929,7 @@ export function MelodyGrid({
             <span
               className="melody-grid__playhead"
               style={{
-                left: `${(playheadRatio * activeCols) / layout.columnCount * 100}%`,
+                left: `${playheadRatio * 100}%`,
               }}
             />
           </div>

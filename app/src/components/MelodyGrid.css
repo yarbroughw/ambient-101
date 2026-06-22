@@ -73,9 +73,11 @@
   z-index: 3;
 }
 
-.melody-grid--fluid .melody-grid__playhead-layer {
-  right: var(--melody-grid-pitch-width);
-  width: auto;
+.melody-grid__scroll--fluid .melody-grid__playhead-layer {
+  width: calc(
+    (var(--melody-grid-active-cols) / var(--melody-grid-column-count)) *
+      (100% - var(--melody-grid-step-width) - var(--melody-grid-pitch-width))
+  );
 }
 
 .melody-grid__playhead {
