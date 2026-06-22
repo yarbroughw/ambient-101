@@ -10,6 +10,7 @@ import './TimelineMotionControls.css'
 type TimelineMotionControlsProps = {
   motion: TimelineMotion
   zoomStop: number
+  showHoverTooltips?: boolean
   onMotionChange: (motion: TimelineMotion) => void
   onZoomStopChange: (zoomStop: number) => void
 }
@@ -28,6 +29,7 @@ function formatZoomReadout(zoomStop: number): string {
 export function TimelineMotionControls({
   motion,
   zoomStop,
+  showHoverTooltips = true,
   onMotionChange,
   onZoomStopChange,
 }: TimelineMotionControlsProps) {
@@ -43,7 +45,11 @@ export function TimelineMotionControls({
             motion === 'fixed-rate' ? ' is-active' : ''
           }`}
           aria-pressed={motion === 'fixed-rate'}
-          title="fixed scroll rate — tile width shows loop length"
+          title={
+            showHoverTooltips
+              ? 'fixed scroll rate — tile width shows loop length'
+              : undefined
+          }
           onClick={() => onMotionChange('fixed-rate')}
         >
           rate
@@ -54,7 +60,11 @@ export function TimelineMotionControls({
             motion === 'fixed-width' ? ' is-active' : ''
           }`}
           aria-pressed={motion === 'fixed-width'}
-          title="fixed tile width — scroll speed shows loop length"
+          title={
+            showHoverTooltips
+              ? 'fixed tile width — scroll speed shows loop length'
+              : undefined
+          }
           onClick={() => onMotionChange('fixed-width')}
         >
           width

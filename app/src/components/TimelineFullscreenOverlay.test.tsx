@@ -80,4 +80,13 @@ describe('TimelineFullscreenOverlay', () => {
     renderOverlay()
     expect(document.body.style.overflow).toBe('hidden')
   })
+
+  it('omits hover tooltips on overlay controls', () => {
+    renderOverlay()
+    expect(screen.getByRole('button', { name: 'Exit fullscreen timeline' })).not.toHaveAttribute(
+      'title',
+    )
+    expect(screen.getByRole('button', { name: 'rate' })).not.toHaveAttribute('title')
+    expect(screen.getByRole('button', { name: 'width' })).not.toHaveAttribute('title')
+  })
 })

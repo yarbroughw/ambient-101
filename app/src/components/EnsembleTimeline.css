@@ -223,6 +223,8 @@
 }
 
 .ensemble-timeline--fullscreen .ensemble-timeline__lane {
+  /* border-box keeps lane borders inside the height split (content-box clips the bottom lane). */
+  box-sizing: border-box;
   height: var(--timeline-lane-height);
   flex: 0 0 var(--timeline-lane-height);
 }

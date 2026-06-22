@@ -151,4 +151,53 @@ describe('EnsembleTimeline fullscreen layout', () => {
     expect(section.classList.contains('ensemble-timeline--fullscreen')).toBe(true)
     expect(section.style.getPropertyValue('--timeline-lane-height')).toBe('150px')
   })
+
+  it('omits lane hover tooltips in fullscreen layout', () => {
+    const pattern = createTestPattern()
+    const loop = {
+      getProgress: () => 0,
+      isTesting: () => false,
+      getLoopTimeSec: () => 0,
+    } as unknown as TapeLoop
+    const loops = [{ pattern, loop }] as unknown as DemoLoop[]
+    const onSelectLane = vi.fn()
+
+    const { container } = render(
+      <EnsembleTimeline
+        layout="fullscreen"
+        loops={loops}
+        runningById={{}}
+        motion="fixed-rate"
+        zoomStop={0}
+        onSelectLane={onSelectLane}
+      />,
+    )
+
+    const lane = container.querySelector('.ensemble-timeline__lane') as HTMLElement
+    expect(lane.getAttribute('title')).toBeNull()
+  })
+
+  it('shows lane hover tooltips in inline layout', () => {
+    const pattern = createTestPattern()
+    const loop = {
+      getProgress: () => 0,
+      isTesting: () => false,
+      getLoopTimeSec: () => 0,
+    } as unknown as TapeLoop
+    const loops = [{ pattern, loop }] as unknown as DemoLoop[]
+    const onSelectLane = vi.fn()
+
+    const { container } = render(
+      <EnsembleTimeline
+        loops={loops}
+        runningById={{}}
+        motion="fixed-rate"
+        zoomStop={0}
+        onSelectLane={onSelectLane}
+      />,
+    )
+
+    const lane = container.querySelector('.ensemble-timeline__lane') as HTMLElement
+    expect(lane.getAttribute('title')).toBe('click to open in reels view')
+  })
 })

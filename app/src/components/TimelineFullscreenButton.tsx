@@ -31,12 +31,14 @@ function CompressIcon({ className }: { className?: string }) {
 type TimelineFullscreenButtonProps = {
   active: boolean
   hidden?: boolean
+  showHoverTooltips?: boolean
   onClick: () => void
 }
 
 export function TimelineFullscreenButton({
   active,
   hidden = false,
+  showHoverTooltips = true,
   onClick,
 }: TimelineFullscreenButtonProps) {
   const Icon = active ? CompressIcon : ExpandIcon
@@ -51,7 +53,13 @@ export function TimelineFullscreenButton({
       aria-hidden={hidden || undefined}
       tabIndex={hidden ? -1 : undefined}
       aria-label={active ? 'Exit fullscreen timeline' : 'Fullscreen timeline'}
-      title={hidden ? undefined : active ? 'exit fullscreen (f)' : 'fullscreen timeline (f)'}
+      title={
+        hidden || !showHoverTooltips
+          ? undefined
+          : active
+            ? 'exit fullscreen (f)'
+            : 'fullscreen timeline (f)'
+      }
       disabled={hidden}
       onClick={onClick}
     >

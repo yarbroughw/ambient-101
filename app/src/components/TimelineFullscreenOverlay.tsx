@@ -71,10 +71,15 @@ export function TimelineFullscreenOverlay({
         <TimelineMotionControls
           motion={motion}
           zoomStop={zoomStop}
+          showHoverTooltips={false}
           onMotionChange={onMotionChange}
           onZoomStopChange={onZoomStopChange}
         />
-        <TimelineFullscreenButton active onClick={onClose} />
+        <TimelineFullscreenButton
+          active
+          showHoverTooltips={false}
+          onClick={onClose}
+        />
       </div>
       <EnsembleTimeline
         layout="fullscreen"

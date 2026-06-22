@@ -164,6 +164,7 @@ export function EnsembleTimeline({
             zoomStop={zoomStop}
             playheadX={playheadX}
             laneWidth={width}
+            showHoverTooltips={!isFullscreen}
             onSelect={onSelectLane}
           />
         ))}
@@ -187,6 +188,7 @@ type TimelineLaneProps = {
   zoomStop: number
   playheadX: number
   laneWidth: number
+  showHoverTooltips?: boolean
   onSelect?: (id: string) => void
 }
 
@@ -198,6 +200,7 @@ function TimelineLane({
   zoomStop,
   playheadX,
   laneWidth,
+  showHoverTooltips = true,
   onSelect,
 }: TimelineLaneProps) {
   const { phase, lap } = useTapeLanePhase(row.loop, row.running)
@@ -302,7 +305,11 @@ function TimelineLane({
       aria-label={
         interactive ? `Open ${row.label} in reels view` : row.label
       }
-      title={interactive ? 'click to open in reels view' : undefined}
+      title={
+        interactive && showHoverTooltips
+          ? 'click to open in reels view'
+          : undefined
+      }
       onClick={interactive ? () => onSelect(row.id) : undefined}
       onKeyDown={
         interactive
