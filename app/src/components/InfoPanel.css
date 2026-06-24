@@ -1,0 +1,216 @@
+.info-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  width: var(--info-panel-width);
+  border-left: 1px solid var(--color-outline);
+  background: var(--color-loop-bg);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
+  animation: info-panel-slide 180ms ease-out;
+}
+
+/*
+ * Reserve room for the docked rail so the main content reflows alongside it
+ * instead of being covered. `:has` lets the open panel (added to the DOM only
+ * while open) drive the layout of its siblings.
+ */
+body:has(.info-panel) {
+  padding-right: var(--info-panel-width);
+}
+
+/*
+ * Screens that are fixed to the viewport (so they ignore the body padding)
+ * are shrunk from the right instead, so they sit alongside the rail too.
+ */
+body:has(.info-panel) .app--startup,
+body:has(.info-panel) .timeline-fullscreen {
+  right: var(--info-panel-width);
+}
+
+/* Keep the fixed top-right buttons clear of the rail. */
+body:has(.info-panel) .settings-btn {
+  right: calc(var(--info-panel-width) + 12px);
+}
+
+body:has(.info-panel) .info-btn {
+  right: calc(var(--info-panel-width) + 44px);
+}
+
+/* No room to sit alongside on small screens — let the rail overlay instead. */
+@media (max-width: 640px) {
+  body:has(.info-panel) {
+    padding-right: 0;
+  }
+
+  body:has(.info-panel) .app--startup,
+  body:has(.info-panel) .timeline-fullscreen {
+    right: 0;
+  }
+
+  body:has(.info-panel) .settings-btn {
+    right: 12px;
+  }
+
+  body:has(.info-panel) .info-btn {
+    right: 44px;
+  }
+}
+
+@keyframes info-panel-slide {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .info-panel__sheet {
+    animation: none;
+  }
+}
+
+.info-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 18px 22px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--color-outline) 55%, transparent);
+}
+
+.info-panel__title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  color: var(--color-btn-text);
+}
+
+.info-panel__close {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--color-outline);
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--color-labels);
+  cursor: pointer;
+}
+
+.info-panel__close:hover {
+  border-color: var(--color-btn-text);
+  color: var(--color-btn-text);
+}
+
+.info-panel__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.info-panel__section {
+  display: flex;
+  flex: 1 1 50%;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 22px;
+  overflow-y: auto;
+}
+
+.info-panel__section--howto {
+  border-top: 1px solid
+    color-mix(in srgb, var(--color-outline) 55%, transparent);
+}
+
+.info-panel__section-title {
+  margin: 0 0 10px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-labels);
+}
+
+.info-panel__prose {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--color-btn-text);
+}
+
+.info-panel__prose p {
+  margin: 0 0 10px;
+}
+
+.info-panel__prose h4 {
+  margin: 14px 0 6px;
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-labels);
+}
+
+.info-panel__prose ul {
+  margin: 0 0 10px;
+  padding-left: 16px;
+}
+
+.info-panel__prose ul ul {
+  margin: 4px 0 4px;
+}
+
+.info-panel__prose li {
+  margin: 0 0 5px;
+}
+
+.info-panel__prose strong {
+  font-weight: 400;
+  color: var(--color-active);
+}
+
+.info-panel__prose em {
+  font-style: italic;
+  color: var(--color-btn-text);
+}
+
+.info-panel__prose a {
+  color: var(--color-active);
+}
+
+.info-panel__author {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0 0;
+}
+
+.info-panel__photo {
+  width: 100%;
+  max-width: 110px;
+  height: auto;
+  border: 1px solid var(--color-outline);
+}
+
+.info-panel__author--no-photo .info-panel__photo {
+  display: none;
+}
+
+.info-panel__author-caption {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--color-labels);
+}
