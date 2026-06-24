@@ -4,6 +4,7 @@
 
 :root {
   --ui-scale: 1.2;
+  --info-panel-width: clamp(280px, 34vw, 420px);
   font-family: var(--font-mono);
   line-height: 1.4;
   font-weight: 400;
@@ -30,6 +31,13 @@ body {
   margin: 0;
   min-height: 100vh;
   overscroll-behavior-x: none;
+  transition: padding-right 180ms ease-out;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --info-panel-width: 100%;
+  }
 }
 
 #root {

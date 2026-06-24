@@ -5,6 +5,7 @@ import { GlobalPaceControl } from './components/GlobalPaceControl'
 import { GlobalTonalityToolbar } from './components/GlobalTonalityToolbar'
 import { MasterSpectrum } from './components/MasterSpectrum'
 import { SettingsButton } from './components/SettingsButton'
+import { InfoButton } from './components/InfoButton'
 import { ViewToggle } from './components/ViewToggleButton'
 import './components/ViewToggleButton.css'
 import { BackButton } from './components/BackButton'
@@ -727,6 +728,7 @@ export default function App() {
   if (!audioReady) {
     return (
       <div className="app app--startup">
+        <InfoButton screen="start" />
         <SettingsButton
           lockMelodyTempo={lockMelodyTempo}
           onLockMelodyTempoChange={handleLockMelodyTempoChange}
@@ -740,6 +742,7 @@ export default function App() {
     <div className="app">
       <BackButton onClick={handleBackToStartup} />
       <EnsembleTitle name={ensembleName} onRename={handleEnsembleRename} />
+      <InfoButton screen="ensemble" />
       <SettingsButton
         lockMelodyTempo={lockMelodyTempo}
         onLockMelodyTempoChange={handleLockMelodyTempoChange}
